@@ -1,0 +1,12 @@
+[package]
+name = "genco"
+version = "0.1.0"
+authors = ["John-John Tedro <udoprog@tedro.se>"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/udoprog/genco"
+homepage = "https://github.com/udoprog/genco"
+documentation = "https://docs.rs/genco"
+description = """
+Even simpler code generation for Rust.
+"""
