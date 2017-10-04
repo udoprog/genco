@@ -4,16 +4,17 @@ use super::formatter::Formatter;
 use super::custom::Custom;
 use std::fmt;
 use super::tokens::Tokens;
+use super::contained::Contained;
 
 /// A single element in a set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Element<'element, C> {
+pub enum Element<'element, C: 'element> {
     /// Append the given set of tokens.
-    Append(Tokens<'element, C>),
-    /// Push the given set of tokens, adding a newline if current line is not empty.
-    Push(Tokens<'element, C>),
+    Append(Contained<'element, Tokens<'element, C>>),
+    /// Push the owned set of tokens, adding a newline if current line is not empty.
+    Push(Contained<'element, Tokens<'element, C>>),
     /// Nested on indentation level.
-    Nested(Tokens<'element, C>),
+    Nested(Contained<'element, Tokens<'element, C>>),
     /// Single-space spacing.
     Spacing,
     /// New line if needed.
@@ -37,17 +38,17 @@ impl<'element, C: Custom> Element<'element, C> {
 
         match *self {
             Append(ref tokens) => {
-                tokens.format(out, extra, level)?;
+                tokens.as_ref().format(out, extra, level)?;
             }
             Push(ref tokens) => {
                 out.new_line_unless_empty()?;
-                tokens.format(out, extra, level)?;
+                tokens.as_ref().format(out, extra, level)?;
             }
             Nested(ref tokens) => {
                 out.new_line_unless_empty()?;
 
                 out.indent();
-                tokens.format(out, extra, level + 1usize)?;
+                tokens.as_ref().format(out, extra, level + 1usize)?;
                 out.unindent();
             }
             LineSpacing => {
@@ -92,7 +93,7 @@ impl<'element, C> From<String> for Element<'element, C> {
 
 impl<'element, C> From<Tokens<'element, C>> for Element<'element, C> {
     fn from(value: Tokens<'element, C>) -> Self {
-        Element::Append(value)
+        Element::Append(Contained::Owned(value))
     }
 }
 

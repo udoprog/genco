@@ -2,7 +2,8 @@
 #![deny(missing_docs)]
 
 #[macro_use]
-pub mod macros;
+mod macros;
+mod contained;
 mod custom;
 mod element;
 mod formatter;
@@ -10,9 +11,9 @@ mod java;
 mod js;
 mod python;
 mod quoted;
-mod rust;
 mod tokens;
 mod write_tokens;
+pub mod rust;
 
 pub use self::element::Element;
 pub use self::java::Java;

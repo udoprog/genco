@@ -13,6 +13,13 @@ pub trait WriteTokens {
         tokens: Tokens<'element, C>,
         extra: &mut C::Extra,
     ) -> fmt::Result;
+
+    /// Write the given tokens to the container as a file.
+    fn write_file<'element, C: Custom>(
+        &mut self,
+        tokens: Tokens<'element, C>,
+        extra: &mut C::Extra,
+    ) -> fmt::Result;
 }
 
 impl WriteTokens for String {
@@ -22,5 +29,13 @@ impl WriteTokens for String {
         extra: &mut C::Extra,
     ) -> fmt::Result {
         tokens.format(&mut WriteFormatter::new(self), extra, 0usize)
+    }
+
+    fn write_file<'element, C: Custom>(
+        &mut self,
+        tokens: Tokens<'element, C>,
+        extra: &mut C::Extra,
+    ) -> fmt::Result {
+        C::write_file(tokens, &mut WriteFormatter::new(self), extra, 0usize)
     }
 }
