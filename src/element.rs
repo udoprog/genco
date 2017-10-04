@@ -4,7 +4,8 @@ use super::formatter::Formatter;
 use super::custom::Custom;
 use std::fmt;
 use super::tokens::Tokens;
-use super::contained::Contained;
+use super::contained::Contained::{self, Owned, Borrowed};
+use std::borrow::Cow;
 
 /// A single element in a set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -20,15 +21,11 @@ pub enum Element<'element, C: 'element> {
     /// New line if needed.
     LineSpacing,
     /// A borrowed string.
-    BorrowedLiteral(&'element str),
-    /// An owned string.
-    OwnedLiteral(String),
+    Literal(Cow<'element, str>),
     /// A borrowed quoted string.
-    BorrowedQuoted(&'element str),
-    /// An owned quoted string.
-    OwnedQuoted(String),
+    Quoted(Cow<'element, str>),
     /// Language-specific items.
-    Custom(C),
+    Custom(Contained<'element, C>),
 }
 
 impl<'element, C: Custom> Element<'element, C> {
@@ -58,20 +55,14 @@ impl<'element, C: Custom> Element<'element, C> {
             Spacing => {
                 out.write_str(" ")?;
             }
-            BorrowedLiteral(ref literal) => {
-                out.write_str(literal)?;
+            Literal(ref literal) => {
+                out.write_str(literal.as_ref())?;
             }
-            OwnedLiteral(ref literal) => {
-                out.write_str(literal.as_str())?;
-            }
-            BorrowedQuoted(ref literal) => {
-                C::quote_string(out, literal)?;
-            }
-            OwnedQuoted(ref literal) => {
-                C::quote_string(out, literal.as_str())?;
+            Quoted(ref literal) => {
+                C::quote_string(out, literal.as_ref())?;
             }
             Custom(ref custom) => {
-                custom.format(out, extra, level)?;
+                custom.as_ref().format(out, extra, level)?;
             }
         }
 
@@ -81,24 +72,30 @@ impl<'element, C: Custom> Element<'element, C> {
 
 impl<'element, C> From<&'element str> for Element<'element, C> {
     fn from(value: &'element str) -> Self {
-        Element::BorrowedLiteral(value)
+        Element::Literal(Cow::Borrowed(value))
+    }
+}
+
+impl<'element, C: Custom> From<&'element C> for Element<'element, C> {
+    fn from(value: &'element C) -> Self {
+        Element::Custom(Borrowed(value))
     }
 }
 
 impl<'element, C> From<String> for Element<'element, C> {
     fn from(value: String) -> Self {
-        Element::OwnedLiteral(value)
+        Element::Literal(Cow::Owned(value))
     }
 }
 
 impl<'element, C> From<Tokens<'element, C>> for Element<'element, C> {
     fn from(value: Tokens<'element, C>) -> Self {
-        Element::Append(Contained::Owned(value))
+        Element::Append(Owned(value))
     }
 }
 
 impl<'element, C: Custom> From<C> for Element<'element, C> {
     fn from(value: C) -> Self {
-        Element::Custom(value)
+        Element::Custom(Owned(value))
     }
 }

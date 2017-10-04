@@ -17,6 +17,7 @@ use std::fmt;
 use std::result;
 use std::slice;
 use super::contained::Contained::{self, Owned, Borrowed};
+use std::borrow::Cow;
 
 /// A set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -168,14 +169,7 @@ impl<'element, C: Clone> Tokens<'element, C> {
 /// Convert custom elements.
 impl<'element, C: Custom> From<C> for Tokens<'element, C> {
     fn from(value: C) -> Self {
-        Tokens { elements: vec![Owned(Element::Custom(value))] }
-    }
-}
-
-/// Convert strings.
-impl<'element, C> From<&'element str> for Tokens<'element, C> {
-    fn from(value: &'element str) -> Self {
-        Tokens { elements: vec![Owned(Element::BorrowedLiteral(value))] }
+        Tokens { elements: vec![Owned(Element::Custom(Owned(value)))] }
     }
 }
 
@@ -183,6 +177,20 @@ impl<'element, C> From<&'element str> for Tokens<'element, C> {
 impl<'element, C> From<Element<'element, C>> for Tokens<'element, C> {
     fn from(value: Element<'element, C>) -> Self {
         Tokens { elements: vec![Owned(value)] }
+    }
+}
+
+/// Convert custom elements.
+impl<'element, C: Custom> From<&'element C> for Tokens<'element, C> {
+    fn from(value: &'element C) -> Self {
+        Tokens { elements: vec![Owned(Element::Custom(Borrowed(value)))] }
+    }
+}
+
+/// Convert strings.
+impl<'element, C> From<&'element str> for Tokens<'element, C> {
+    fn from(value: &'element str) -> Self {
+        Tokens { elements: vec![Owned(Element::Literal(Cow::Borrowed(value)))] }
     }
 }
 
@@ -210,7 +218,7 @@ impl<'element, C: 'element> Iterator for WalkCustomIter<'element, C> {
                                 self.queue.push_back(tokens.as_ref());
                                 continue;
                             }
-                            &Custom(ref custom) => return Some(custom),
+                            &Custom(ref custom) => return Some(custom.as_ref()),
                             _ => continue,
                         }
                     }

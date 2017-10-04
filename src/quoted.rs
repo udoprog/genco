@@ -1,6 +1,7 @@
 //! Trait to convert to quoted.
 
 use super::element::Element;
+use std::borrow::Cow;
 
 /// Trait to convert types to quoted elements.
 pub trait Quoted<'element> {
@@ -10,12 +11,12 @@ pub trait Quoted<'element> {
 
 impl<'element> Quoted<'element> for String {
     fn quoted<C>(self) -> Element<'element, C> {
-        Element::OwnedQuoted(self)
+        Element::Quoted(Cow::Owned(self))
     }
 }
 
 impl<'element> Quoted<'element> for &'element str {
     fn quoted<C>(self) -> Element<'element, C> {
-        Element::BorrowedQuoted(self)
+        Element::Quoted(Cow::Borrowed(self))
     }
 }

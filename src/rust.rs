@@ -159,14 +159,13 @@ mod tests {
 
     #[test]
     fn test_imported() {
-        let mut toks: Tokens<Rust> = Tokens::new();
         let fmt = imported("std", "fmt");
-        toks.push(toks!(fmt, "::Debug"));
-        let res = toks.to_file();
+        let mut toks: Tokens<Rust> = Tokens::new();
+        toks.push(toks!(&fmt, "::Debug"));
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug"),
-            res.as_ref().map(|s| s.as_str())
+            toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
 }
