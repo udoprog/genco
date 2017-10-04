@@ -106,7 +106,11 @@ impl<'element, C: Clone> Tokens<'element, C> {
 
         let len = self.elements.len();
         let mut it = self.elements.into_iter();
-        let mut out = Vec::with_capacity(usize::max(0, len + len - 1));
+
+        let mut out = Vec::with_capacity(match len {
+            v if v < 1 => 0,
+            v => v - 1,
+        });
 
         if let Some(first) = it.next() {
             out.push(first);
