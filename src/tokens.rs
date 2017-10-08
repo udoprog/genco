@@ -17,6 +17,7 @@ use std::fmt;
 use std::result;
 use std::slice;
 use super::con::Con::{self, Owned, Borrowed};
+use std::vec;
 
 /// A set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,13 +78,13 @@ impl<'element, C: 'element> Tokens<'element, C> {
     /// Extend with another set of tokens.
     pub fn extend<I>(&mut self, it: I)
     where
-        I: IntoIterator<Item = Element<'element, C>>,
+        I: IntoIterator<Item = Con<'element, Element<'element, C>>>,
     {
-        self.elements.extend(it.into_iter().map(Owned));
+        self.elements.extend(it.into_iter());
     }
 
     /// Walk over all elements.
-    pub fn walk_custom(&'element self) -> WalkCustomIter<'element, C> {
+    pub fn walk_custom(&self) -> WalkCustomIter<C> {
         let mut queue = LinkedList::new();
         queue.push_back(self);
 
@@ -91,6 +92,15 @@ impl<'element, C: 'element> Tokens<'element, C> {
             queue: queue,
             current: None,
         }
+    }
+}
+
+impl<'element, C> IntoIterator for Tokens<'element, C> {
+    type Item = Con<'element, Element<'element, C>>;
+    type IntoIter = vec::IntoIter<Con<'element, Element<'element, C>>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
     }
 }
 

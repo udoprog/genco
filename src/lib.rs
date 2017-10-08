@@ -9,11 +9,11 @@ mod element;
 mod formatter;
 mod java;
 mod js;
-mod python;
 mod quoted;
 mod tokens;
 mod write_tokens;
 pub mod rust;
+pub mod python;
 
 pub use self::element::Element;
 pub use self::java::Java;
