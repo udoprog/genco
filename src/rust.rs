@@ -7,6 +7,8 @@ use super::tokens::Tokens;
 use std::collections::BTreeSet;
 use std::borrow::Cow;
 
+static SEP: &'static str = "::";
+
 /// Rust token specialization.
 #[derive(Debug, Clone)]
 pub enum Rust<'element> {
@@ -38,13 +40,13 @@ impl<'element> Rust<'element> {
             match *custom {
                 Imported {
                     ref module,
-                    ref name,
-                } => modules.insert((module.as_ref(), name.as_ref(), None)),
+                    ..
+                } => modules.insert((module.as_ref(), None)),
                 ImportedAlias {
                     ref module,
-                    ref name,
                     ref alias,
-                } => modules.insert((module.as_ref(), name.as_ref(), Some(alias.as_ref()))),
+                    ..
+                } => modules.insert((module.as_ref(), Some(alias.as_ref()))),
             };
         }
 
@@ -54,13 +56,11 @@ impl<'element> Rust<'element> {
 
         let mut out = Tokens::new();
 
-        for (module, name, alias) in modules {
+        for (module, alias) in modules {
             let mut s = Tokens::new();
 
             s.append("use ");
             s.append(module);
-            s.append("::");
-            s.append(name);
 
             if let Some(alias) = alias {
                 s.append(" as ");
@@ -83,9 +83,22 @@ impl<'element> Custom for Rust<'element> {
         use self::Rust::*;
 
         match *self {
-            Imported { ref name, .. } |
-            ImportedAlias { alias: ref name, .. } => out.write_str(name),
+            Imported { ref module, ref name, .. } => {
+                if let Some(part) = module.split(SEP).last() {
+                    out.write_str(part)?;
+                    out.write_str(SEP)?;
+                }
+
+                out.write_str(name)?;
+            }
+            ImportedAlias { ref alias, ref name, .. } => {
+                out.write_str(alias)?;
+                out.write_str(SEP)?;
+                out.write_str(name)?;
+            }
         }
+
+        Ok(())
     }
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
@@ -167,7 +180,7 @@ mod tests {
     use tokens::Tokens;
     use rust::Rust;
     use quoted::Quoted;
-    use super::imported;
+    use super::imported_ref;
 
     #[test]
     fn test_string() {
@@ -180,9 +193,9 @@ mod tests {
 
     #[test]
     fn test_imported() {
-        let fmt = imported("std", "fmt");
+        let dbg = imported_ref("std::fmt", "Debug");
         let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push(toks!(&fmt, "::Debug"));
+        toks.push(toks!(&dbg));
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug"),
