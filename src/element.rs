@@ -70,9 +70,9 @@ impl<'element, C: Custom> Element<'element, C> {
     }
 }
 
-impl<'element, C> From<&'element str> for Element<'element, C> {
-    fn from(value: &'element str) -> Self {
-        Element::Literal(Cow::Borrowed(value))
+impl<'element, C: Custom> From<C> for Element<'element, C> {
+    fn from(value: C) -> Self {
+        Element::Custom(Owned(value))
     }
 }
 
@@ -88,14 +88,14 @@ impl<'element, C> From<String> for Element<'element, C> {
     }
 }
 
-impl<'element, C> From<Tokens<'element, C>> for Element<'element, C> {
-    fn from(value: Tokens<'element, C>) -> Self {
-        Element::Append(Owned(value))
+impl<'element, C> From<&'element str> for Element<'element, C> {
+    fn from(value: &'element str) -> Self {
+        Element::Literal(Cow::Borrowed(value))
     }
 }
 
-impl<'element, C: Custom> From<C> for Element<'element, C> {
-    fn from(value: C) -> Self {
-        Element::Custom(Owned(value))
+impl<'element, C> From<Tokens<'element, C>> for Element<'element, C> {
+    fn from(value: Tokens<'element, C>) -> Self {
+        Element::Append(Owned(value))
     }
 }

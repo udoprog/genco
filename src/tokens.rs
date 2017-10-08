@@ -17,7 +17,6 @@ use std::fmt;
 use std::result;
 use std::slice;
 use super::contained::Contained::{self, Owned, Borrowed};
-use std::borrow::Cow;
 
 /// A set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -166,13 +165,6 @@ impl<'element, C: Clone> Tokens<'element, C> {
     }
 }
 
-/// Convert custom elements.
-impl<'element, C: Custom> From<C> for Tokens<'element, C> {
-    fn from(value: C) -> Self {
-        Tokens { elements: vec![Owned(Element::Custom(Owned(value)))] }
-    }
-}
-
 /// Convert element to tokens.
 impl<'element, C> From<Element<'element, C>> for Tokens<'element, C> {
     fn from(value: Element<'element, C>) -> Self {
@@ -181,16 +173,30 @@ impl<'element, C> From<Element<'element, C>> for Tokens<'element, C> {
 }
 
 /// Convert custom elements.
+impl<'element, C: Custom> From<C> for Tokens<'element, C> {
+    fn from(value: C) -> Self {
+        Tokens { elements: vec![Owned(value.into())] }
+    }
+}
+
+/// Convert custom elements.
 impl<'element, C: Custom> From<&'element C> for Tokens<'element, C> {
     fn from(value: &'element C) -> Self {
-        Tokens { elements: vec![Owned(Element::Custom(Borrowed(value)))] }
+        Tokens { elements: vec![Owned(value.into())] }
+    }
+}
+
+/// Convert borrowed strings.
+impl<'element, C> From<&'element str> for Tokens<'element, C> {
+    fn from(value: &'element str) -> Self {
+        Tokens { elements: vec![Owned(value.into())] }
     }
 }
 
 /// Convert strings.
-impl<'element, C> From<&'element str> for Tokens<'element, C> {
-    fn from(value: &'element str) -> Self {
-        Tokens { elements: vec![Owned(Element::Literal(Cow::Borrowed(value)))] }
+impl<'element, C> From<String> for Tokens<'element, C> {
+    fn from(value: String) -> Self {
+        Tokens { elements: vec![Owned(value.into())] }
     }
 }
 
