@@ -38,10 +38,7 @@ impl<'element> Rust<'element> {
 
         for custom in tokens.walk_custom() {
             match *custom {
-                Imported {
-                    ref module,
-                    ..
-                } => modules.insert((module.as_ref(), None)),
+                Imported { ref module, .. } => modules.insert((module.as_ref(), None)),
                 ImportedAlias {
                     ref module,
                     ref alias,
@@ -83,7 +80,11 @@ impl<'element> Custom for Rust<'element> {
         use self::Rust::*;
 
         match *self {
-            Imported { ref module, ref name, .. } => {
+            Imported {
+                ref module,
+                ref name,
+                ..
+            } => {
                 if let Some(part) = module.split(SEP).last() {
                     out.write_str(part)?;
                     out.write_str(SEP)?;
@@ -91,7 +92,11 @@ impl<'element> Custom for Rust<'element> {
 
                 out.write_str(name)?;
             }
-            ImportedAlias { ref alias, ref name, .. } => {
+            ImportedAlias {
+                ref alias,
+                ref name,
+                ..
+            } => {
                 out.write_str(alias)?;
                 out.write_str(SEP)?;
                 out.write_str(name)?;

@@ -1,14 +1,14 @@
 //! Helper container for borrowed or owned values.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Contained<'a, T: 'a> {
+pub enum Con<'a, T: 'a> {
     Borrowed(&'a T),
     Owned(T),
 }
 
-impl<'a, T> AsRef<T> for Contained<'a, T> {
+impl<'a, T> AsRef<T> for Con<'a, T> {
     fn as_ref(&self) -> &T {
-        use self::Contained::*;
+        use self::Con::*;
 
         match *self {
             Borrowed(value) => value,

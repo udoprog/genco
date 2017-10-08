@@ -3,7 +3,7 @@
 
 #[macro_use]
 mod macros;
-mod contained;
+mod con;
 mod custom;
 mod element;
 mod formatter;

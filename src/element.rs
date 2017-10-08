@@ -4,18 +4,18 @@ use super::formatter::Formatter;
 use super::custom::Custom;
 use std::fmt;
 use super::tokens::Tokens;
-use super::contained::Contained::{self, Owned, Borrowed};
+use super::con::Con::{self, Owned, Borrowed};
 use std::borrow::Cow;
 
 /// A single element in a set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element<'element, C: 'element> {
     /// Append the given set of tokens.
-    Append(Contained<'element, Tokens<'element, C>>),
+    Append(Con<'element, Tokens<'element, C>>),
     /// Push the owned set of tokens, adding a newline if current line is not empty.
-    Push(Contained<'element, Tokens<'element, C>>),
+    Push(Con<'element, Tokens<'element, C>>),
     /// Nested on indentation level.
-    Nested(Contained<'element, Tokens<'element, C>>),
+    Nested(Con<'element, Tokens<'element, C>>),
     /// Single-space spacing.
     Spacing,
     /// New line if needed.
@@ -25,7 +25,7 @@ pub enum Element<'element, C: 'element> {
     /// A borrowed quoted string.
     Quoted(Cow<'element, str>),
     /// Language-specific items.
-    Custom(Contained<'element, C>),
+    Custom(Con<'element, C>),
 }
 
 impl<'element, C: Custom> Element<'element, C> {

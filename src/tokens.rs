@@ -16,12 +16,12 @@ use super::custom::Custom;
 use std::fmt;
 use std::result;
 use std::slice;
-use super::contained::Contained::{self, Owned, Borrowed};
+use super::con::Con::{self, Owned, Borrowed};
 
 /// A set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tokens<'element, C: 'element> {
-    elements: Vec<Contained<'element, Element<'element, C>>>,
+    elements: Vec<Con<'element, Element<'element, C>>>,
 }
 
 /// Generic methods.
@@ -134,11 +134,10 @@ impl<'element, C: Clone> Tokens<'element, C> {
         let len = self.elements.len();
         let mut it = self.elements.into_iter();
 
-        let mut out: Vec<Contained<'element, Element<'element, C>>> =
-            Vec::with_capacity(match len {
-                v if v < 1 => v,
-                v => v + v - 1,
-            });
+        let mut out: Vec<Con<'element, Element<'element, C>>> = Vec::with_capacity(match len {
+            v if v < 1 => v,
+            v => v + v - 1,
+        });
 
         if let Some(first) = it.next() {
             out.push(first);
@@ -202,7 +201,7 @@ impl<'element, C> From<String> for Tokens<'element, C> {
 
 pub struct WalkCustomIter<'element, C: 'element> {
     queue: LinkedList<&'element Tokens<'element, C>>,
-    current: Option<slice::Iter<'element, Contained<'element, Element<'element, C>>>>,
+    current: Option<slice::Iter<'element, Con<'element, Element<'element, C>>>>,
 }
 
 impl<'element, C: 'element> Iterator for WalkCustomIter<'element, C> {
