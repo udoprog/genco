@@ -198,7 +198,7 @@ mod tests {
         toks.push(toks!(&dbg));
 
         assert_eq!(
-            Ok("use std::fmt;\n\nfmt::Debug"),
+            Ok("use std::fmt;\n\nfmt::Debug\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }

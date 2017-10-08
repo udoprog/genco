@@ -2,7 +2,7 @@
 
 use std::fmt;
 use super::tokens::Tokens;
-use super::formatter::WriteFormatter;
+use super::formatter::{WriteFormatter, Formatter};
 use super::custom::Custom;
 
 /// Helper trait to write tokens immediately to containers.
@@ -36,6 +36,9 @@ impl WriteTokens for String {
         tokens: Tokens<'element, C>,
         extra: &mut C::Extra,
     ) -> fmt::Result {
-        C::write_file(tokens, &mut WriteFormatter::new(self), extra, 0usize)
+        let mut formatter = WriteFormatter::new(self);
+        C::write_file(tokens, &mut formatter, extra, 0usize)?;
+        formatter.new_line_unless_empty()?;
+        Ok(())
     }
 }
