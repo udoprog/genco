@@ -125,7 +125,15 @@ impl<'element> Custom for Rust<'element> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a>(module: &'a str, name: &'a str) -> Rust<'a> {
+pub fn imported<'a>(module: Cow<'a, str>, name: Cow<'a, str>) -> Rust<'a> {
+    Rust::Imported {
+        module: module,
+        name: name,
+    }
+}
+
+/// Setup an imported element from borrowed components.
+pub fn imported_ref<'a>(module: &'a str, name: &'a str) -> Rust<'a> {
     Rust::Imported {
         module: Cow::Borrowed(module),
         name: Cow::Borrowed(name),
@@ -133,12 +141,25 @@ pub fn imported<'a>(module: &'a str, name: &'a str) -> Rust<'a> {
 }
 
 /// Setup an imported alias element.
-pub fn imported_alias<'a>(module: &'a str, name: &'a str, alias: &'a str) -> Rust<'a> {
+pub fn imported_alias<'a>(
+    module: Cow<'a, str>,
+    name: Cow<'a, str>,
+    alias: Cow<'a, str>,
+) -> Rust<'a> {
     Rust::ImportedAlias {
-        module: Cow::Borrowed(module),
-        name: Cow::Borrowed(name),
-        alias: Cow::Borrowed(alias),
+        module: module,
+        name: name,
+        alias: alias,
     }
+}
+
+/// Setup an imported alias element from borrowed components.
+pub fn imported_alias_ref<'a>(module: &'a str, name: &'a str, alias: &'a str) -> Rust<'a> {
+    imported_alias(
+        Cow::Borrowed(module),
+        Cow::Borrowed(name),
+        Cow::Borrowed(alias),
+    )
 }
 
 #[cfg(test)]
