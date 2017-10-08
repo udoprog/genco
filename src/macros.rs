@@ -9,13 +9,15 @@
 /// ```
 #[macro_export]
 macro_rules! toks {
-    ($($vars:expr),*) => {
+    ($($x:expr),*) => {
         {
-            let mut tokens = $crate::tokens::Tokens::new();
-            $(tokens.append($vars);)*
-            tokens
+            let mut _t = $crate::Tokens::new();
+            $(_t.append($x);)*
+            _t
         }
-    }
+    };
+
+    ($($x:expr,)*) => {toks!($($x),*)}
 }
 
 #[cfg(test)]
