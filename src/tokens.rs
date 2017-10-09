@@ -87,9 +87,7 @@ impl<'element, C: 'element> Tokens<'element, C> {
         let mut queue = LinkedList::new();
         queue.extend(self.elements.iter().map(AsRef::as_ref));
 
-        WalkCustomIter {
-            queue: queue,
-        }
+        WalkCustomIter { queue: queue }
     }
 }
 
@@ -222,14 +220,16 @@ impl<'element, C: 'element> Iterator for WalkCustomIter<'element, C> {
             match *next {
                 Borrowed(ref borrowed) => {
                     self.queue.push_back(borrowed);
-                },
+                }
                 Append(ref tokens) |
                 Push(ref tokens) |
                 Nested(ref tokens) => {
-                    self.queue.extend(tokens.as_ref().elements.iter().map(AsRef::as_ref));
+                    self.queue.extend(
+                        tokens.as_ref().elements.iter().map(AsRef::as_ref),
+                    );
                 }
                 Custom(ref custom) => return Some(custom.as_ref()),
-                _ => {},
+                _ => {}
             }
         }
 

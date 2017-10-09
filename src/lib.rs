@@ -8,10 +8,10 @@ mod custom;
 mod element;
 mod formatter;
 mod java;
-mod js;
 mod quoted;
 mod tokens;
 mod write_tokens;
+pub mod js;
 pub mod rust;
 pub mod python;
 
