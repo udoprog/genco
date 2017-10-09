@@ -1,6 +1,7 @@
 use std::fmt;
 use std::iter;
 
+/// Helper trait to format tokens.
 pub trait Formatter: fmt::Write {
     /// Forcibly create a new line.
     fn new_line(&mut self) -> fmt::Result;

@@ -15,13 +15,14 @@ mod write_tokens;
 pub mod rust;
 pub mod python;
 
+pub use self::custom::Custom;
 pub use self::element::Element;
 pub use self::java::Java;
 pub use self::rust::Rust;
 pub use self::js::JavaScript;
 pub use self::python::Python;
 pub use self::tokens::Tokens;
-pub use self::formatter::WriteFormatter;
+pub use self::formatter::{Formatter, WriteFormatter};
 pub use self::write_tokens::WriteTokens;
 pub use self::quoted::Quoted;
 
