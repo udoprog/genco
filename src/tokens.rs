@@ -15,12 +15,11 @@ use std::collections::LinkedList;
 use super::custom::Custom;
 use std::fmt;
 use std::result;
-use std::slice;
 use super::con::Con::{self, Owned, Borrowed};
 use std::vec;
 
 /// A set of tokens.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Tokens<'element, C: 'element> {
     elements: Vec<Con<'element, Element<'element, C>>>,
 }
@@ -86,11 +85,10 @@ impl<'element, C: 'element> Tokens<'element, C> {
     /// Walk over all elements.
     pub fn walk_custom(&self) -> WalkCustomIter<C> {
         let mut queue = LinkedList::new();
-        queue.push_back(self);
+        queue.extend(self.elements.iter().map(AsRef::as_ref));
 
         WalkCustomIter {
             queue: queue,
-            current: None,
         }
     }
 }
@@ -210,8 +208,7 @@ impl<'element, C> From<String> for Tokens<'element, C> {
 }
 
 pub struct WalkCustomIter<'element, C: 'element> {
-    queue: LinkedList<&'element Tokens<'element, C>>,
-    current: Option<slice::Iter<'element, Con<'element, Element<'element, C>>>>,
+    queue: LinkedList<&'element Element<'element, C>>,
 }
 
 impl<'element, C: 'element> Iterator for WalkCustomIter<'element, C> {
@@ -220,40 +217,23 @@ impl<'element, C: 'element> Iterator for WalkCustomIter<'element, C> {
     fn next(&mut self) -> Option<Self::Item> {
         use self::Element::*;
 
-        loop {
-            match self.current {
-                Some(ref mut current) => {
-                    // read all nested tokens and queue them
-                    // return any elements encountered.
-                    while let Some(next) = current.next() {
-                        match next.as_ref() {
-                            &Append(ref tokens) |
-                            &Push(ref tokens) |
-                            &Nested(ref tokens) => {
-                                self.queue.push_back(tokens.as_ref());
-                                continue;
-                            }
-                            &Custom(ref custom) => return Some(custom.as_ref()),
-                            _ => continue,
-                        }
-                    }
-
-                    // fall through to set self.current to None
+        // read until custom element is encountered.
+        while let Some(next) = self.queue.pop_front() {
+            match *next {
+                Borrowed(ref borrowed) => {
+                    self.queue.push_back(borrowed);
+                },
+                Append(ref tokens) |
+                Push(ref tokens) |
+                Nested(ref tokens) => {
+                    self.queue.extend(tokens.as_ref().elements.iter().map(AsRef::as_ref));
                 }
-                None => {
-                    if let Some(next) = self.queue.pop_front() {
-                        self.current = Some(next.elements.iter());
-                    }
-
-                    match self.current {
-                        Some(_) => continue,
-                        None => return None,
-                    }
-                }
+                Custom(ref custom) => return Some(custom.as_ref()),
+                _ => {},
             }
-
-            self.current = None;
         }
+
+        None
     }
 }
 

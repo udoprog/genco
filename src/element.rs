@@ -10,6 +10,8 @@ use std::borrow::Cow;
 /// A single element in a set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element<'element, C: 'element> {
+    /// A borrowed element.
+    Borrowed(&'element Element<'element, C>),
     /// Append the given set of tokens.
     Append(Con<'element, Tokens<'element, C>>),
     /// Push the owned set of tokens, adding a newline if current line is not empty.
@@ -34,6 +36,9 @@ impl<'element, C: Custom> Element<'element, C> {
         use self::Element::*;
 
         match *self {
+            Borrowed(element) => {
+                element.format(out, extra, level)?;
+            }
             Append(ref tokens) => {
                 tokens.as_ref().format(out, extra, level)?;
             }
@@ -94,8 +99,20 @@ impl<'element, C> From<&'element str> for Element<'element, C> {
     }
 }
 
+impl<'element, C> From<&'element Element<'element, C>> for Element<'element, C> {
+    fn from(value: &'element Element<'element, C>) -> Self {
+        Element::Borrowed(value)
+    }
+}
+
 impl<'element, C> From<Tokens<'element, C>> for Element<'element, C> {
     fn from(value: Tokens<'element, C>) -> Self {
         Element::Append(Owned(value))
+    }
+}
+
+impl<'element, C> From<&'element Tokens<'element, C>> for Element<'element, C> {
+    fn from(value: &'element Tokens<'element, C>) -> Self {
+        Element::Append(Borrowed(value))
     }
 }
