@@ -218,8 +218,11 @@ impl<'element, C: 'element> Iterator for WalkCustomIter<'element, C> {
         // read until custom element is encountered.
         while let Some(next) = self.queue.pop_front() {
             match *next {
-                Borrowed(ref borrowed) => {
-                    self.queue.push_back(borrowed);
+                Rc(ref element) => {
+                    self.queue.push_back(element.as_ref());
+                }
+                Borrowed(ref element) => {
+                    self.queue.push_back(element);
                 }
                 Append(ref tokens) |
                 Push(ref tokens) |

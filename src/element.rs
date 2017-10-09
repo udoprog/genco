@@ -4,12 +4,16 @@ use super::formatter::Formatter;
 use super::custom::Custom;
 use std::fmt;
 use super::tokens::Tokens;
-use super::con::Con::{self, Owned, Borrowed};
-use std::borrow::Cow;
+use super::con::Con;
+use super::cons::Cons;
+
+use std::rc::Rc;
 
 /// A single element in a set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Element<'element, C: 'element> {
+    /// A refcounted member.
+    Rc(Rc<Element<'element, C>>),
     /// A borrowed element.
     Borrowed(&'element Element<'element, C>),
     /// Append the given set of tokens.
@@ -23,9 +27,9 @@ pub enum Element<'element, C: 'element> {
     /// New line if needed.
     LineSpacing,
     /// A borrowed string.
-    Literal(Cow<'element, str>),
+    Literal(Cons<'element>),
     /// A borrowed quoted string.
-    Quoted(Cow<'element, str>),
+    Quoted(Cons<'element>),
     /// Language-specific items.
     Custom(Con<'element, C>),
 }
@@ -36,6 +40,9 @@ impl<'element, C: Custom> Element<'element, C> {
         use self::Element::*;
 
         match *self {
+            Rc(ref element) => {
+                element.format(out, extra, level)?;
+            }
             Borrowed(element) => {
                 element.format(out, extra, level)?;
             }
@@ -77,25 +84,31 @@ impl<'element, C: Custom> Element<'element, C> {
 
 impl<'element, C: Custom> From<C> for Element<'element, C> {
     fn from(value: C) -> Self {
-        Element::Custom(Owned(value))
+        Element::Custom(Con::Owned(value))
     }
 }
 
 impl<'element, C: Custom> From<&'element C> for Element<'element, C> {
     fn from(value: &'element C) -> Self {
-        Element::Custom(Borrowed(value))
+        Element::Custom(Con::Borrowed(value))
     }
 }
 
 impl<'element, C> From<String> for Element<'element, C> {
     fn from(value: String) -> Self {
-        Element::Literal(Cow::Owned(value))
+        Element::Literal(Cons::Owned(value))
     }
 }
 
 impl<'element, C> From<&'element str> for Element<'element, C> {
     fn from(value: &'element str) -> Self {
-        Element::Literal(Cow::Borrowed(value))
+        Element::Literal(Cons::Borrowed(value))
+    }
+}
+
+impl<'element, C> From<Rc<String>> for Element<'element, C> {
+    fn from(value: Rc<String>) -> Self {
+        Element::Literal(Cons::Rc(value))
     }
 }
 
@@ -105,14 +118,26 @@ impl<'element, C> From<&'element Element<'element, C>> for Element<'element, C> 
     }
 }
 
+impl<'element, C> From<Rc<Element<'element, C>>> for Element<'element, C> {
+    fn from(value: Rc<Element<'element, C>>) -> Self {
+        Element::Rc(value)
+    }
+}
+
 impl<'element, C> From<Tokens<'element, C>> for Element<'element, C> {
     fn from(value: Tokens<'element, C>) -> Self {
-        Element::Append(Owned(value))
+        Element::Append(Con::Owned(value))
     }
 }
 
 impl<'element, C> From<&'element Tokens<'element, C>> for Element<'element, C> {
     fn from(value: &'element Tokens<'element, C>) -> Self {
-        Element::Append(Borrowed(value))
+        Element::Append(Con::Borrowed(value))
+    }
+}
+
+impl<'element, C> From<Rc<Tokens<'element, C>>> for Element<'element, C> {
+    fn from(value: Rc<Tokens<'element, C>>) -> Self {
+        Element::Append(Con::Rc(value))
     }
 }
