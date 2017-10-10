@@ -89,6 +89,11 @@ impl<'element, C: 'element> Tokens<'element, C> {
 
         WalkCustomIter { queue: queue }
     }
+
+    /// Check if tokens contain no elements.
+    pub fn is_empty(&self) -> bool {
+        self.elements.is_empty()
+    }
 }
 
 impl<'element, C> IntoIterator for Tokens<'element, C> {
