@@ -5,25 +5,25 @@ use super::cons::Cons;
 use std::rc::Rc;
 
 /// Trait to convert types to quoted elements.
-pub trait Quoted<'element> {
+pub trait Quoted<'el> {
     /// Convert type to quoted element.
-    fn quoted<C>(self) -> Element<'element, C>;
+    fn quoted<C>(self) -> Element<'el, C>;
 }
 
-impl<'element> Quoted<'element> for String {
-    fn quoted<C>(self) -> Element<'element, C> {
+impl<'el> Quoted<'el> for String {
+    fn quoted<C>(self) -> Element<'el, C> {
         Element::Quoted(Cons::Owned(self))
     }
 }
 
-impl<'element> Quoted<'element> for &'element str {
-    fn quoted<C>(self) -> Element<'element, C> {
+impl<'el> Quoted<'el> for &'el str {
+    fn quoted<C>(self) -> Element<'el, C> {
         Element::Quoted(Cons::Borrowed(self))
     }
 }
 
-impl<'element> Quoted<'element> for Rc<String> {
-    fn quoted<C>(self) -> Element<'element, C> {
+impl<'el> Quoted<'el> for Rc<String> {
+    fn quoted<C>(self) -> Element<'el, C> {
         Element::Quoted(Cons::Rc(self))
     }
 }

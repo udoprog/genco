@@ -25,7 +25,7 @@ pub enum JavaScript<'el> {
     },
 }
 
-impl<'element> JavaScript<'element> {
+impl<'el> JavaScript<'el> {
     fn module_to_path(path: &str) -> String {
         let parts: Vec<&str> = path.split(SEP).collect();
         format!("{}.js", parts.join(PATH_SEP))

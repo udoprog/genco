@@ -3,8 +3,8 @@
 use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Cons<'element> {
-    Borrowed(&'element str),
+pub enum Cons<'el> {
+    Borrowed(&'el str),
     Owned(String),
     Rc(Rc<String>),
 }

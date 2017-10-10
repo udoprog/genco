@@ -8,32 +8,32 @@ use super::custom::Custom;
 /// Helper trait to write tokens immediately to containers.
 pub trait WriteTokens {
     /// Write the given tokens to the container.
-    fn write_tokens<'element, C: Custom>(
+    fn write_tokens<'el, C: Custom>(
         &mut self,
-        tokens: Tokens<'element, C>,
+        tokens: Tokens<'el, C>,
         extra: &mut C::Extra,
     ) -> fmt::Result;
 
     /// Write the given tokens to the container as a file.
-    fn write_file<'element, C: Custom>(
+    fn write_file<'el, C: Custom>(
         &mut self,
-        tokens: Tokens<'element, C>,
+        tokens: Tokens<'el, C>,
         extra: &mut C::Extra,
     ) -> fmt::Result;
 }
 
 impl WriteTokens for String {
-    fn write_tokens<'element, C: Custom>(
+    fn write_tokens<'el, C: Custom>(
         &mut self,
-        tokens: Tokens<'element, C>,
+        tokens: Tokens<'el, C>,
         extra: &mut C::Extra,
     ) -> fmt::Result {
         tokens.format(&mut WriteFormatter::new(self), extra, 0usize)
     }
 
-    fn write_file<'element, C: Custom>(
+    fn write_file<'el, C: Custom>(
         &mut self,
-        tokens: Tokens<'element, C>,
+        tokens: Tokens<'el, C>,
         extra: &mut C::Extra,
     ) -> fmt::Result {
         let mut formatter = WriteFormatter::new(self);

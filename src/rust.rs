@@ -11,26 +11,26 @@ static SEP: &'static str = "::";
 
 /// Rust token specialization.
 #[derive(Debug, Clone)]
-pub enum Rust<'element> {
+pub enum Rust<'el> {
     /// An imported name.
     Imported {
         /// Module of the imported name.
-        module: Cow<'element, str>,
+        module: Cow<'el, str>,
         /// Name imported.
-        name: Cow<'element, str>,
+        name: Cow<'el, str>,
     },
     /// An imported module as an alias.
     ImportedAlias {
         /// Module of the imported name.
-        module: Cow<'element, str>,
+        module: Cow<'el, str>,
         /// Name imported.
-        name: Cow<'element, str>,
+        name: Cow<'el, str>,
         /// Alias of module.
-        alias: Cow<'element, str>,
+        alias: Cow<'el, str>,
     },
 }
 
-impl<'element> Rust<'element> {
+impl<'el> Rust<'el> {
     fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
         use self::Rust::*;
 
@@ -73,7 +73,7 @@ impl<'element> Rust<'element> {
     }
 }
 
-impl<'element> Custom for Rust<'element> {
+impl<'el> Custom for Rust<'el> {
     type Extra = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {

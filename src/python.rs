@@ -11,26 +11,26 @@ static SEP: &'static str = ".";
 
 /// Python token specialization.
 #[derive(Debug, Clone)]
-pub enum Python<'element> {
+pub enum Python<'el> {
     /// An imported name.
     Imported {
         /// Module of the imported name.
-        module: Cow<'element, str>,
+        module: Cow<'el, str>,
         /// Name imported.
-        name: Cow<'element, str>,
+        name: Cow<'el, str>,
     },
     /// An imported module as an alias.
     ImportedAlias {
         /// Module of the imported name.
-        module: Cow<'element, str>,
+        module: Cow<'el, str>,
         /// Name imported.
-        name: Cow<'element, str>,
+        name: Cow<'el, str>,
         /// Alias of module.
-        alias: Cow<'element, str>,
+        alias: Cow<'el, str>,
     },
 }
 
-impl<'element> Python<'element> {
+impl<'el> Python<'el> {
     fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
         use self::Python::*;
 
@@ -71,7 +71,7 @@ impl<'element> Python<'element> {
     }
 }
 
-impl<'element> Custom for Python<'element> {
+impl<'el> Custom for Python<'el> {
     type Extra = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {

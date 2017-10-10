@@ -23,8 +23,8 @@ where
     }
 
     /// Write a file according to convention by custom element.
-    fn write_file<'element>(
-        tokens: Tokens<'element, Self>,
+    fn write_file<'el>(
+        tokens: Tokens<'el, Self>,
         out: &mut Formatter,
         extra: &mut Self::Extra,
         level: usize,

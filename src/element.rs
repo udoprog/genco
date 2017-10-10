@@ -11,30 +11,30 @@ use std::rc::Rc;
 
 /// A single element in a set of tokens.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Element<'element, C: 'element> {
+pub enum Element<'el, C: 'el> {
     /// A refcounted member.
-    Rc(Rc<Element<'element, C>>),
+    Rc(Rc<Element<'el, C>>),
     /// A borrowed element.
-    Borrowed(&'element Element<'element, C>),
+    Borrowed(&'el Element<'el, C>),
     /// Append the given set of tokens.
-    Append(Con<'element, Tokens<'element, C>>),
+    Append(Con<'el, Tokens<'el, C>>),
     /// Push the owned set of tokens, adding a newline if current line is not empty.
-    Push(Con<'element, Tokens<'element, C>>),
+    Push(Con<'el, Tokens<'el, C>>),
     /// Nested on indentation level.
-    Nested(Con<'element, Tokens<'element, C>>),
+    Nested(Con<'el, Tokens<'el, C>>),
     /// Single-space spacing.
     Spacing,
     /// New line if needed.
     LineSpacing,
     /// A borrowed string.
-    Literal(Cons<'element>),
+    Literal(Cons<'el>),
     /// A borrowed quoted string.
-    Quoted(Cons<'element>),
+    Quoted(Cons<'el>),
     /// Language-specific items.
-    Custom(Con<'element, C>),
+    Custom(Con<'el, C>),
 }
 
-impl<'element, C: Custom> Element<'element, C> {
+impl<'el, C: Custom> Element<'el, C> {
     /// Format the given element.
     pub fn format(&self, out: &mut Formatter, extra: &mut C::Extra, level: usize) -> fmt::Result {
         use self::Element::*;
@@ -82,62 +82,62 @@ impl<'element, C: Custom> Element<'element, C> {
     }
 }
 
-impl<'element, C: Custom> From<C> for Element<'element, C> {
+impl<'el, C: Custom> From<C> for Element<'el, C> {
     fn from(value: C) -> Self {
         Element::Custom(Con::Owned(value))
     }
 }
 
-impl<'element, C: Custom> From<&'element C> for Element<'element, C> {
-    fn from(value: &'element C) -> Self {
+impl<'el, C: Custom> From<&'el C> for Element<'el, C> {
+    fn from(value: &'el C) -> Self {
         Element::Custom(Con::Borrowed(value))
     }
 }
 
-impl<'element, C> From<String> for Element<'element, C> {
+impl<'el, C> From<String> for Element<'el, C> {
     fn from(value: String) -> Self {
         Element::Literal(Cons::Owned(value))
     }
 }
 
-impl<'element, C> From<&'element str> for Element<'element, C> {
-    fn from(value: &'element str) -> Self {
+impl<'el, C> From<&'el str> for Element<'el, C> {
+    fn from(value: &'el str) -> Self {
         Element::Literal(Cons::Borrowed(value))
     }
 }
 
-impl<'element, C> From<Rc<String>> for Element<'element, C> {
+impl<'el, C> From<Rc<String>> for Element<'el, C> {
     fn from(value: Rc<String>) -> Self {
         Element::Literal(Cons::Rc(value))
     }
 }
 
-impl<'element, C> From<&'element Element<'element, C>> for Element<'element, C> {
-    fn from(value: &'element Element<'element, C>) -> Self {
+impl<'el, C> From<&'el Element<'el, C>> for Element<'el, C> {
+    fn from(value: &'el Element<'el, C>) -> Self {
         Element::Borrowed(value)
     }
 }
 
-impl<'element, C> From<Rc<Element<'element, C>>> for Element<'element, C> {
-    fn from(value: Rc<Element<'element, C>>) -> Self {
+impl<'el, C> From<Rc<Element<'el, C>>> for Element<'el, C> {
+    fn from(value: Rc<Element<'el, C>>) -> Self {
         Element::Rc(value)
     }
 }
 
-impl<'element, C> From<Tokens<'element, C>> for Element<'element, C> {
-    fn from(value: Tokens<'element, C>) -> Self {
+impl<'el, C> From<Tokens<'el, C>> for Element<'el, C> {
+    fn from(value: Tokens<'el, C>) -> Self {
         Element::Append(Con::Owned(value))
     }
 }
 
-impl<'element, C> From<&'element Tokens<'element, C>> for Element<'element, C> {
-    fn from(value: &'element Tokens<'element, C>) -> Self {
+impl<'el, C> From<&'el Tokens<'el, C>> for Element<'el, C> {
+    fn from(value: &'el Tokens<'el, C>) -> Self {
         Element::Append(Con::Borrowed(value))
     }
 }
 
-impl<'element, C> From<Rc<Tokens<'element, C>>> for Element<'element, C> {
-    fn from(value: Rc<Tokens<'element, C>>) -> Self {
+impl<'el, C> From<Rc<Tokens<'el, C>>> for Element<'el, C> {
+    fn from(value: Rc<Tokens<'el, C>>) -> Self {
         Element::Append(Con::Rc(value))
     }
 }
