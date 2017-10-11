@@ -10,15 +10,78 @@ use std::collections::{HashMap, BTreeSet};
 static JAVA_LANG: &'static str = "java.lang";
 static SEP: &'static str = ".";
 
+/// Short primitive type.
+pub const SHORT: Java<'static> = Java::Primitive {
+    primitive: "short",
+    boxed: "Short",
+};
+
+/// Integer primitive type.
+pub const INTEGER: Java<'static> = Java::Primitive {
+    primitive: "int",
+    boxed: "Integer",
+};
+
+/// Long primitive type.
+pub const LONG: Java<'static> = Java::Primitive {
+    primitive: "long",
+    boxed: "Long",
+};
+
+/// Float primitive type.
+pub const FLOAT: Java<'static> = Java::Primitive {
+    primitive: "float",
+    boxed: "Float",
+};
+
+/// Double primitive type.
+pub const DOUBLE: Java<'static> = Java::Primitive {
+    primitive: "double",
+    boxed: "Double",
+};
+
+/// Char primitive type.
+pub const CHAR: Java<'static> = Java::Primitive {
+    primitive: "char",
+    boxed: "Character",
+};
+
+/// Boolean primitive type.
+pub const BOOLEAN: Java<'static> = Java::Primitive {
+    primitive: "boolean",
+    boxed: "Boolean",
+};
+
+/// Byte primitive type.
+pub const BYTE: Java<'static> = Java::Primitive {
+    primitive: "byte",
+    boxed: "Byte",
+};
+
+/// Void (not-really) primitive type.
+pub const VOID: Java<'static> = Java::Primitive {
+    primitive: "void",
+    boxed: "Void",
+};
+
 /// Java token specialization.
 #[derive(Debug, Clone)]
 pub enum Java<'el> {
-    /// An imported name.
-    Imported {
-        /// Package of the imported name.
+    /// Primitive type.
+    Primitive {
+        /// The boxed variant of the primitive type.
+        boxed: &'static str,
+        /// The primitive-primitive type.
+        primitive: &'static str,
+    },
+    /// A class, with or without arguments, imported from somewhere.
+    Class {
+        /// Package of the class.
         package: Cow<'el, str>,
-        /// Name imported.
+        /// Name of class.
         name: Cow<'el, str>,
+        /// Arguments of the class.
+        arguments: Vec<Java<'el>>,
     },
 }
 
@@ -30,21 +93,33 @@ pub struct JavaExtra {
 }
 
 impl<'el> Java<'el> {
+    fn type_imports<'a>(java: &'a Java<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
+        use self::Java::*;
+
+        match *java {
+            Class {
+                ref package,
+                ref name,
+                ref arguments,
+            } => {
+                for argument in arguments {
+                    Self::type_imports(argument, modules);
+                }
+
+                modules.insert((package.as_ref(), name.as_ref()));
+            }
+            _ => {}
+        };
+    }
+
     fn imports<'a>(
         tokens: &'a Tokens<'a, Self>,
         extra: &mut JavaExtra,
     ) -> Option<Tokens<'a, Self>> {
-        use self::Java::*;
-
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            match *custom {
-                Imported {
-                    ref package,
-                    ref name,
-                } => modules.insert((package.as_ref(), name.as_ref())),
-            };
+            Self::type_imports(custom, &mut modules);
         }
 
         if modules.is_empty() {
@@ -68,18 +143,79 @@ impl<'el> Java<'el> {
 
         Some(out)
     }
+
+    /// Add arguments to the given variable.
+    ///
+    /// Only applies to classes, any other will return the same value.
+    pub fn with_arguments(&self, arguments: Vec<Java<'el>>) -> Java<'el> {
+        use self::Java::*;
+
+        match *self {
+            Class {
+                ref package,
+                ref name,
+                ..
+            } => {
+                Class {
+                    package: package.clone(),
+                    name: name.clone(),
+                    arguments: arguments,
+                }
+            }
+            ref java => java.clone(),
+        }
+    }
+
+    /// Compare if two types are equal.
+    pub fn equals(&self, other: &Java) -> bool {
+        use self::Java::*;
+
+        match (self, other) {
+            (&Primitive { primitive: ref l_primitive, .. },
+             &Primitive { primitive: ref r_primitive, .. }) => l_primitive == r_primitive,
+            (&Class {
+                 package: ref l_package,
+                 name: ref l_name,
+                 arguments: ref l_arguments,
+             },
+             &Class {
+                 package: ref r_package,
+                 name: ref r_name,
+                 arguments: ref r_arguments,
+             }) => {
+                l_package == r_package && l_name == r_name &&
+                    l_arguments.len() == r_arguments.len() &&
+                    l_arguments.iter().zip(r_arguments.iter()).all(|(l, r)| {
+                        l.equals(r)
+                    })
+            }
+            _ => false,
+        }
+    }
 }
 
 impl<'el> Custom for Java<'el> {
     type Extra = JavaExtra;
 
-    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, _level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
         use self::Java::*;
 
         match *self {
-            Imported {
+            Primitive {
+                ref boxed,
+                ref primitive,
+                ..
+            } => {
+                if level > 1 {
+                    out.write_str(boxed.as_ref())?;
+                } else {
+                    out.write_str(primitive.as_ref())?;
+                }
+            }
+            Class {
                 ref package,
                 ref name,
+                ref arguments,
                 ..
             } => {
                 if package != JAVA_LANG &&
@@ -91,6 +227,16 @@ impl<'el> Custom for Java<'el> {
                 }
 
                 out.write_str(name.as_ref())?;
+
+                if !arguments.is_empty() {
+                    out.write_str("<")?;
+
+                    for argument in arguments {
+                        argument.format(out, extra, level + 1usize)?;
+                    }
+
+                    out.write_str(">")?;
+                }
             }
         }
 
@@ -138,17 +284,19 @@ impl<'el> Custom for Java<'el> {
 
 /// Setup an imported element.
 pub fn imported<'a>(package: Cow<'a, str>, name: Cow<'a, str>) -> Java<'a> {
-    Java::Imported {
+    Java::Class {
         package: package,
         name: name,
+        arguments: vec![],
     }
 }
 
 /// Setup an imported element from borrowed components.
 pub fn imported_ref<'a>(package: &'a str, name: &'a str) -> Java<'a> {
-    Java::Imported {
+    Java::Class {
         package: Cow::Borrowed(package),
         name: Cow::Borrowed(name),
+        arguments: vec![],
     }
 }
 
@@ -172,12 +320,13 @@ mod tests {
         let a = imported_ref("java.io", "A");
         let b = imported_ref("java.io", "B");
         let ob = imported_ref("java.util", "B");
+        let ob_a = ob.with_arguments(vec![a.clone()]);
 
-        let toks = toks!(integer, a, b, ob).join_spacing();
+        let toks = toks!(integer, a, b, ob, ob_a).join_spacing();
 
         assert_eq!(
             Ok(
-                "import java.io.A;\nimport java.io.B;\n\nInteger A B java.util.B\n",
+                "import java.io.A;\nimport java.io.B;\n\nInteger A B java.util.B java.util.B<A>\n",
             ),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
