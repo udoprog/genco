@@ -23,11 +23,11 @@ where
 {
     write: &'write mut W,
     /// if last line was empty.
-    last_line_empty: bool,
+    current_line_empty: bool,
     /// Current indentation level.
     indent: usize,
     /// Holds the current indentation level as a string.
-    indent_buffer: String,
+    buffer: String,
 }
 
 impl<'write, W> WriteFormatter<'write, W>
@@ -38,20 +38,18 @@ where
     pub fn new(write: &mut W) -> WriteFormatter<W> {
         WriteFormatter {
             write: write,
-            last_line_empty: true,
+            current_line_empty: true,
             indent: 0usize,
-            indent_buffer: String::from("  "),
+            buffer: String::from("  "),
         }
     }
 
     fn check_indent(&mut self) -> fmt::Result {
-        if self.last_line_empty {
-            self.write.write_str(
-                &self.indent_buffer[0..self.indent * 2],
-            )?;
+        if self.current_line_empty && self.indent > 0 {
+            self.write.write_str(&self.buffer[0..self.indent * 2])?;
+            self.current_line_empty = false;
         }
 
-        self.last_line_empty = false;
         Ok(())
     }
 }
@@ -62,17 +60,23 @@ where
 {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.check_indent()?;
-        self.write.write_str(s)
+        self.write.write_str(s)?;
+        self.current_line_empty = false;
+        Ok(())
     }
 
     fn write_char(&mut self, c: char) -> fmt::Result {
         self.check_indent()?;
-        self.write.write_char(c)
+        self.write.write_char(c)?;
+        self.current_line_empty = false;
+        Ok(())
     }
 
     fn write_fmt(&mut self, args: fmt::Arguments) -> fmt::Result {
         self.check_indent()?;
-        self.write.write_fmt(args)
+        self.write.write_fmt(args)?;
+        self.current_line_empty = false;
+        Ok(())
     }
 }
 
@@ -82,14 +86,13 @@ where
 {
     fn new_line(&mut self) -> fmt::Result {
         self.write.write_char('\n')?;
-        self.last_line_empty = true;
+        self.current_line_empty = true;
         Ok(())
     }
 
     fn new_line_unless_empty(&mut self) -> fmt::Result {
-        if !self.last_line_empty {
-            self.write.write_char('\n')?;
-            self.last_line_empty = true;
+        if !self.current_line_empty {
+            self.new_line()?;
         }
 
         Ok(())
@@ -99,10 +102,10 @@ where
         self.indent += 1;
 
         // check that buffer contains the current indentation.
-        if self.indent_buffer.len() < self.indent * 2 {
+        if self.buffer.len() < self.indent * 2 {
             // double the buffer
-            for c in iter::repeat(' ').take(self.indent_buffer.len()) {
-                self.indent_buffer.push(c);
+            for c in iter::repeat(' ').take(self.buffer.len()) {
+                self.buffer.push(c);
             }
         }
     }
