@@ -23,7 +23,7 @@ pub use self::rust::Rust;
 pub use self::js::JavaScript;
 pub use self::python::Python;
 pub use self::tokens::Tokens;
-pub use self::formatter::{Formatter, WriteFormatter};
+pub use self::formatter::{Formatter, IoFmt};
 pub use self::write_tokens::WriteTokens;
 pub use self::quoted::Quoted;
 

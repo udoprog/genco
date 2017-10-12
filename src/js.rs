@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 use super::custom::Custom;
 use super::formatter::Formatter;
-use std::fmt;
+use std::fmt::{self, Write};
 use std::borrow::Cow;
 use super::tokens::Tokens;
 use super::quoted::Quoted;

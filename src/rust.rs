@@ -2,7 +2,7 @@
 
 use super::custom::Custom;
 use super::formatter::Formatter;
-use std::fmt;
+use std::fmt::{self, Write};
 use super::tokens::Tokens;
 use std::collections::BTreeSet;
 use std::borrow::Cow;

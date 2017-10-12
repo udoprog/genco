@@ -1,9 +1,27 @@
 //! Specialization for Java code generation.
 
+mod constructor;
+mod field;
+mod modifier;
+mod argument;
+mod method;
+mod class;
+mod enum_;
+mod interface;
+
+pub use self::constructor::Constructor;
+pub use self::field::Field;
+pub use self::argument::Argument;
+pub use self::modifier::Modifier;
+pub use self::method::Method;
+pub use self::class::Class;
+pub use self::enum_::Enum;
+pub use self::interface::Interface;
+
+use super::cons::Cons;
 use super::custom::Custom;
 use super::formatter::Formatter;
-use std::fmt;
-use std::borrow::Cow;
+use std::fmt::{self, Write};
 use super::tokens::Tokens;
 use std::collections::{HashMap, BTreeSet};
 
@@ -65,7 +83,7 @@ pub const VOID: Java<'static> = Java::Primitive {
 };
 
 /// Java token specialization.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Java<'el> {
     /// Primitive type.
     Primitive {
@@ -77,19 +95,37 @@ pub enum Java<'el> {
     /// A class, with or without arguments, imported from somewhere.
     Class {
         /// Package of the class.
-        package: Cow<'el, str>,
+        package: Cons<'el>,
         /// Name of class.
-        name: Cow<'el, str>,
+        name: Cons<'el>,
         /// Arguments of the class.
         arguments: Vec<Java<'el>>,
+    },
+    /// A local name with no specific qualification.
+    Local {
+        /// Name of class.
+        name: Cons<'el>,
     },
 }
 
 /// Extra data for Java formatting.
 #[derive(Debug, Default)]
-pub struct JavaExtra {
+pub struct Extra<'el> {
+    /// Package to use.
+    pub package: Option<Cons<'el>>,
+
     /// Types which has been imported into the local namespace.
     imported: HashMap<String, String>,
+}
+
+impl<'el> Extra<'el> {
+    /// Set the package name to build.
+    pub fn package<P>(&mut self, package: P)
+    where
+        P: Into<Cons<'el>>,
+    {
+        self.package = Some(package.into())
+    }
 }
 
 impl<'el> Java<'el> {
@@ -112,10 +148,7 @@ impl<'el> Java<'el> {
         };
     }
 
-    fn imports<'a>(
-        tokens: &'a Tokens<'a, Self>,
-        extra: &mut JavaExtra,
-    ) -> Option<Tokens<'a, Self>> {
+    fn imports<'a>(tokens: &'a Tokens<'a, Self>, extra: &mut Extra) -> Option<Tokens<'a, Self>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -166,8 +199,24 @@ impl<'el> Java<'el> {
         }
     }
 
+    /// Get a guaranteed boxed version of a type.
+    pub fn as_boxed(&self) -> Java<'el> {
+        use self::Java::*;
+
+        match *self {
+            Primitive { ref boxed, .. } => {
+                Class {
+                    package: Cons::Borrowed(JAVA_LANG),
+                    name: Cons::Borrowed(boxed),
+                    arguments: vec![],
+                }
+            }
+            ref other => other.clone(),
+        }
+    }
+
     /// Compare if two types are equal.
-    pub fn equals(&self, other: &Java) -> bool {
+    pub fn equals(&self, other: &Java<'el>) -> bool {
         use self::Java::*;
 
         match (self, other) {
@@ -192,10 +241,21 @@ impl<'el> Java<'el> {
             _ => false,
         }
     }
+
+    /// Get the name of the type.
+    pub fn name(&self) -> Cons<'el> {
+        use self::Java::*;
+
+        match *self {
+            Primitive { ref primitive, .. } => Cons::Borrowed(primitive),
+            Class { ref name, .. } => name.clone(),
+            Local { ref name, .. } => name.clone(),
+        }
+    }
 }
 
 impl<'el> Custom for Java<'el> {
-    type Extra = JavaExtra;
+    type Extra = Extra<'el>;
 
     fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
         use self::Java::*;
@@ -218,9 +278,10 @@ impl<'el> Custom for Java<'el> {
                 ref arguments,
                 ..
             } => {
-                if package != JAVA_LANG &&
+                if package.as_ref() != JAVA_LANG &&
                     extra.imported.get(name.as_ref()).map(String::as_str) !=
-                        Some(package.as_ref())
+                        Some(package.as_ref()) &&
+                    Some(package) != extra.package.as_ref()
                 {
                     out.write_str(package.as_ref())?;
                     out.write_str(SEP)?;
@@ -237,6 +298,9 @@ impl<'el> Custom for Java<'el> {
 
                     out.write_str(">")?;
                 }
+            }
+            Local { ref name } => {
+                out.write_str(name.as_ref())?;
             }
         }
 
@@ -273,6 +337,10 @@ impl<'el> Custom for Java<'el> {
     ) -> fmt::Result {
         let mut toks: Tokens<Self> = Tokens::new();
 
+        if let Some(ref package) = extra.package {
+            toks.push(toks!["package ", package.clone()]);
+        }
+
         if let Some(imports) = Self::imports(&tokens, extra) {
             toks.push(imports);
         }
@@ -283,29 +351,25 @@ impl<'el> Custom for Java<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a>(package: Cow<'a, str>, name: Cow<'a, str>) -> Java<'a> {
+pub fn imported<'a, P: Into<Cons<'a>>, N: Into<Cons<'a>>>(package: P, name: N) -> Java<'a> {
     Java::Class {
-        package: package,
-        name: name,
+        package: package.into(),
+        name: name.into(),
         arguments: vec![],
     }
 }
 
-/// Setup an imported element from borrowed components.
-pub fn imported_ref<'a>(package: &'a str, name: &'a str) -> Java<'a> {
-    Java::Class {
-        package: Cow::Borrowed(package),
-        name: Cow::Borrowed(name),
-        arguments: vec![],
-    }
+/// Setup a local element from borrowed components.
+pub fn local<'el, N: Into<Cons<'el>>>(name: N) -> Java<'el> {
+    Java::Local { name: name.into() }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use tokens::Tokens;
     use java::Java;
     use quoted::Quoted;
-    use super::imported_ref;
 
     #[test]
     fn test_string() {
@@ -316,10 +380,10 @@ mod tests {
 
     #[test]
     fn test_imported() {
-        let integer = imported_ref("java.lang", "Integer");
-        let a = imported_ref("java.io", "A");
-        let b = imported_ref("java.io", "B");
-        let ob = imported_ref("java.util", "B");
+        let integer = imported("java.lang", "Integer");
+        let a = imported("java.io", "A");
+        let b = imported("java.io", "B");
+        let ob = imported("java.util", "B");
         let ob_a = ob.with_arguments(vec![a.clone()]);
 
         let toks = toks!(integer, a, b, ob, ob_a).join_spacing();

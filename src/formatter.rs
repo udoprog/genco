@@ -1,27 +1,22 @@
 use std::fmt;
 use std::iter;
+use std::io;
 
-/// Helper trait to format tokens.
-pub trait Formatter: fmt::Write {
-    /// Forcibly create a new line.
-    fn new_line(&mut self) -> fmt::Result;
+/// Facade for writing formatted strings to io::Write types.
+pub struct IoFmt<'write, W: 'write>(pub &'write mut W);
 
-    /// Create a new line unless the current line is empty.
-    fn new_line_unless_empty(&mut self) -> fmt::Result;
-
-    /// Indent the formatter.
-    fn indent(&mut self);
-
-    /// Unindent the formatter.
-    fn unindent(&mut self);
+impl<'write, W> fmt::Write for IoFmt<'write, W>
+where
+    W: io::Write,
+{
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        self.0.write_all(s.as_bytes()).map_err(|_| fmt::Error)
+    }
 }
 
 /// Formatter implementation for write types.
-pub struct WriteFormatter<'write, W>
-where
-    W: fmt::Write + 'write,
-{
-    write: &'write mut W,
+pub struct Formatter<'write> {
+    write: &'write mut fmt::Write,
     /// if last line was empty.
     current_line_empty: bool,
     /// Current indentation level.
@@ -30,13 +25,10 @@ where
     buffer: String,
 }
 
-impl<'write, W> WriteFormatter<'write, W>
-where
-    W: fmt::Write,
-{
+impl<'write> Formatter<'write> {
     /// Create a new write formatter.
-    pub fn new(write: &mut W) -> WriteFormatter<W> {
-        WriteFormatter {
+    pub fn new(write: &mut fmt::Write) -> Formatter {
+        Formatter {
             write: write,
             current_line_empty: true,
             indent: 0usize,
@@ -52,45 +44,27 @@ where
 
         Ok(())
     }
-}
 
-impl<'write, W> fmt::Write for WriteFormatter<'write, W>
-where
-    W: fmt::Write,
-{
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.check_indent()?;
-        self.write.write_str(s)?;
-        self.current_line_empty = false;
+    /// Write the given string.
+    pub fn write_str(&mut self, s: &str) -> fmt::Result {
+        if s.len() > 0 {
+            self.check_indent()?;
+            self.write.write_str(s)?;
+            self.current_line_empty = false;
+        }
+
         Ok(())
     }
 
-    fn write_char(&mut self, c: char) -> fmt::Result {
-        self.check_indent()?;
-        self.write.write_char(c)?;
-        self.current_line_empty = false;
-        Ok(())
-    }
-
-    fn write_fmt(&mut self, args: fmt::Arguments) -> fmt::Result {
-        self.check_indent()?;
-        self.write.write_fmt(args)?;
-        self.current_line_empty = false;
-        Ok(())
-    }
-}
-
-impl<'write, W> Formatter for WriteFormatter<'write, W>
-where
-    W: fmt::Write,
-{
-    fn new_line(&mut self) -> fmt::Result {
+    /// Push a new line.
+    pub fn new_line(&mut self) -> fmt::Result {
         self.write.write_char('\n')?;
         self.current_line_empty = true;
         Ok(())
     }
 
-    fn new_line_unless_empty(&mut self) -> fmt::Result {
+    /// Push a new line, unless the current line is empty.
+    pub fn new_line_unless_empty(&mut self) -> fmt::Result {
         if !self.current_line_empty {
             self.new_line()?;
         }
@@ -98,7 +72,8 @@ where
         Ok(())
     }
 
-    fn indent(&mut self) {
+    /// Increase indentation level.
+    pub fn indent(&mut self) {
         self.indent += 1;
 
         // check that buffer contains the current indentation.
@@ -110,7 +85,20 @@ where
         }
     }
 
-    fn unindent(&mut self) {
+    /// Decrease indentation level.
+    pub fn unindent(&mut self) {
         self.indent = self.indent.saturating_sub(1);
+    }
+}
+
+impl<'write> fmt::Write for Formatter<'write> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if s.len() > 0 {
+            self.check_indent()?;
+            self.write.write_str(s)?;
+            self.current_line_empty = false;
+        }
+
+        Ok(())
     }
 }

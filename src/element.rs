@@ -18,6 +18,8 @@ pub enum Element<'el, C: 'el> {
     Borrowed(&'el Element<'el, C>),
     /// Append the given set of tokens.
     Append(Con<'el, Tokens<'el, C>>),
+    /// Push an empty line.
+    PushLine,
     /// Push the owned set of tokens, adding a newline if current line is not empty.
     Push(Con<'el, Tokens<'el, C>>),
     /// Nested on indentation level.
@@ -48,6 +50,9 @@ impl<'el, C: Custom> Element<'el, C> {
             }
             Append(ref tokens) => {
                 tokens.as_ref().format(out, extra, level)?;
+            }
+            PushLine => {
+                out.new_line_unless_empty()?;
             }
             Push(ref tokens) => {
                 out.new_line_unless_empty()?;
@@ -96,19 +101,25 @@ impl<'el, C: Custom> From<&'el C> for Element<'el, C> {
 
 impl<'el, C> From<String> for Element<'el, C> {
     fn from(value: String) -> Self {
-        Element::Literal(Cons::Owned(value))
+        Element::Literal(value.into())
     }
 }
 
 impl<'el, C> From<&'el str> for Element<'el, C> {
     fn from(value: &'el str) -> Self {
-        Element::Literal(Cons::Borrowed(value))
+        Element::Literal(value.into())
     }
 }
 
 impl<'el, C> From<Rc<String>> for Element<'el, C> {
     fn from(value: Rc<String>) -> Self {
-        Element::Literal(Cons::Rc(value))
+        Element::Literal(value.into())
+    }
+}
+
+impl<'el, C> From<Cons<'el>> for Element<'el, C> {
+    fn from(value: Cons<'el>) -> Self {
+        Element::Literal(value)
     }
 }
 

@@ -27,3 +27,9 @@ impl<'el> Quoted<'el> for Rc<String> {
         Element::Quoted(Cons::Rc(self))
     }
 }
+
+impl<'el> Quoted<'el> for Cons<'el> {
+    fn quoted<C>(self) -> Element<'el, C> {
+        Element::Quoted(self)
+    }
+}

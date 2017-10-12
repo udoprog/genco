@@ -17,6 +17,7 @@ use std::fmt;
 use std::result;
 use super::con::Con::{self, Owned, Borrowed};
 use std::vec;
+use std::iter::FromIterator;
 
 /// A set of tokens.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -117,16 +118,24 @@ impl<'el, C: Custom> Tokens<'el, C> {
 
     /// Format token as file.
     pub fn to_file(self) -> result::Result<String, fmt::Error> {
+        self.to_file_with(C::Extra::default())
+    }
+
+    /// Format token as file with the given extra.
+    pub fn to_file_with(self, mut extra: C::Extra) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
-        let mut extra = C::Extra::default();
         output.write_file(self, &mut extra)?;
         Ok(output)
     }
 
     /// Format the tokens.
     pub fn to_string(self) -> result::Result<String, fmt::Error> {
+        self.to_string_with(C::Extra::default())
+    }
+
+    /// Format the tokens with the given extra.
+    pub fn to_string_with(self, mut extra: C::Extra) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
-        let mut extra = C::Extra::default();
         output.write_tokens(self, &mut extra)?;
         Ok(output)
     }
@@ -174,6 +183,13 @@ impl<'el, C: Clone> Tokens<'el, C> {
     }
 }
 
+/// Convert collection to tokens.
+impl<'el, C> From<Vec<Tokens<'el, C>>> for Tokens<'el, C> {
+    fn from(value: Vec<Tokens<'el, C>>) -> Self {
+        Tokens { elements: value.into_iter().map(|t| Con::Owned(t.into())).collect() }
+    }
+}
+
 /// Convert element to tokens.
 impl<'el, C> From<Element<'el, C>> for Tokens<'el, C> {
     fn from(value: Element<'el, C>) -> Self {
@@ -206,6 +222,18 @@ impl<'el, C> From<&'el str> for Tokens<'el, C> {
 impl<'el, C> From<String> for Tokens<'el, C> {
     fn from(value: String) -> Self {
         Tokens { elements: vec![Owned(value.into())] }
+    }
+}
+
+impl<'el, C> FromIterator<&'el Element<'el, C>> for Tokens<'el, C> {
+    fn from_iter<I: IntoIterator<Item = &'el Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
+        Tokens { elements: iter.into_iter().map(|e| Con::Borrowed(e)).collect() }
+    }
+}
+
+impl<'el, C> FromIterator<Element<'el, C>> for Tokens<'el, C> {
+    fn from_iter<I: IntoIterator<Item = Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
+        Tokens { elements: iter.into_iter().map(|e| Con::Owned(e)).collect() }
     }
 }
 

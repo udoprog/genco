@@ -20,3 +20,21 @@ impl<'a> AsRef<str> for Cons<'a> {
         }
     }
 }
+
+impl<'el> From<String> for Cons<'el> {
+    fn from(value: String) -> Self {
+        Cons::Owned(value)
+    }
+}
+
+impl<'el> From<&'el str> for Cons<'el> {
+    fn from(value: &'el str) -> Self {
+        Cons::Borrowed(value)
+    }
+}
+
+impl<'el> From<Rc<String>> for Cons<'el> {
+    fn from(value: Rc<String>) -> Self {
+        Cons::Rc(value)
+    }
+}
