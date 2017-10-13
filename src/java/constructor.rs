@@ -3,7 +3,7 @@
 use tokens::Tokens;
 use java::Java;
 use super::argument::Argument;
-use con::Con;
+use con::Con::Owned;
 use cons::Cons;
 use super::modifier::Modifier;
 use element::Element;
@@ -50,7 +50,7 @@ impl<'el> From<(Cons<'el>, Constructor<'el>)> for Tokens<'el, Java<'el>> {
         let args: Vec<Tokens<Java>> = c.arguments.into_iter().map(|a| a.into()).collect();
         let args: Tokens<Java> = args.into();
 
-        let mut sig = Tokens::new();
+        let mut sig: Tokens<Java> = Tokens::new();
 
         if !c.modifiers.is_empty() {
             sig.append(c.modifiers);
@@ -58,9 +58,12 @@ impl<'el> From<(Cons<'el>, Constructor<'el>)> for Tokens<'el, Java<'el>> {
         }
 
         if !args.is_empty() {
-            let sep = toks![",", PushLine];
+            let sep = toks![",", PushSpacing];
             let args = args.join(sep);
-            sig.append(toks![name, "(", Nested(Con::Owned(args.into())), ")"]);
+
+            sig.append(toks![
+                name, "(", Nested(Owned(args)), ")",
+            ]);
         } else {
             sig.append(toks![name, "()"]);
         }

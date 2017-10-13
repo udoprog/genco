@@ -67,6 +67,6 @@ mod tests {
         let el: Tokens<Java> = vec![Final, Static, Public, Static].into();
         let s = el.to_string();
         let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("final public static"), out);
+        assert_eq!(Ok("public static final"), out);
     }
 }

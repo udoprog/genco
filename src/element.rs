@@ -18,22 +18,22 @@ pub enum Element<'el, C: 'el> {
     Borrowed(&'el Element<'el, C>),
     /// Append the given set of tokens.
     Append(Con<'el, Tokens<'el, C>>),
-    /// Push the owned set of tokens, adding a newline if current line is not empty.
+    /// Append the given set of tokens in a PushSpacing way.
     Push(Con<'el, Tokens<'el, C>>),
-    /// Nested on indentation level.
+    /// Append the given set of tokens in a nested way.
     Nested(Con<'el, Tokens<'el, C>>),
-    /// Push an empty line.
-    PushLine,
-    /// Single-space spacing.
-    Spacing,
-    /// New line if needed.
-    LineSpacing,
     /// A borrowed string.
     Literal(Cons<'el>),
     /// A borrowed quoted string.
     Quoted(Cons<'el>),
     /// Language-specific items.
     Custom(Con<'el, C>),
+    /// Push an empty line.
+    PushSpacing,
+    /// Single-space spacing.
+    Spacing,
+    /// New line if needed.
+    LineSpacing,
 }
 
 impl<'el, C: Custom> Element<'el, C> {
@@ -51,28 +51,18 @@ impl<'el, C: Custom> Element<'el, C> {
             Append(ref tokens) => {
                 tokens.as_ref().format(out, extra, level)?;
             }
+            Nested(ref tokens) => {
+                out.indent();
+                out.new_line_unless_empty()?;
+
+                tokens.as_ref().format(out, extra, level)?;
+
+                out.unindent();
+                out.new_line_unless_empty()?;
+            }
             Push(ref tokens) => {
                 out.new_line_unless_empty()?;
                 tokens.as_ref().format(out, extra, level)?;
-            }
-            Nested(ref tokens) => {
-                out.new_line_unless_empty()?;
-
-                out.indent();
-                tokens.as_ref().format(out, extra, level)?;
-                out.unindent();
-
-                out.new_line_unless_empty()?;
-            }
-            PushLine => {
-                out.new_line_unless_empty()?;
-            }
-            LineSpacing => {
-                out.new_line_unless_empty()?;
-                out.new_line()?;
-            }
-            Spacing => {
-                out.write_str(" ")?;
             }
             Literal(ref literal) => {
                 out.write_str(literal.as_ref())?;
@@ -82,6 +72,17 @@ impl<'el, C: Custom> Element<'el, C> {
             }
             Custom(ref custom) => {
                 custom.as_ref().format(out, extra, level)?;
+            }
+            // whitespace below
+            PushSpacing => {
+                out.new_line_unless_empty()?;
+            }
+            LineSpacing => {
+                out.new_line_unless_empty()?;
+                out.new_line()?;
+            }
+            Spacing => {
+                out.write_str(" ")?;
             }
         }
 

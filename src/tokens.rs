@@ -9,20 +9,20 @@
 //! ```
 
 use super::formatter::Formatter;
-use super::element::Element;
+use super::element::Element::{self, Push, Nested};
 use super::write_tokens::WriteTokens;
 use std::collections::LinkedList;
 use super::custom::Custom;
 use std::fmt;
 use std::result;
-use super::con::Con::{self, Owned, Borrowed};
+use super::con::Con::{Owned, Borrowed};
 use std::vec;
 use std::iter::FromIterator;
 
 /// A set of tokens.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Tokens<'el, C: 'el> {
-    elements: Vec<Con<'el, Element<'el, C>>>,
+    elements: Vec<Element<'el, C>>,
 }
 
 /// Generic methods.
@@ -37,14 +37,12 @@ impl<'el, C: 'el> Tokens<'el, C> {
     where
         T: Into<Tokens<'el, C>>,
     {
-        self.elements.push(
-            Owned(Element::Nested(Owned(tokens.into()))),
-        );
+        self.elements.push(Nested(Owned(tokens.into())));
     }
 
     /// Push a nested reference to a definition.
     pub fn nested_ref(&mut self, tokens: &'el Tokens<'el, C>) {
-        self.elements.push(Owned(Element::Nested(Borrowed(tokens))));
+        self.elements.push(Nested(Borrowed(tokens)));
     }
 
     /// Push a definition, guaranteed to be preceded with one newline.
@@ -52,14 +50,12 @@ impl<'el, C: 'el> Tokens<'el, C> {
     where
         T: Into<Tokens<'el, C>>,
     {
-        self.elements.push(
-            Owned(Element::Push(Owned(tokens.into()))),
-        );
+        self.elements.push(Push(Owned(tokens.into())));
     }
 
     /// Push a reference to a definition.
     pub fn push_ref(&mut self, tokens: &'el Tokens<'el, C>) {
-        self.elements.push(Owned(Element::Push(Borrowed(tokens))));
+        self.elements.push(Push(Borrowed(tokens.into())));
     }
 
     /// Append the given element.
@@ -67,18 +63,18 @@ impl<'el, C: 'el> Tokens<'el, C> {
     where
         E: Into<Element<'el, C>>,
     {
-        self.elements.push(Owned(element.into()));
+        self.elements.push(element.into());
     }
 
     /// Append a reference to a definition.
     pub fn append_ref(&mut self, element: &'el Element<'el, C>) {
-        self.elements.push(Borrowed(element));
+        self.elements.push(Element::Borrowed(element));
     }
 
     /// Extend with another set of tokens.
     pub fn extend<I>(&mut self, it: I)
     where
-        I: IntoIterator<Item = Con<'el, Element<'el, C>>>,
+        I: IntoIterator<Item = Element<'el, C>>,
     {
         self.elements.extend(it.into_iter());
     }
@@ -86,8 +82,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Walk over all elements.
     pub fn walk_custom(&self) -> WalkCustomIter<C> {
         let mut queue = LinkedList::new();
-        queue.extend(self.elements.iter().map(AsRef::as_ref));
-
+        queue.extend(self.elements.iter());
         WalkCustomIter { queue: queue }
     }
 
@@ -98,8 +93,8 @@ impl<'el, C: 'el> Tokens<'el, C> {
 }
 
 impl<'el, C> IntoIterator for Tokens<'el, C> {
-    type Item = Con<'el, Element<'el, C>>;
-    type IntoIter = vec::IntoIter<Con<'el, Element<'el, C>>>;
+    type Item = Element<'el, C>;
+    type IntoIter = vec::IntoIter<Element<'el, C>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
@@ -110,7 +105,7 @@ impl<'el, C: Custom> Tokens<'el, C> {
     /// Format the tokens.
     pub fn format(&self, out: &mut Formatter, extra: &mut C::Extra, level: usize) -> fmt::Result {
         for element in &self.elements {
-            element.as_ref().format(out, extra, level)?;
+            element.format(out, extra, level)?;
         }
 
         Ok(())
@@ -153,7 +148,7 @@ impl<'el, C: Clone> Tokens<'el, C> {
         let len = self.elements.len();
         let mut it = self.elements.into_iter();
 
-        let mut out: Vec<Con<'el, Element<'el, C>>> = Vec::with_capacity(match len {
+        let mut out: Vec<Element<'el, C>> = Vec::with_capacity(match len {
             v if v < 1 => v,
             v => v + v - 1,
         });
@@ -165,7 +160,7 @@ impl<'el, C: Clone> Tokens<'el, C> {
         }
 
         while let Some(next) = it.next() {
-            out.push(Owned(element.clone()));
+            out.push(element.clone());
             out.push(next);
         }
 
@@ -186,54 +181,54 @@ impl<'el, C: Clone> Tokens<'el, C> {
 /// Convert collection to tokens.
 impl<'el, C> From<Vec<Tokens<'el, C>>> for Tokens<'el, C> {
     fn from(value: Vec<Tokens<'el, C>>) -> Self {
-        Tokens { elements: value.into_iter().map(|t| Con::Owned(t.into())).collect() }
+        Tokens { elements: value.into_iter().map(Into::into).collect() }
     }
 }
 
 /// Convert element to tokens.
 impl<'el, C> From<Element<'el, C>> for Tokens<'el, C> {
     fn from(value: Element<'el, C>) -> Self {
-        Tokens { elements: vec![Owned(value)] }
+        Tokens { elements: vec![value] }
     }
 }
 
 /// Convert custom elements.
 impl<'el, C: Custom> From<C> for Tokens<'el, C> {
     fn from(value: C) -> Self {
-        Tokens { elements: vec![Owned(value.into())] }
+        Tokens { elements: vec![value.into()] }
     }
 }
 
 /// Convert custom elements.
 impl<'el, C: Custom> From<&'el C> for Tokens<'el, C> {
     fn from(value: &'el C) -> Self {
-        Tokens { elements: vec![Owned(value.into())] }
+        Tokens { elements: vec![value.into()] }
     }
 }
 
 /// Convert borrowed strings.
 impl<'el, C> From<&'el str> for Tokens<'el, C> {
     fn from(value: &'el str) -> Self {
-        Tokens { elements: vec![Owned(value.into())] }
+        Tokens { elements: vec![value.into()] }
     }
 }
 
 /// Convert strings.
 impl<'el, C> From<String> for Tokens<'el, C> {
     fn from(value: String) -> Self {
-        Tokens { elements: vec![Owned(value.into())] }
+        Tokens { elements: vec![value.into()] }
     }
 }
 
 impl<'el, C> FromIterator<&'el Element<'el, C>> for Tokens<'el, C> {
     fn from_iter<I: IntoIterator<Item = &'el Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
-        Tokens { elements: iter.into_iter().map(|e| Con::Borrowed(e)).collect() }
+        Tokens { elements: iter.into_iter().map(|e| Element::Borrowed(e)).collect() }
     }
 }
 
 impl<'el, C> FromIterator<Element<'el, C>> for Tokens<'el, C> {
     fn from_iter<I: IntoIterator<Item = Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
-        Tokens { elements: iter.into_iter().map(|e| Con::Owned(e)).collect() }
+        Tokens { elements: iter.into_iter().collect() }
     }
 }
 
@@ -256,12 +251,10 @@ impl<'el, C: 'el> Iterator for WalkCustomIter<'el, C> {
                 Borrowed(ref element) => {
                     self.queue.push_back(element);
                 }
-                Append(ref tokens) |
                 Push(ref tokens) |
-                Nested(ref tokens) => {
-                    self.queue.extend(
-                        tokens.as_ref().elements.iter().map(AsRef::as_ref),
-                    );
+                Nested(ref tokens) |
+                Append(ref tokens) => {
+                    self.queue.extend(tokens.as_ref().elements.iter());
                 }
                 Custom(ref custom) => return Some(custom.as_ref()),
                 _ => {}

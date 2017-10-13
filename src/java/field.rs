@@ -69,11 +69,13 @@ impl<'el> Field<'el> {
 
 impl<'el> From<Field<'el>> for Tokens<'el, Java<'el>> {
     fn from(f: Field<'el>) -> Self {
+        use self::Element::*;
+
         let mut tokens = Tokens::new();
 
         if !f.annotations.is_empty() {
             tokens.push(f.annotations);
-            tokens.append(Element::PushLine);
+            tokens.append(PushSpacing);
         }
 
         if !f.modifiers.is_empty() {

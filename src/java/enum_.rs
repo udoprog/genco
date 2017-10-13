@@ -70,6 +70,8 @@ impl<'el> Enum<'el> {
 
 impl<'el> From<Enum<'el>> for Tokens<'el, Java<'el>> {
     fn from(e: Enum<'el>) -> Tokens<'el, Java<'el>> {
+        use self::Element::*;
+
         let mut sig = Tokens::new();
 
         if !e.modifiers.is_empty() {
@@ -107,10 +109,10 @@ impl<'el> From<Enum<'el>> for Tokens<'el, Java<'el>> {
             let mut body = Tokens::new();
 
             if !e.variants.is_empty() {
-                let sep = toks![",", Element::PushLine];
+                let sep = toks![",", PushSpacing];
                 let mut variants = e.variants.join(sep);
                 variants.append(";");
-                body.push(variants);
+                body.append(variants);
             }
 
             if !e.fields.is_empty() {
@@ -166,7 +168,7 @@ mod tests {
         let out = s.as_ref().map(|s| s.as_str());
         assert_eq!(
             Ok(
-                "public enum Foo {\n  FOO(1),\n  BAR(2);\n  hello\n\n  world\n}",
+                "public enum Foo {\n  FOO(1),\n  BAR(2);\n\n  hello\n\n  world\n}",
             ),
             out
         );
