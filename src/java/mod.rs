@@ -14,9 +14,9 @@ pub use self::field::Field;
 pub use self::argument::Argument;
 pub use self::modifier::Modifier;
 pub use self::method::Method;
-pub use self::class::Class;
 pub use self::enum_::Enum;
 pub use self::interface::Interface;
+pub use self::class::Class;
 
 use super::cons::Cons;
 use super::custom::Custom;
@@ -82,8 +82,21 @@ pub const VOID: Java<'static> = Java::Primitive {
     boxed: "Void",
 };
 
+/// A class.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Type<'el> {
+    /// Package of the class.
+    package: Cons<'el>,
+    /// Name  of class.
+    name: Cons<'el>,
+    /// Path of class when nested.
+    path: Vec<Cons<'el>>,
+    /// Arguments of the class.
+    arguments: Vec<Java<'el>>,
+}
+
 /// An optional type.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Optional<'el> {
     /// The type that is optional.
     pub value: Box<Java<'el>>,
@@ -92,7 +105,7 @@ pub struct Optional<'el> {
 }
 
 /// Java token specialization.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Java<'el> {
     /// Primitive type.
     Primitive {
@@ -102,14 +115,7 @@ pub enum Java<'el> {
         primitive: &'static str,
     },
     /// A class, with or without arguments, imported from somewhere.
-    Class {
-        /// Package of the class.
-        package: Cons<'el>,
-        /// Name of class.
-        name: Cons<'el>,
-        /// Arguments of the class.
-        arguments: Vec<Java<'el>>,
-    },
+    Class(Type<'el>),
     /// A local name with no specific qualification.
     Local {
         /// Name of class.
@@ -140,20 +146,16 @@ impl<'el> Extra<'el> {
 }
 
 impl<'el> Java<'el> {
-    fn type_imports<'a>(java: &'a Java<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
+    fn type_imports<'a>(java: &'a Java<'a>, modules: &mut BTreeSet<&'a Type<'a>>) {
         use self::Java::*;
 
         match *java {
-            Class {
-                ref package,
-                ref name,
-                ref arguments,
-            } => {
-                for argument in arguments {
+            Class(ref class) => {
+                for argument in &class.arguments {
                     Self::type_imports(argument, modules);
                 }
 
-                modules.insert((package.as_ref(), name.as_ref()));
+                modules.insert(class);
             }
             _ => {}
         };
@@ -174,21 +176,31 @@ impl<'el> Java<'el> {
 
         let mut out = Tokens::new();
 
-        for (package, name) in modules {
-            if extra.imported.contains_key(name) {
+        for cls in modules {
+            if extra.imported.contains_key(cls.name.as_ref()) {
                 continue;
             }
 
-            if package == JAVA_LANG {
+            if cls.package.as_ref() == JAVA_LANG {
                 continue;
             }
 
-            if Some(package) == file_package {
+            if Some(cls.package.as_ref()) == file_package {
                 continue;
             }
 
-            out.push(toks!("import ", package, SEP, name, ";"));
-            extra.imported.insert(name.to_string(), package.to_string());
+            out.push(toks!(
+                "import ",
+                cls.package.clone(),
+                SEP,
+                cls.name.clone(),
+                ";"
+            ));
+
+            extra.imported.insert(
+                cls.name.to_string(),
+                cls.package.to_string(),
+            );
         }
 
         Some(out)
@@ -201,16 +213,13 @@ impl<'el> Java<'el> {
         use self::Java::*;
 
         match *self {
-            Class {
-                ref package,
-                ref name,
-                ..
-            } => {
-                Class {
-                    package: package.clone(),
-                    name: name.clone(),
+            Class(ref cls) => {
+                Class(Type {
+                    package: cls.package.clone(),
+                    name: cls.name.clone(),
+                    path: cls.path.clone(),
                     arguments: arguments,
-                }
+                })
             }
             ref java => java.clone(),
         }
@@ -222,11 +231,12 @@ impl<'el> Java<'el> {
 
         match *self {
             Primitive { ref boxed, .. } => {
-                Class {
+                Class(Type {
                     package: Cons::Borrowed(JAVA_LANG),
                     name: Cons::Borrowed(boxed),
+                    path: vec![],
                     arguments: vec![],
-                }
+                })
             }
             ref other => other.clone(),
         }
@@ -239,19 +249,10 @@ impl<'el> Java<'el> {
         match (self, other) {
             (&Primitive { primitive: ref l_primitive, .. },
              &Primitive { primitive: ref r_primitive, .. }) => l_primitive == r_primitive,
-            (&Class {
-                 package: ref l_package,
-                 name: ref l_name,
-                 arguments: ref l_arguments,
-             },
-             &Class {
-                 package: ref r_package,
-                 name: ref r_name,
-                 arguments: ref r_arguments,
-             }) => {
-                l_package == r_package && l_name == r_name &&
-                    l_arguments.len() == r_arguments.len() &&
-                    l_arguments.iter().zip(r_arguments.iter()).all(|(l, r)| {
+            (&Class(ref l), &Class(ref r)) => {
+                l.package == r.package && l.name == r.name &&
+                    l.arguments.len() == r.arguments.len() &&
+                    l.arguments.iter().zip(r.arguments.iter()).all(|(l, r)| {
                         l.equals(r)
                     })
             }
@@ -265,7 +266,7 @@ impl<'el> Java<'el> {
 
         match *self {
             Primitive { ref primitive, .. } => Cons::Borrowed(primitive),
-            Class { ref name, .. } => name.clone(),
+            Class(ref cls) => cls.name.clone(),
             Local { ref name, .. } => name.clone(),
             Optional(self::Optional { ref value, .. }) => value.name(),
         }
@@ -277,7 +278,7 @@ impl<'el> Java<'el> {
 
         match *self {
             Primitive { .. } => Some(Cons::Borrowed(JAVA_LANG)),
-            Class { ref package, .. } => Some(package.clone()),
+            Class(ref cls) => Some(cls.package.clone()),
             Local { .. } => None,
             Optional(self::Optional { ref value, .. }) => value.package(),
         }
@@ -288,7 +289,7 @@ impl<'el> Java<'el> {
         use self::Java::*;
 
         match *self {
-            Class { ref arguments, .. } => Some(arguments),
+            Class(ref cls) => Some(&cls.arguments),
             Optional(self::Optional { ref value, .. }) => value.arguments(),
             _ => None,
         }
@@ -347,29 +348,33 @@ impl<'el> Custom for Java<'el> {
                     out.write_str(primitive.as_ref())?;
                 }
             }
-            Class {
-                ref package,
-                ref name,
-                ref arguments,
-                ..
-            } => {
+            Class(ref cls) => {
                 {
                     let file_package = extra.package.as_ref().map(|p| p.as_ref());
-                    let imported = extra.imported.get(name.as_ref()).map(String::as_str);
-                    let pkg = Some(package.as_ref());
+                    let imported = extra.imported.get(cls.name.as_ref()).map(String::as_str);
+                    let pkg = Some(cls.package.as_ref());
 
-                    if package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
-                        out.write_str(package.as_ref())?;
+                    if cls.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
+                        out.write_str(cls.package.as_ref())?;
                         out.write_str(SEP)?;
                     }
                 }
 
-                out.write_str(name.as_ref())?;
+                {
+                    out.write_str(cls.name.as_ref())?;
 
-                if !arguments.is_empty() {
+                    let mut it = cls.path.iter();
+
+                    while let Some(n) = it.next() {
+                        out.write_str(".")?;
+                        out.write_str(n.as_ref())?;
+                    }
+                }
+
+                if !cls.arguments.is_empty() {
                     out.write_str("<")?;
 
-                    let mut it = arguments.iter().peekable();
+                    let mut it = cls.arguments.iter().peekable();
 
                     while let Some(argument) = it.next() {
                         argument.format(out, extra, level + 1usize)?;
@@ -438,11 +443,12 @@ impl<'el> Custom for Java<'el> {
 
 /// Setup an imported element.
 pub fn imported<'a, P: Into<Cons<'a>>, N: Into<Cons<'a>>>(package: P, name: N) -> Java<'a> {
-    Java::Class {
+    Java::Class(Type {
         package: package.into(),
         name: name.into(),
+        path: vec![],
         arguments: vec![],
-    }
+    })
 }
 
 /// Setup a local element from borrowed components.

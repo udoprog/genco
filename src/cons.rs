@@ -1,9 +1,10 @@
 //! Helper trait to take ownership of strings.
 
 use std::rc::Rc;
+use std::ops::Deref;
 
 /// A managed string that permits immutable borrowing.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Cons<'el> {
     /// A borrowed string.
     Borrowed(&'el str),
@@ -22,6 +23,14 @@ impl<'a> AsRef<str> for Cons<'a> {
             Owned(ref value) => value,
             Rc(ref value) => value.as_ref(),
         }
+    }
+}
+
+impl<'a> Deref for Cons<'a> {
+    type Target = str;
+
+    fn deref(&self) -> &str {
+        self.as_ref()
     }
 }
 
