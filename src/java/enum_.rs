@@ -110,7 +110,7 @@ impl<'el> From<Enum<'el>> for Tokens<'el, Java<'el>> {
                 let sep = toks![",", Element::PushLine];
                 let mut variants = e.variants.join(sep);
                 variants.append(";");
-                body.extend(variants);
+                body.push(variants);
             }
 
             if !e.fields.is_empty() {

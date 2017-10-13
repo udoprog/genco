@@ -59,7 +59,7 @@ impl<'el, C: Custom> Element<'el, C> {
                 out.new_line_unless_empty()?;
 
                 out.indent();
-                tokens.as_ref().format(out, extra, level + 1usize)?;
+                tokens.as_ref().format(out, extra, level)?;
                 out.unindent();
 
                 out.new_line_unless_empty()?;

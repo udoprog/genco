@@ -162,6 +162,8 @@ impl<'el> Java<'el> {
     fn imports<'a>(tokens: &'a Tokens<'a, Self>, extra: &mut Extra) -> Option<Tokens<'a, Self>> {
         let mut modules = BTreeSet::new();
 
+        let file_package = extra.package.as_ref().map(|p| p.as_ref());
+
         for custom in tokens.walk_custom() {
             Self::type_imports(custom, &mut modules);
         }
@@ -178,6 +180,10 @@ impl<'el> Java<'el> {
             }
 
             if package == JAVA_LANG {
+                continue;
+            }
+
+            if Some(package) == file_package {
                 continue;
             }
 
@@ -335,7 +341,7 @@ impl<'el> Custom for Java<'el> {
                 ref primitive,
                 ..
             } => {
-                if level > 1 {
+                if level > 0 {
                     out.write_str(boxed.as_ref())?;
                 } else {
                     out.write_str(primitive.as_ref())?;
@@ -347,13 +353,15 @@ impl<'el> Custom for Java<'el> {
                 ref arguments,
                 ..
             } => {
-                if package.as_ref() != JAVA_LANG &&
-                    extra.imported.get(name.as_ref()).map(String::as_str) !=
-                        Some(package.as_ref()) &&
-                    Some(package) != extra.package.as_ref()
                 {
-                    out.write_str(package.as_ref())?;
-                    out.write_str(SEP)?;
+                    let file_package = extra.package.as_ref().map(|p| p.as_ref());
+                    let imported = extra.imported.get(name.as_ref()).map(String::as_str);
+                    let pkg = Some(package.as_ref());
+
+                    if package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
+                        out.write_str(package.as_ref())?;
+                        out.write_str(SEP)?;
+                    }
                 }
 
                 out.write_str(name.as_ref())?;
@@ -361,8 +369,14 @@ impl<'el> Custom for Java<'el> {
                 if !arguments.is_empty() {
                     out.write_str("<")?;
 
-                    for argument in arguments {
+                    let mut it = arguments.iter().peekable();
+
+                    while let Some(argument) = it.next() {
                         argument.format(out, extra, level + 1usize)?;
+
+                        if it.peek().is_some() {
+                            out.write_str(", ")?;
+                        }
                     }
 
                     out.write_str(">")?;
