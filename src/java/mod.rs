@@ -82,6 +82,15 @@ pub const VOID: Java<'static> = Java::Primitive {
     boxed: "Void",
 };
 
+/// An optional type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Optional<'el> {
+    /// The type that is optional.
+    pub value: Box<Java<'el>>,
+    /// The complete optional field type, including wrapper.
+    pub field: Box<Java<'el>>,
+}
+
 /// Java token specialization.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Java<'el> {
@@ -106,6 +115,8 @@ pub enum Java<'el> {
         /// Name of class.
         name: Cons<'el>,
     },
+    /// Optional type.
+    Optional(Optional<'el>),
 }
 
 /// Extra data for Java formatting.
@@ -250,7 +261,65 @@ impl<'el> Java<'el> {
             Primitive { ref primitive, .. } => Cons::Borrowed(primitive),
             Class { ref name, .. } => name.clone(),
             Local { ref name, .. } => name.clone(),
+            Optional(self::Optional { ref value, .. }) => value.name(),
         }
+    }
+
+    /// Get the name of the type.
+    pub fn package(&self) -> Option<Cons<'el>> {
+        use self::Java::*;
+
+        match *self {
+            Primitive { .. } => Some(Cons::Borrowed(JAVA_LANG)),
+            Class { ref package, .. } => Some(package.clone()),
+            Local { .. } => None,
+            Optional(self::Optional { ref value, .. }) => value.package(),
+        }
+    }
+
+    /// Get the arguments
+    pub fn arguments(&self) -> Option<&[Java<'el>]> {
+        use self::Java::*;
+
+        match *self {
+            Class { ref arguments, .. } => Some(arguments),
+            Optional(self::Optional { ref value, .. }) => value.arguments(),
+            _ => None,
+        }
+    }
+
+    /// Check if type is optional.
+    pub fn is_optional(&self) -> bool {
+        use self::Java::*;
+
+        match *self {
+            Optional(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Get type as optional.
+    pub fn as_optional(&self) -> Option<&Optional<'el>> {
+        use self::Java::*;
+
+        match *self {
+            Optional(ref optional) => Some(optional),
+            _ => None,
+        }
+    }
+
+    /// Get the field type (includes optionality).
+    pub fn as_field(&self) -> Java<'el> {
+        self.as_optional()
+            .map(|opt| (*opt.field).clone())
+            .unwrap_or_else(|| self.clone())
+    }
+
+    /// Get the value type (strips optionality).
+    pub fn as_value(&self) -> Java<'el> {
+        self.as_optional()
+            .map(|opt| (*opt.value).clone())
+            .unwrap_or_else(|| self.clone())
     }
 }
 
@@ -302,6 +371,9 @@ impl<'el> Custom for Java<'el> {
             Local { ref name } => {
                 out.write_str(name.as_ref())?;
             }
+            Optional(self::Optional { ref field, .. }) => {
+                field.format(out, extra, level)?;
+            }
         }
 
         Ok(())
@@ -338,7 +410,7 @@ impl<'el> Custom for Java<'el> {
         let mut toks: Tokens<Self> = Tokens::new();
 
         if let Some(ref package) = extra.package {
-            toks.push(toks!["package ", package.clone()]);
+            toks.push(toks!["package ", package.clone(), ";"]);
         }
 
         if let Some(imports) = Self::imports(&tokens, extra) {
@@ -362,6 +434,14 @@ pub fn imported<'a, P: Into<Cons<'a>>, N: Into<Cons<'a>>>(package: P, name: N) -
 /// Setup a local element from borrowed components.
 pub fn local<'el, N: Into<Cons<'el>>>(name: N) -> Java<'el> {
     Java::Local { name: name.into() }
+}
+
+/// Setup an optional type.
+pub fn optional<'el, I: Into<Java<'el>>, F: Into<Java<'el>>>(value: I, field: F) -> Java<'el> {
+    Java::Optional(Optional {
+        value: Box::new(value.into()),
+        field: Box::new(field.into()),
+    })
 }
 
 #[cfg(test)]

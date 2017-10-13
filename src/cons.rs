@@ -2,10 +2,14 @@
 
 use std::rc::Rc;
 
+/// A managed string that permits immutable borrowing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Cons<'el> {
+    /// A borrowed string.
     Borrowed(&'el str),
+    /// An owned string (deprecate?)
     Owned(String),
+    /// A refcounted string.
     Rc(Rc<String>),
 }
 

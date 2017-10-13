@@ -18,12 +18,12 @@ pub enum Element<'el, C: 'el> {
     Borrowed(&'el Element<'el, C>),
     /// Append the given set of tokens.
     Append(Con<'el, Tokens<'el, C>>),
-    /// Push an empty line.
-    PushLine,
     /// Push the owned set of tokens, adding a newline if current line is not empty.
     Push(Con<'el, Tokens<'el, C>>),
     /// Nested on indentation level.
     Nested(Con<'el, Tokens<'el, C>>),
+    /// Push an empty line.
+    PushLine,
     /// Single-space spacing.
     Spacing,
     /// New line if needed.
@@ -51,9 +51,6 @@ impl<'el, C: Custom> Element<'el, C> {
             Append(ref tokens) => {
                 tokens.as_ref().format(out, extra, level)?;
             }
-            PushLine => {
-                out.new_line_unless_empty()?;
-            }
             Push(ref tokens) => {
                 out.new_line_unless_empty()?;
                 tokens.as_ref().format(out, extra, level)?;
@@ -64,6 +61,11 @@ impl<'el, C: Custom> Element<'el, C> {
                 out.indent();
                 tokens.as_ref().format(out, extra, level + 1usize)?;
                 out.unindent();
+
+                out.new_line_unless_empty()?;
+            }
+            PushLine => {
+                out.new_line_unless_empty()?;
             }
             LineSpacing => {
                 out.new_line_unless_empty()?;

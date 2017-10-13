@@ -29,9 +29,11 @@ impl<'el> Field<'el> {
         T: Into<Java<'el>>,
         N: Into<Cons<'el>>,
     {
+        use self::Modifier::*;
+
         Field {
             annotations: Tokens::new(),
-            modifiers: Vec::new(),
+            modifiers: vec![Private, Final],
             ty: ty.into(),
             name: name.into(),
             initializer: None,
@@ -71,6 +73,7 @@ impl<'el> From<Field<'el>> for Tokens<'el, Java<'el>> {
 
         if !f.annotations.is_empty() {
             tokens.push(f.annotations);
+            tokens.append(Element::PushLine);
         }
 
         if !f.modifiers.is_empty() {
@@ -81,6 +84,11 @@ impl<'el> From<Field<'el>> for Tokens<'el, Java<'el>> {
         tokens.append(f.ty);
         tokens.append(" ");
         tokens.append(f.name);
+
+        if let Some(initializer) = f.initializer {
+            tokens.append(" = ");
+            tokens.append(initializer);
+        }
 
         tokens
     }

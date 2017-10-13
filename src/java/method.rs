@@ -30,9 +30,11 @@ impl<'el> Method<'el> {
     where
         N: Into<Cons<'el>>,
     {
+        use self::Modifier::*;
+
         Method {
-            modifiers: vec![Modifier::Public],
-            arguments: Vec::new(),
+            modifiers: vec![Public],
+            arguments: vec![],
             body: Tokens::new(),
             returns: VOID,
             annotations: Tokens::new(),
@@ -73,7 +75,7 @@ impl<'el> From<Method<'el>> for Tokens<'el, Java<'el>> {
             s.push(toks![sig, ";"]);
         } else {
             s.push(toks![sig, " {"]);
-            s.nested(m.body.join_line_spacing());
+            s.nested(m.body);
             s.push("}");
         }
 

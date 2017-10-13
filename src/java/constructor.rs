@@ -3,8 +3,10 @@
 use tokens::Tokens;
 use java::Java;
 use super::argument::Argument;
+use con::Con;
 use cons::Cons;
 use super::modifier::Modifier;
+use element::Element;
 
 /// Model for Java Constructors.
 #[derive(Debug, Clone)]
@@ -41,6 +43,8 @@ impl<'el> Constructor<'el> {
 
 impl<'el> From<(Cons<'el>, Constructor<'el>)> for Tokens<'el, Java<'el>> {
     fn from(value: (Cons<'el>, Constructor<'el>)) -> Tokens<'el, Java<'el>> {
+        use self::Element::*;
+
         let (name, c) = value;
 
         let args: Vec<Tokens<Java>> = c.arguments.into_iter().map(|a| a.into()).collect();
@@ -53,7 +57,13 @@ impl<'el> From<(Cons<'el>, Constructor<'el>)> for Tokens<'el, Java<'el>> {
             sig.append(" ");
         }
 
-        sig.append(toks![name, "(", args.join_spacing(), ")"]);
+        if !args.is_empty() {
+            let sep = toks![",", PushLine];
+            let args = args.join(sep);
+            sig.append(toks![name, "(", Nested(Con::Owned(args.into())), ")"]);
+        } else {
+            sig.append(toks![name, "()"]);
+        }
 
         let mut s = Tokens::new();
 
@@ -62,7 +72,7 @@ impl<'el> From<(Cons<'el>, Constructor<'el>)> for Tokens<'el, Java<'el>> {
         }
 
         s.push(toks![sig, " {"]);
-        s.nested(c.body.join_line_spacing());
+        s.nested(c.body);
         s.push("}");
 
         s

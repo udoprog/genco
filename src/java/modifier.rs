@@ -49,8 +49,8 @@ impl<'el, C: Custom> From<Vec<Modifier>> for Tokens<'el, C> {
 
 impl<'el, C: Custom> From<Vec<Modifier>> for Element<'el, C> {
     fn from(value: Vec<Modifier>) -> Self {
-        let out: BTreeSet<&str> = value.iter().map(Modifier::name).collect();
-        let out: Vec<&str> = out.into_iter().collect();
+        let out: BTreeSet<Modifier> = value.into_iter().collect();
+        let out: Vec<&str> = out.iter().map(Modifier::name).collect();
         Element::Literal(out.join(" ").into())
     }
 }

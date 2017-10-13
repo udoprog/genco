@@ -33,6 +33,14 @@ impl<'el> Argument<'el> {
         }
     }
 
+    /// Push an annotation.
+    pub fn annotation<A>(&mut self, annotation: A)
+    where
+        A: Into<Tokens<'el, Java<'el>>>,
+    {
+        self.annotations.push(annotation.into());
+    }
+
     /// Get the variable of the argument.
     pub fn var(&self) -> Cons<'el> {
         self.name.clone()

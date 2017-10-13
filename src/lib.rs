@@ -26,6 +26,7 @@ pub use self::tokens::Tokens;
 pub use self::formatter::{Formatter, IoFmt};
 pub use self::write_tokens::WriteTokens;
 pub use self::quoted::Quoted;
+pub use self::cons::Cons;
 
 #[cfg(test)]
 mod tests {
