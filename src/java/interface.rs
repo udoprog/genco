@@ -6,6 +6,7 @@ use cons::Cons;
 use super::modifier::Modifier;
 use super::method::Method;
 use into_tokens::IntoTokens;
+use element::Element;
 
 /// Model for Java Interfaces.
 #[derive(Debug, Clone)]
@@ -17,7 +18,7 @@ pub struct Interface<'el> {
     /// Extra body (added to end of interface).
     pub body: Tokens<'el, Java<'el>>,
     /// What this interface extends.
-    pub extends: Option<Tokens<'el, Java<'el>>>,
+    pub extends: Vec<Tokens<'el, Java<'el>>>,
     /// Annotations for the constructor.
     annotations: Tokens<'el, Java<'el>>,
     /// Name of interface.
@@ -34,7 +35,7 @@ impl<'el> Interface<'el> {
             modifiers: vec![Modifier::Public],
             methods: vec![],
             body: Tokens::new(),
-            extends: None,
+            extends: vec![],
             annotations: Tokens::new(),
             name: name.into(),
         }
@@ -68,9 +69,15 @@ impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
         sig.append("interface ");
         sig.append(self.name);
 
-        if let Some(extends) = self.extends {
-            sig.append("extends ");
-            sig.append(extends);
+        if !self.extends.is_empty() {
+            sig.append(" extends ");
+            sig.append(
+                self.extends
+                    .into_iter()
+                    .map::<Element<_>, _>(Into::into)
+                    .collect::<Tokens<Java>>()
+                    .join(", "),
+            );
         }
 
         let mut s = Tokens::new();
@@ -103,14 +110,17 @@ mod tests {
     use super::Interface;
     use java::Java;
     use tokens::Tokens;
+    use java::local;
 
     #[test]
     fn test_vec() {
-        let i = Interface::new("Foo");
+        let mut i = Interface::new("Foo");
+        i.extends = vec![local("Super").into()];
+
         let t: Tokens<Java> = i.into();
 
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("public interface Foo {\n}"), out);
+        assert_eq!(Ok("public interface Foo extends Super {\n}"), out);
     }
 }

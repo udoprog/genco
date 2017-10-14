@@ -81,7 +81,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
         sig.append(self.name.clone());
 
         if let Some(extends) = self.extends {
-            sig.append("extends ");
+            sig.append(" extends ");
             sig.append(extends);
         }
 
@@ -91,7 +91,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
                 .map::<Element<_>, _>(Into::into)
                 .collect();
 
-            sig.append("implements ");
+            sig.append(" implements ");
             sig.append(implements.join(", "));
         }
 
@@ -141,16 +141,18 @@ impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
 #[cfg(test)]
 mod tests {
     use super::Class;
-    use java::Java;
+    use java::{Java, local};
     use tokens::Tokens;
 
     #[test]
     fn test_vec() {
-        let c = Class::new("Foo");
+        let mut c = Class::new("Foo");
+        c.implements = vec![local("Super").into()];
+
         let t: Tokens<Java> = c.into();
 
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("public class Foo {\n}"), out);
+        assert_eq!(Ok("public class Foo implements Super {\n}"), out);
     }
 }
