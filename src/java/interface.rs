@@ -5,6 +5,7 @@ use java::Java;
 use cons::Cons;
 use super::modifier::Modifier;
 use super::method::Method;
+use into_tokens::IntoTokens;
 
 /// Model for Java Interfaces.
 #[derive(Debug, Clone)]
@@ -42,9 +43,9 @@ impl<'el> Interface<'el> {
     /// Push an annotation.
     pub fn annotation<A>(&mut self, annotation: A)
     where
-        A: Into<Tokens<'el, Java<'el>>>,
+        A: IntoTokens<'el, Java<'el>>,
     {
-        self.annotations.push(annotation.into());
+        self.annotations.push(annotation.into_tokens());
     }
 
     /// Name of interface.
@@ -53,40 +54,42 @@ impl<'el> Interface<'el> {
     }
 }
 
-impl<'el> From<Interface<'el>> for Tokens<'el, Java<'el>> {
-    fn from(i: Interface<'el>) -> Tokens<'el, Java<'el>> {
+into_tokens_impl_from!(Interface<'el>, Java<'el>);
+
+impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
+    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
         let mut sig = Tokens::new();
 
-        if !i.modifiers.is_empty() {
-            sig.append(i.modifiers);
+        if !self.modifiers.is_empty() {
+            sig.append(self.modifiers);
             sig.append(" ");
         }
 
         sig.append("interface ");
-        sig.append(i.name);
+        sig.append(self.name);
 
-        if let Some(extends) = i.extends {
+        if let Some(extends) = self.extends {
             sig.append("extends ");
             sig.append(extends);
         }
 
         let mut s = Tokens::new();
 
-        if !i.annotations.is_empty() {
-            s.push(i.annotations);
+        if !self.annotations.is_empty() {
+            s.push(self.annotations);
         }
 
         s.push(toks![sig, " {"]);
         s.nested({
             let mut body = Tokens::new();
 
-            if !i.methods.is_empty() {
-                for method in i.methods {
+            if !self.methods.is_empty() {
+                for method in self.methods {
                     body.push(method);
                 }
             }
 
-            body.extend(i.body);
+            body.extend(self.body);
             body.join_line_spacing()
         });
         s.push("}");

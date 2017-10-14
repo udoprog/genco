@@ -6,6 +6,7 @@ use std::fmt::{self, Write};
 use std::borrow::Cow;
 use super::tokens::Tokens;
 use std::collections::BTreeSet;
+use super::into_tokens::IntoTokens;
 
 static SEP: &'static str = ".";
 
@@ -29,6 +30,9 @@ pub enum Python<'el> {
         alias: Cow<'el, str>,
     },
 }
+
+into_tokens_impl_from!(Python<'el>, Python<'el>);
+into_tokens_impl_from!(&'el Python<'el>, Python<'el>);
 
 impl<'el> Python<'el> {
     fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {

@@ -6,6 +6,7 @@ use cons::Cons;
 use con::Con;
 use super::modifier::Modifier;
 use element::Element;
+use into_tokens::IntoTokens;
 
 /// Model for Java Fields.
 #[derive(Debug, Clone)]
@@ -43,17 +44,17 @@ impl<'el> Field<'el> {
     /// Push an annotation.
     pub fn annotation<A>(&mut self, annotation: A)
     where
-        A: Into<Tokens<'el, Java<'el>>>,
+        A: IntoTokens<'el, Java<'el>>,
     {
-        self.annotations.push(annotation.into());
+        self.annotations.push(annotation.into_tokens());
     }
 
     /// Set initializer for field.
     pub fn initializer<I>(&mut self, initializer: I)
     where
-        I: Into<Tokens<'el, Java<'el>>>,
+        I: IntoTokens<'el, Java<'el>>,
     {
-        self.initializer = Some(initializer.into());
+        self.initializer = Some(initializer.into_tokens());
     }
 
     /// The variable of the field.
@@ -67,27 +68,29 @@ impl<'el> Field<'el> {
     }
 }
 
-impl<'el> From<Field<'el>> for Tokens<'el, Java<'el>> {
-    fn from(f: Field<'el>) -> Self {
+into_tokens_impl_from!(Field<'el>, Java<'el>);
+
+impl<'el> IntoTokens<'el, Java<'el>> for Field<'el> {
+    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
         use self::Element::*;
 
         let mut tokens = Tokens::new();
 
-        if !f.annotations.is_empty() {
-            tokens.push(f.annotations);
+        if !self.annotations.is_empty() {
+            tokens.push(self.annotations);
             tokens.append(PushSpacing);
         }
 
-        if !f.modifiers.is_empty() {
-            tokens.append(f.modifiers);
+        if !self.modifiers.is_empty() {
+            tokens.append(self.modifiers);
             tokens.append(" ");
         }
 
-        tokens.append(f.ty);
+        tokens.append(self.ty);
         tokens.append(" ");
-        tokens.append(f.name);
+        tokens.append(self.name);
 
-        if let Some(initializer) = f.initializer {
+        if let Some(initializer) = self.initializer {
             tokens.append(" = ");
             tokens.append(initializer);
         }
@@ -98,6 +101,6 @@ impl<'el> From<Field<'el>> for Tokens<'el, Java<'el>> {
 
 impl<'el> From<Field<'el>> for Element<'el, Java<'el>> {
     fn from(f: Field<'el>) -> Self {
-        Element::Append(Con::Owned(f.into()))
+        Element::Append(Con::Owned(f.into_tokens()))
     }
 }

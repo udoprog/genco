@@ -6,6 +6,7 @@ use super::argument::Argument;
 use super::modifier::Modifier;
 use super::VOID;
 use cons::Cons;
+use into_tokens::IntoTokens;
 
 /// Model for Java Methods.
 #[derive(Debug, Clone)]
@@ -45,37 +46,50 @@ impl<'el> Method<'el> {
     /// Push an annotation.
     pub fn annotation<A>(&mut self, annotation: A)
     where
-        A: Into<Tokens<'el, Java<'el>>>,
+        A: IntoTokens<'el, Java<'el>>,
     {
-        self.annotations.push(annotation.into());
+        self.annotations.push(annotation.into_tokens());
     }
 }
 
-impl<'el> From<Method<'el>> for Tokens<'el, Java<'el>> {
-    fn from(m: Method<'el>) -> Tokens<'el, Java<'el>> {
-        let args: Vec<Tokens<Java>> = m.arguments.into_iter().map(|a| a.into()).collect();
-        let args: Tokens<Java> = args.into();
+into_tokens_impl_from!(Method<'el>, Java<'el>);
+
+impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
+    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
+        let args: Vec<Tokens<Java>> = self.arguments
+            .into_iter()
+            .map(IntoTokens::into_tokens)
+            .collect();
+
+        let args: Tokens<Java> = args.into_tokens();
 
         let mut sig = Tokens::new();
 
-        if !m.modifiers.is_empty() {
-            sig.append(m.modifiers);
+        if !self.modifiers.is_empty() {
+            sig.append(self.modifiers);
             sig.append(" ");
         }
 
-        sig.append(toks![m.returns, " ", m.name, "(", args.join_spacing(), ")"]);
+        sig.append(toks![
+            self.returns,
+            " ",
+            self.name,
+            "(",
+            args.join_spacing(),
+            ")",
+        ]);
 
         let mut s = Tokens::new();
 
-        if !m.annotations.is_empty() {
-            s.push(m.annotations);
+        if !self.annotations.is_empty() {
+            s.push(self.annotations);
         }
 
-        if m.body.is_empty() {
+        if self.body.is_empty() {
             s.push(toks![sig, ";"]);
         } else {
             s.push(toks![sig, " {"]);
-            s.nested(m.body);
+            s.nested(self.body);
             s.push("}");
         }
 

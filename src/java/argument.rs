@@ -4,6 +4,7 @@ use tokens::Tokens;
 use java::Java;
 use super::modifier::Modifier;
 use cons::Cons;
+use into_tokens::IntoTokens;
 
 /// Model for Java Arguments to functions.
 #[derive(Debug, Clone)]
@@ -36,9 +37,9 @@ impl<'el> Argument<'el> {
     /// Push an annotation.
     pub fn annotation<A>(&mut self, annotation: A)
     where
-        A: Into<Tokens<'el, Java<'el>>>,
+        A: IntoTokens<'el, Java<'el>>,
     {
-        self.annotations.push(annotation.into());
+        self.annotations.push(annotation.into_tokens());
     }
 
     /// Get the variable of the argument.
@@ -47,16 +48,18 @@ impl<'el> Argument<'el> {
     }
 }
 
-impl<'el> From<Argument<'el>> for Tokens<'el, Java<'el>> {
-    fn from(value: Argument<'el>) -> Tokens<'el, Java<'el>> {
+into_tokens_impl_from!(Argument<'el>, Java<'el>);
+
+impl<'el> IntoTokens<'el, Java<'el>> for Argument<'el> {
+    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
         let mut s = Tokens::new();
 
-        let modifiers: Tokens<Java> = value.modifiers.into();
+        let modifiers: Tokens<Java> = self.modifiers.into();
 
-        s.extend(value.annotations.join_spacing());
+        s.extend(self.annotations.join_spacing());
         s.extend(modifiers);
-        s.append(value.ty);
-        s.append(value.name);
+        s.append(self.ty);
+        s.append(self.name);
 
         s.join_spacing()
     }

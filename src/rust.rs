@@ -6,6 +6,7 @@ use std::fmt::{self, Write};
 use super::tokens::Tokens;
 use std::collections::BTreeSet;
 use std::borrow::Cow;
+use super::into_tokens::IntoTokens;
 
 static SEP: &'static str = "::";
 
@@ -29,6 +30,9 @@ pub enum Rust<'el> {
         alias: Cow<'el, str>,
     },
 }
+
+into_tokens_impl_from!(Rust<'el>, Rust<'el>);
+into_tokens_impl_from!(&'el Rust<'el>, Rust<'el>);
 
 impl<'el> Rust<'el> {
     fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {

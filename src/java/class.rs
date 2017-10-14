@@ -8,6 +8,7 @@ use super::method::Method;
 use super::constructor::Constructor;
 use super::field::Field;
 use element::Element;
+use into_tokens::IntoTokens;
 
 /// Model for Java Classs.
 #[derive(Debug, Clone)]
@@ -54,9 +55,9 @@ impl<'el> Class<'el> {
     /// Push an annotation.
     pub fn annotation<A>(&mut self, annotation: A)
     where
-        A: Into<Tokens<'el, Java<'el>>>,
+        A: IntoTokens<'el, Java<'el>>,
     {
-        self.annotations.push(annotation.into());
+        self.annotations.push(annotation.into_tokens());
     }
 
     /// Name of class.
@@ -65,25 +66,27 @@ impl<'el> Class<'el> {
     }
 }
 
-impl<'el> From<Class<'el>> for Tokens<'el, Java<'el>> {
-    fn from(c: Class<'el>) -> Tokens<'el, Java<'el>> {
+into_tokens_impl_from!(Class<'el>, Java<'el>);
+
+impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
+    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
         let mut sig = Tokens::new();
 
-        if !c.modifiers.is_empty() {
-            sig.append(c.modifiers);
+        if !self.modifiers.is_empty() {
+            sig.append(self.modifiers);
             sig.append(" ");
         }
 
         sig.append("class ");
-        sig.append(c.name.clone());
+        sig.append(self.name.clone());
 
-        if let Some(extends) = c.extends {
+        if let Some(extends) = self.extends {
             sig.append("extends ");
             sig.append(extends);
         }
 
-        if !c.implements.is_empty() {
-            let implements: Tokens<_> = c.implements
+        if !self.implements.is_empty() {
+            let implements: Tokens<_> = self.implements
                 .into_iter()
                 .map::<Element<_>, _>(Into::into)
                 .collect();
@@ -94,8 +97,8 @@ impl<'el> From<Class<'el>> for Tokens<'el, Java<'el>> {
 
         let mut s = Tokens::new();
 
-        if !c.annotations.is_empty() {
-            s.push(c.annotations);
+        if !self.annotations.is_empty() {
+            s.push(self.annotations);
         }
 
         s.push(toks![sig, " {"]);
@@ -103,29 +106,29 @@ impl<'el> From<Class<'el>> for Tokens<'el, Java<'el>> {
         s.nested({
             let mut body = Tokens::new();
 
-            if !c.fields.is_empty() {
+            if !self.fields.is_empty() {
                 let mut fields = Tokens::new();
 
-                for field in c.fields {
+                for field in self.fields {
                     fields.push(toks![field, ";"]);
                 }
 
                 body.push(fields);
             }
 
-            if !c.constructors.is_empty() {
-                for constructor in c.constructors {
-                    body.push((c.name.clone(), constructor));
+            if !self.constructors.is_empty() {
+                for constructor in self.constructors {
+                    body.push((self.name.clone(), constructor));
                 }
             }
 
-            if !c.methods.is_empty() {
-                for method in c.methods {
+            if !self.methods.is_empty() {
+                for method in self.methods {
                     body.push(method);
                 }
             }
 
-            body.extend(c.body);
+            body.extend(self.body);
             body.join_line_spacing()
         });
 

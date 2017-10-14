@@ -7,6 +7,7 @@ use std::fmt::{self, Write};
 use std::borrow::Cow;
 use super::tokens::Tokens;
 use super::quoted::Quoted;
+use super::into_tokens::IntoTokens;
 
 static SEP: &'static str = ".";
 static PATH_SEP: &'static str = "/";
@@ -24,6 +25,9 @@ pub enum JavaScript<'el> {
         alias: Cow<'el, str>,
     },
 }
+
+into_tokens_impl_from!(JavaScript<'el>, JavaScript<'el>);
+into_tokens_impl_from!(&'el JavaScript<'el>, JavaScript<'el>);
 
 impl<'el> JavaScript<'el> {
     fn module_to_path(path: &str) -> String {

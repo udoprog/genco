@@ -8,6 +8,7 @@ use super::method::Method;
 use super::constructor::Constructor;
 use super::field::Field;
 use element::Element;
+use into_tokens::IntoTokens;
 
 /// Model for Java Enums.
 #[derive(Debug, Clone)]
@@ -57,9 +58,9 @@ impl<'el> Enum<'el> {
     /// Push an annotation.
     pub fn annotation<A>(&mut self, annotation: A)
     where
-        A: Into<Tokens<'el, Java<'el>>>,
+        A: IntoTokens<'el, Java<'el>>,
     {
-        self.annotations.push(annotation.into());
+        self.annotations.push(annotation.into_tokens());
     }
 
     /// Name of enum.
@@ -68,27 +69,29 @@ impl<'el> Enum<'el> {
     }
 }
 
-impl<'el> From<Enum<'el>> for Tokens<'el, Java<'el>> {
-    fn from(e: Enum<'el>) -> Tokens<'el, Java<'el>> {
+into_tokens_impl_from!(Enum<'el>, Java<'el>);
+
+impl<'el> IntoTokens<'el, Java<'el>> for Enum<'el> {
+    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
         use self::Element::*;
 
         let mut sig = Tokens::new();
 
-        if !e.modifiers.is_empty() {
-            sig.append(e.modifiers);
+        if !self.modifiers.is_empty() {
+            sig.append(self.modifiers);
             sig.append(" ");
         }
 
         sig.append("enum ");
-        sig.append(e.name.clone());
+        sig.append(self.name.clone());
 
-        if let Some(extends) = e.extends {
+        if let Some(extends) = self.extends {
             sig.append("extends ");
             sig.append(extends);
         }
 
-        if !e.implements.is_empty() {
-            let implements: Tokens<_> = e.implements
+        if !self.implements.is_empty() {
+            let implements: Tokens<_> = self.implements
                 .into_iter()
                 .map::<Element<_>, _>(Into::into)
                 .collect();
@@ -99,8 +102,8 @@ impl<'el> From<Enum<'el>> for Tokens<'el, Java<'el>> {
 
         let mut s = Tokens::new();
 
-        if !e.annotations.is_empty() {
-            s.push(e.annotations);
+        if !self.annotations.is_empty() {
+            s.push(self.annotations);
         }
 
         s.push(toks![sig, " {"]);
@@ -108,36 +111,36 @@ impl<'el> From<Enum<'el>> for Tokens<'el, Java<'el>> {
         s.nested({
             let mut body = Tokens::new();
 
-            if !e.variants.is_empty() {
+            if !self.variants.is_empty() {
                 let sep = toks![",", PushSpacing];
-                let mut variants = e.variants.join(sep);
+                let mut variants = self.variants.join(sep);
                 variants.append(";");
                 body.append(variants);
             }
 
-            if !e.fields.is_empty() {
+            if !self.fields.is_empty() {
                 let mut fields = Tokens::new();
 
-                for field in e.fields {
+                for field in self.fields {
                     fields.push(toks![field, ";"]);
                 }
 
                 body.push(fields);
             }
 
-            if !e.constructors.is_empty() {
-                for constructor in e.constructors {
-                    body.push((e.name.clone(), constructor));
+            if !self.constructors.is_empty() {
+                for constructor in self.constructors {
+                    body.push((self.name.clone(), constructor));
                 }
             }
 
-            if !e.methods.is_empty() {
-                for method in e.methods {
+            if !self.methods.is_empty() {
+                for method in self.methods {
                     body.push(method);
                 }
             }
 
-            body.extend(e.body);
+            body.extend(self.body);
             body.join_line_spacing()
         });
 

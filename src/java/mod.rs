@@ -21,6 +21,7 @@ pub use self::class::Class;
 use super::cons::Cons;
 use super::custom::Custom;
 use super::formatter::Formatter;
+use super::into_tokens::IntoTokens;
 use std::fmt::{self, Write};
 use super::tokens::Tokens;
 use std::collections::{HashMap, BTreeSet};
@@ -125,6 +126,9 @@ pub enum Java<'el> {
     Optional(Optional<'el>),
 }
 
+into_tokens_impl_from!(Java<'el>, Java<'el>);
+into_tokens_impl_from!(&'el Java<'el>, Java<'el>);
+
 /// Extra data for Java formatting.
 #[derive(Debug, Default)]
 pub struct Extra<'el> {
@@ -146,7 +150,29 @@ impl<'el> Extra<'el> {
 }
 
 impl<'el> Java<'el> {
-    fn type_imports<'a>(java: &'a Java<'a>, modules: &mut BTreeSet<&'a Type<'a>>) {
+    /// Extend the type with a nested path.
+    ///
+    /// This discards any arguments associated with it.
+    pub fn path<P: Into<Cons<'el>>>(&self, part: P) -> Java<'el> {
+        use self::Java::*;
+
+        match *self {
+            Class(ref class) => {
+                let mut path = class.path.clone();
+                path.push(part.into());
+
+                Class(Type {
+                    package: class.package.clone(),
+                    name: class.name.clone(),
+                    path: path,
+                    arguments: vec![],
+                })
+            }
+            ref java => java.clone(),
+        }
+    }
+
+    fn type_imports<'a>(java: &'a Java<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
         use self::Java::*;
 
         match *java {
@@ -155,7 +181,7 @@ impl<'el> Java<'el> {
                     Self::type_imports(argument, modules);
                 }
 
-                modules.insert(class);
+                modules.insert((class.package.as_ref(), class.name.as_ref()));
             }
             _ => {}
         };
@@ -176,31 +202,21 @@ impl<'el> Java<'el> {
 
         let mut out = Tokens::new();
 
-        for cls in modules {
-            if extra.imported.contains_key(cls.name.as_ref()) {
+        for (package, name) in modules {
+            if extra.imported.contains_key(name) {
                 continue;
             }
 
-            if cls.package.as_ref() == JAVA_LANG {
+            if package == JAVA_LANG {
                 continue;
             }
 
-            if Some(cls.package.as_ref()) == file_package {
+            if Some(package) == file_package {
                 continue;
             }
 
-            out.push(toks!(
-                "import ",
-                cls.package.clone(),
-                SEP,
-                cls.name.clone(),
-                ";"
-            ));
-
-            extra.imported.insert(
-                cls.name.to_string(),
-                cls.package.to_string(),
-            );
+            out.push(toks!("import ", package, SEP, name, ";"));
+            extra.imported.insert(name.to_string(), package.to_string());
         }
 
         Some(out)

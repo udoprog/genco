@@ -7,6 +7,7 @@ use con::Con::Owned;
 use cons::Cons;
 use super::modifier::Modifier;
 use element::Element;
+use into_tokens::IntoTokens;
 
 /// Model for Java Constructors.
 #[derive(Debug, Clone)]
@@ -35,20 +36,22 @@ impl<'el> Constructor<'el> {
     /// Push an annotation.
     pub fn annotation<A>(&mut self, annotation: A)
     where
-        A: Into<Tokens<'el, Java<'el>>>,
+        A: IntoTokens<'el, Java<'el>>,
     {
-        self.annotations.push(annotation.into());
+        self.annotations.push(annotation.into_tokens());
     }
 }
 
-impl<'el> From<(Cons<'el>, Constructor<'el>)> for Tokens<'el, Java<'el>> {
-    fn from(value: (Cons<'el>, Constructor<'el>)) -> Tokens<'el, Java<'el>> {
+into_tokens_impl_from!((Cons<'el>, Constructor<'el>), Java<'el>);
+
+impl<'el> IntoTokens<'el, Java<'el>> for (Cons<'el>, Constructor<'el>) {
+    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
         use self::Element::*;
 
-        let (name, c) = value;
+        let (name, c) = self;
 
-        let args: Vec<Tokens<Java>> = c.arguments.into_iter().map(|a| a.into()).collect();
-        let args: Tokens<Java> = args.into();
+        let args: Vec<Tokens<Java>> = c.arguments.into_iter().map(|a| a.into_tokens()).collect();
+        let args: Tokens<Java> = args.into_tokens();
 
         let mut sig: Tokens<Java> = Tokens::new();
 

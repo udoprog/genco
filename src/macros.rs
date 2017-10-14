@@ -20,6 +20,26 @@ macro_rules! toks {
     ($($x:expr,)*) => {toks!($($x),*)}
 }
 
+macro_rules! into_tokens_impl_from {
+    ($type:ty, $custom:ty) => {
+        impl<'el> From<$type> for Tokens<'el, $custom> {
+            fn from(value: $type) -> Tokens<'el, $custom> {
+                value.into_tokens()
+            }
+        }
+    }
+}
+
+macro_rules! into_tokens_impl_from_generic {
+    ($type:ty) => {
+        impl<'el, C> From<$type> for Tokens<'el, C> {
+            fn from(value: $type) -> Tokens<'el, C> {
+                value.into_tokens()
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use quoted::Quoted;
