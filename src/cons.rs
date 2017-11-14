@@ -2,6 +2,7 @@
 
 use std::rc::Rc;
 use std::ops::Deref;
+use std::borrow::Cow;
 
 /// A managed string that permits immutable borrowing.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -49,5 +50,16 @@ impl<'el> From<&'el str> for Cons<'el> {
 impl<'el> From<Rc<String>> for Cons<'el> {
     fn from(value: Rc<String>) -> Self {
         Cons::Rc(value)
+    }
+}
+
+impl<'el> From<Cow<'el, str>> for Cons<'el> {
+    fn from(value: Cow<'el, str>) -> Self {
+        use self::Cow::*;
+
+        match value {
+            Owned(string) => Cons::Owned(string),
+            Borrowed(string) => Cons::Borrowed(string),
+        }
     }
 }
