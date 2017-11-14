@@ -50,6 +50,11 @@ impl<'el> Method<'el> {
     {
         self.annotations.push(annotation.into_tokens());
     }
+
+    /// Name of method.
+    pub fn name(&self) -> Cons<'el> {
+        self.name.clone()
+    }
 }
 
 into_tokens_impl_from!(Method<'el>, Java<'el>);
@@ -75,7 +80,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
             " ",
             self.name,
             "(",
-            args.join_spacing(),
+            args.join(", "),
             ")",
         ]);
 
