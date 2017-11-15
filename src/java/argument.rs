@@ -46,6 +46,11 @@ impl<'el> Argument<'el> {
     pub fn var(&self) -> Cons<'el> {
         self.name.clone()
     }
+
+    /// The type of the argument.
+    pub fn ty(&self) -> Java<'el> {
+        self.ty.clone()
+    }
 }
 
 into_tokens_impl_from!(Argument<'el>, Java<'el>);

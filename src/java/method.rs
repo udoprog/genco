@@ -19,6 +19,8 @@ pub struct Method<'el> {
     pub body: Tokens<'el, Java<'el>>,
     /// Return type.
     pub returns: Java<'el>,
+    /// Generic parameters.
+    pub parameters: Tokens<'el, Java<'el>>,
     /// Annotations for the constructor.
     annotations: Tokens<'el, Java<'el>>,
     /// Name of the method.
@@ -38,6 +40,7 @@ impl<'el> Method<'el> {
             arguments: vec![],
             body: Tokens::new(),
             returns: VOID,
+            parameters: Tokens::new(),
             annotations: Tokens::new(),
             name: name.into(),
         }
@@ -75,14 +78,15 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
             sig.append(" ");
         }
 
-        sig.append(toks![
-            self.returns,
-            " ",
-            self.name,
-            "(",
-            args.join(", "),
-            ")",
-        ]);
+        sig.append(toks![self.returns, " ", self.name]);
+
+        if !self.parameters.is_empty() {
+            sig.append("<");
+            sig.append(self.parameters.join(", "));
+            sig.append(">");
+        }
+
+        sig.append(toks!["(", args.join(", "), ")"]);
 
         let mut s = Tokens::new();
 
@@ -109,8 +113,9 @@ mod tests {
 
     #[test]
     fn test_empty_body() {
-        let c = Method::new("foo");
+        let mut c = Method::new("foo");
+        c.parameters.append("T");
         let t: Tokens<_> = c.into();
-        assert_eq!(Ok(String::from("public void foo();")), t.to_string());
+        assert_eq!(Ok(String::from("public void foo<T>();")), t.to_string());
     }
 }

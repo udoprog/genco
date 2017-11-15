@@ -19,6 +19,8 @@ pub struct Interface<'el> {
     pub body: Tokens<'el, Java<'el>>,
     /// What this interface extends.
     pub extends: Vec<Tokens<'el, Java<'el>>>,
+    /// Generic parameters.
+    pub parameters: Tokens<'el, Java<'el>>,
     /// Annotations for the constructor.
     annotations: Tokens<'el, Java<'el>>,
     /// Name of interface.
@@ -36,6 +38,7 @@ impl<'el> Interface<'el> {
             methods: vec![],
             body: Tokens::new(),
             extends: vec![],
+            parameters: Tokens::new(),
             annotations: Tokens::new(),
             name: name.into(),
         }
@@ -68,6 +71,12 @@ impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
 
         sig.append("interface ");
         sig.append(self.name);
+
+        if !self.parameters.is_empty() {
+            sig.append("<");
+            sig.append(self.parameters.join(", "));
+            sig.append(">");
+        }
 
         if !self.extends.is_empty() {
             sig.append(" extends ");
@@ -115,12 +124,13 @@ mod tests {
     #[test]
     fn test_vec() {
         let mut i = Interface::new("Foo");
+        i.parameters.append("T");
         i.extends = vec![local("Super").into()];
 
         let t: Tokens<Java> = i.into();
 
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("public interface Foo extends Super {\n}"), out);
+        assert_eq!(Ok("public interface Foo<T> extends Super {\n}"), out);
     }
 }

@@ -27,6 +27,8 @@ pub struct Class<'el> {
     pub extends: Option<Java<'el>>,
     /// What this class implements.
     pub implements: Vec<Java<'el>>,
+    /// Generic parameters.
+    pub parameters: Tokens<'el, Java<'el>>,
     /// Annotations for the constructor.
     annotations: Tokens<'el, Java<'el>>,
     /// Name of class.
@@ -47,6 +49,7 @@ impl<'el> Class<'el> {
             constructors: vec![],
             extends: None,
             implements: vec![],
+            parameters: Tokens::new(),
             annotations: Tokens::new(),
             name: name.into(),
         }
@@ -79,6 +82,12 @@ impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
 
         sig.append("class ");
         sig.append(self.name.clone());
+
+        if !self.parameters.is_empty() {
+            sig.append("<");
+            sig.append(self.parameters.join(", "));
+            sig.append(">");
+        }
 
         if let Some(extends) = self.extends {
             sig.append(" extends ");
@@ -147,12 +156,13 @@ mod tests {
     #[test]
     fn test_vec() {
         let mut c = Class::new("Foo");
+        c.parameters.append("T");
         c.implements = vec![local("Super").into()];
 
         let t: Tokens<Java> = c.into();
 
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("public class Foo implements Super {\n}"), out);
+        assert_eq!(Ok("public class Foo<T> implements Super {\n}"), out);
     }
 }
