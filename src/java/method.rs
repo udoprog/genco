@@ -2,6 +2,7 @@
 
 use tokens::Tokens;
 use java::Java;
+use element::Element;
 use super::argument::Argument;
 use super::modifier::Modifier;
 use super::VOID;
@@ -21,6 +22,8 @@ pub struct Method<'el> {
     pub returns: Java<'el>,
     /// Generic parameters.
     pub parameters: Tokens<'el, Java<'el>>,
+    /// Comments associated with this method.
+    pub comments: Vec<Cons<'el>>,
     /// Annotations for the constructor.
     annotations: Tokens<'el, Java<'el>>,
     /// Name of the method.
@@ -41,6 +44,7 @@ impl<'el> Method<'el> {
             body: Tokens::new(),
             returns: VOID,
             parameters: Tokens::new(),
+            comments: Vec::new(),
             annotations: Tokens::new(),
             name: name.into(),
         }
@@ -72,6 +76,18 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
         let args: Tokens<Java> = args.into_tokens();
 
         let mut sig = Tokens::new();
+
+        if !self.comments.is_empty() {
+            sig.push("/**");
+
+            for line in self.comments {
+                sig.push(" * ");
+                sig.append(line);
+            }
+
+            sig.push(" */");
+            sig.append(Element::PushSpacing);
+        }
 
         if !self.modifiers.is_empty() {
             sig.append(self.modifiers);
@@ -111,10 +127,28 @@ mod tests {
     use super::Method;
     use tokens::Tokens;
 
-    #[test]
-    fn test_empty_body() {
+    fn build_method() -> Method<'static> {
         let mut c = Method::new("foo");
         c.parameters.append("T");
+        c
+    }
+
+    #[test]
+    fn test_with_comments() {
+        let mut c = build_method();
+        c.comments.push("Hello World".into());
+        let t: Tokens<_> = c.into();
+        assert_eq!(
+            Ok(String::from(
+                "/**\n * Hello World\n */\npublic void foo<T>();",
+            )),
+            t.to_string()
+        );
+    }
+
+    #[test]
+    fn test_no_comments() {
+        let c = build_method();
         let t: Tokens<_> = c.into();
         assert_eq!(Ok(String::from("public void foo<T>();")), t.to_string());
     }
