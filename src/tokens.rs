@@ -54,6 +54,22 @@ impl<'el, C: 'el> Tokens<'el, C> {
         self.elements.push(Push(Owned(tokens.into_tokens())));
     }
 
+    /// Push the given set of tokens, unless it is empty.
+    ///
+    /// This is useful when you wish to preserve the structure of nested and joined tokens.
+    pub fn push_unless_empty<T>(&mut self, tokens: T)
+    where
+        T: IntoTokens<'el, C>,
+    {
+        let tokens = tokens.into_tokens();
+
+        if tokens.is_empty() {
+            return;
+        }
+
+        self.elements.push(Push(Owned(tokens)));
+    }
+
     /// Push a reference to a definition.
     pub fn push_ref(&mut self, tokens: &'el Tokens<'el, C>) {
         self.elements.push(Push(Borrowed(tokens.into())));
