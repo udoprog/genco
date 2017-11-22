@@ -16,7 +16,7 @@ use std::collections::LinkedList;
 use super::custom::Custom;
 use std::fmt;
 use std::result;
-use super::con::Con::{Owned, Borrowed};
+use con_::Con::{Owned, Borrowed};
 use std::vec;
 use std::iter::FromIterator;
 

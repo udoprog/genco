@@ -3,7 +3,7 @@
 use tokens::Tokens;
 use java::Java;
 use cons::Cons;
-use con::Con;
+use con_::Con;
 use super::modifier::Modifier;
 use element::Element;
 use into_tokens::IntoTokens;

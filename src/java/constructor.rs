@@ -3,7 +3,7 @@
 use tokens::Tokens;
 use java::Java;
 use super::argument::Argument;
-use con::Con::Owned;
+use con_::Con::Owned;
 use cons::Cons;
 use super::modifier::Modifier;
 use element::Element;
