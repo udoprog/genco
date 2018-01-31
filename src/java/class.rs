@@ -150,7 +150,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
 #[cfg(test)]
 mod tests {
     use super::Class;
-    use java::{Java, local};
+    use java::{local, Java};
     use tokens::Tokens;
 
     #[test]

@@ -10,13 +10,13 @@
 
 use super::into_tokens::IntoTokens;
 use super::formatter::Formatter;
-use super::element::Element::{self, Push, Nested};
+use super::element::Element::{self, Nested, Push};
 use super::write_tokens::WriteTokens;
 use std::collections::LinkedList;
 use super::custom::Custom;
 use std::fmt;
 use std::result;
-use con_::Con::{Owned, Borrowed};
+use con_::Con::{Borrowed, Owned};
 use std::vec;
 use std::iter::FromIterator;
 
@@ -30,7 +30,9 @@ pub struct Tokens<'el, C: 'el> {
 impl<'el, C: 'el> Tokens<'el, C> {
     /// Create a new set of tokens.
     pub fn new() -> Tokens<'el, C> {
-        Tokens { elements: Vec::new() }
+        Tokens {
+            elements: Vec::new(),
+        }
     }
 
     /// Push a nested definition.
@@ -204,7 +206,9 @@ impl<'el, C> IntoTokens<'el, C> for Tokens<'el, C> {
 /// Convert collection to tokens.
 impl<'el, C> IntoTokens<'el, C> for Vec<Tokens<'el, C>> {
     fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens { elements: self.into_iter().map(Into::into).collect() }
+        Tokens {
+            elements: self.into_iter().map(Into::into).collect(),
+        }
     }
 }
 
@@ -213,7 +217,9 @@ into_tokens_impl_from_generic!(Vec<Tokens<'el, C>>);
 /// Convert element to tokens.
 impl<'el, C> IntoTokens<'el, C> for Element<'el, C> {
     fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens { elements: vec![self] }
+        Tokens {
+            elements: vec![self],
+        }
     }
 }
 
@@ -225,7 +231,9 @@ where
     C: Custom,
 {
     fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens { elements: vec![self.into()] }
+        Tokens {
+            elements: vec![self.into()],
+        }
     }
 }
 
@@ -235,14 +243,18 @@ where
     C: Custom,
 {
     fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens { elements: vec![self.into()] }
+        Tokens {
+            elements: vec![self.into()],
+        }
     }
 }
 
 /// Convert borrowed strings.
 impl<'el, C> IntoTokens<'el, C> for &'el str {
     fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens { elements: vec![self.into()] }
+        Tokens {
+            elements: vec![self.into()],
+        }
     }
 }
 
@@ -251,7 +263,9 @@ into_tokens_impl_from_generic!(&'el str);
 /// Convert strings.
 impl<'el, C> IntoTokens<'el, C> for String {
     fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens { elements: vec![self.into()] }
+        Tokens {
+            elements: vec![self.into()],
+        }
     }
 }
 
@@ -259,13 +273,17 @@ into_tokens_impl_from_generic!(String);
 
 impl<'el, C> FromIterator<&'el Element<'el, C>> for Tokens<'el, C> {
     fn from_iter<I: IntoIterator<Item = &'el Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
-        Tokens { elements: iter.into_iter().map(|e| Element::Borrowed(e)).collect() }
+        Tokens {
+            elements: iter.into_iter().map(|e| Element::Borrowed(e)).collect(),
+        }
     }
 }
 
 impl<'el, C> FromIterator<Element<'el, C>> for Tokens<'el, C> {
     fn from_iter<I: IntoIterator<Item = Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
-        Tokens { elements: iter.into_iter().collect() }
+        Tokens {
+            elements: iter.into_iter().collect(),
+        }
     }
 }
 
@@ -288,9 +306,7 @@ impl<'el, C: 'el> Iterator for WalkCustomIter<'el, C> {
                 Borrowed(ref element) => {
                     self.queue.push_back(element);
                 }
-                Push(ref tokens) |
-                Nested(ref tokens) |
-                Append(ref tokens) => {
+                Push(ref tokens) | Nested(ref tokens) | Append(ref tokens) => {
                     self.queue.extend(tokens.as_ref().elements.iter());
                 }
                 Custom(ref custom) => return Some(custom.as_ref()),

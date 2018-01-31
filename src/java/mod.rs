@@ -24,7 +24,7 @@ use super::formatter::Formatter;
 use super::into_tokens::IntoTokens;
 use std::fmt::{self, Write};
 use super::tokens::Tokens;
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap};
 
 static JAVA_LANG: &'static str = "java.lang";
 static SEP: &'static str = ".";
@@ -229,14 +229,12 @@ impl<'el> Java<'el> {
         use self::Java::*;
 
         match *self {
-            Class(ref cls) => {
-                Class(Type {
-                    package: cls.package.clone(),
-                    name: cls.name.clone(),
-                    path: cls.path.clone(),
-                    arguments: arguments,
-                })
-            }
+            Class(ref cls) => Class(Type {
+                package: cls.package.clone(),
+                name: cls.name.clone(),
+                path: cls.path.clone(),
+                arguments: arguments,
+            }),
             ref java => java.clone(),
         }
     }
@@ -246,14 +244,12 @@ impl<'el> Java<'el> {
         use self::Java::*;
 
         match *self {
-            Primitive { ref boxed, .. } => {
-                Class(Type {
-                    package: Cons::Borrowed(JAVA_LANG),
-                    name: Cons::Borrowed(boxed),
-                    path: vec![],
-                    arguments: vec![],
-                })
-            }
+            Primitive { ref boxed, .. } => Class(Type {
+                package: Cons::Borrowed(JAVA_LANG),
+                name: Cons::Borrowed(boxed),
+                path: vec![],
+                arguments: vec![],
+            }),
             ref other => other.clone(),
         }
     }
@@ -263,14 +259,22 @@ impl<'el> Java<'el> {
         use self::Java::*;
 
         match (self, other) {
-            (&Primitive { primitive: ref l_primitive, .. },
-             &Primitive { primitive: ref r_primitive, .. }) => l_primitive == r_primitive,
+            (
+                &Primitive {
+                    primitive: ref l_primitive,
+                    ..
+                },
+                &Primitive {
+                    primitive: ref r_primitive,
+                    ..
+                },
+            ) => l_primitive == r_primitive,
             (&Class(ref l), &Class(ref r)) => {
-                l.package == r.package && l.name == r.name &&
-                    l.arguments.len() == r.arguments.len() &&
-                    l.arguments.iter().zip(r.arguments.iter()).all(|(l, r)| {
-                        l.equals(r)
-                    })
+                l.package == r.package && l.name == r.name && l.arguments.len() == r.arguments.len()
+                    && l.arguments
+                        .iter()
+                        .zip(r.arguments.iter())
+                        .all(|(l, r)| l.equals(r))
             }
             _ => false,
         }
@@ -505,9 +509,7 @@ mod tests {
         let toks = toks!(integer, a, b, ob, ob_a).join_spacing();
 
         assert_eq!(
-            Ok(
-                "import java.io.A;\nimport java.io.B;\n\nInteger A B java.util.B java.util.B<A>\n",
-            ),
+            Ok("import java.io.A;\nimport java.io.B;\n\nInteger A B java.util.B java.util.B<A>\n",),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }

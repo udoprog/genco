@@ -64,9 +64,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for (Cons<'el>, Constructor<'el>) {
             let sep = toks![",", PushSpacing];
             let args = args.join(sep);
 
-            sig.append(toks![
-                name, "(", Nested(Owned(args)), ")",
-            ]);
+            sig.append(toks![name, "(", Nested(Owned(args)), ")",]);
         } else {
             sig.append(toks![name, "()"]);
         }

@@ -188,7 +188,7 @@ pub fn imported_alias_ref<'a>(module: &'a str, name: &'a str, alias: &'a str) ->
 #[cfg(test)]
 mod tests {
     use tokens::Tokens;
-    use super::{Python, imported_ref};
+    use super::{imported_ref, Python};
     use quoted::Quoted;
 
     #[test]
