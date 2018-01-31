@@ -9,8 +9,6 @@ use std::borrow::Cow;
 pub enum Cons<'el> {
     /// A borrowed string.
     Borrowed(&'el str),
-    /// An owned string (deprecate?)
-    Owned(String),
     /// A refcounted string.
     Rc(Rc<String>),
 }
@@ -21,7 +19,6 @@ impl<'a> AsRef<str> for Cons<'a> {
 
         match *self {
             Borrowed(value) => value,
-            Owned(ref value) => value,
             Rc(ref value) => value.as_ref(),
         }
     }
@@ -37,7 +34,7 @@ impl<'a> Deref for Cons<'a> {
 
 impl<'el> From<String> for Cons<'el> {
     fn from(value: String) -> Self {
-        Cons::Owned(value)
+        Cons::Rc(Rc::new(value))
     }
 }
 
@@ -58,7 +55,7 @@ impl<'el> From<Cow<'el, str>> for Cons<'el> {
         use self::Cow::*;
 
         match value {
-            Owned(string) => Cons::Owned(string),
+            Owned(string) => Cons::Rc(Rc::new(string)),
             Borrowed(string) => Cons::Borrowed(string),
         }
     }

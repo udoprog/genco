@@ -12,7 +12,7 @@ pub trait Quoted<'el> {
 
 impl<'el> Quoted<'el> for String {
     fn quoted<C>(self) -> Element<'el, C> {
-        Element::Quoted(Cons::Owned(self))
+        Element::Quoted(Cons::Rc(Rc::new(self)))
     }
 }
 
