@@ -30,6 +30,8 @@ pub enum Element<'el, C: 'el> {
     Custom(Con<'el, C>),
     /// Push an empty line.
     PushSpacing,
+    /// Unconditionally push a line.
+    Line,
     /// Single-space spacing.
     Spacing,
     /// New line if needed.
@@ -76,6 +78,9 @@ impl<'el, C: Custom> Element<'el, C> {
             // whitespace below
             PushSpacing => {
                 out.new_line_unless_empty()?;
+            }
+            Line => {
+                out.new_line()?;
             }
             LineSpacing => {
                 out.new_line_unless_empty()?;
