@@ -13,21 +13,16 @@ static SEP: &'static str = ".";
 /// Python token specialization.
 #[derive(Debug, Clone)]
 pub enum Python<'el> {
-    /// An imported name.
+    /// An imported module.
     Imported {
         /// Module of the imported name.
         module: Cow<'el, str>,
-        /// Name imported.
-        name: Cow<'el, str>,
-    },
-    /// An imported module as an alias.
-    ImportedAlias {
-        /// Module of the imported name.
-        module: Cow<'el, str>,
-        /// Name imported.
-        name: Cow<'el, str>,
         /// Alias of module.
-        alias: Cow<'el, str>,
+        alias: Option<Cow<'el, str>>,
+        /// Name imported.
+        ///
+        /// If `None`, last component of module will be used.
+        name: Option<Cow<'el, str>>,
     },
 }
 
@@ -42,12 +37,11 @@ impl<'el> Python<'el> {
 
         for custom in tokens.walk_custom() {
             match *custom {
-                Imported { ref module, .. } => modules.insert((module.as_ref(), None)),
-                ImportedAlias {
+                Imported {
                     ref module,
                     ref alias,
                     ..
-                } => modules.insert((module.as_ref(), Some(alias.as_ref()))),
+                } => modules.insert((module.as_ref(), alias.as_ref().map(AsRef::as_ref))),
             };
         }
 
@@ -73,6 +67,32 @@ impl<'el> Python<'el> {
 
         Some(out)
     }
+
+    /// Set alias for python element.
+    pub fn alias<A: Into<Cow<'el, str>>>(self, new_alias: A) -> Python<'el> {
+        use self::Python::*;
+
+        match self {
+            Imported { module, name, .. } => Python::Imported {
+                module: module,
+                alias: Some(new_alias.into()),
+                name: name,
+            },
+        }
+    }
+
+    /// Set name for python element.
+    pub fn name<A: Into<Cow<'el, str>>>(self, new_name: A) -> Python<'el> {
+        use self::Python::*;
+
+        match self {
+            Imported { module, alias, .. } => Python::Imported {
+                module: module,
+                alias: alias,
+                name: Some(new_name.into()),
+            },
+        }
+    }
 }
 
 impl<'el> Custom for Python<'el> {
@@ -84,24 +104,32 @@ impl<'el> Custom for Python<'el> {
         match *self {
             Imported {
                 ref module,
-                ref name,
-                ..
-            } => {
-                if let Some(part) = module.split(SEP).last() {
-                    out.write_str(part)?;
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(name)?;
-            }
-            ImportedAlias {
                 ref alias,
                 ref name,
                 ..
             } => {
-                out.write_str(alias)?;
-                out.write_str(SEP)?;
-                out.write_str(name)?;
+                let has_module = match *alias {
+                    Some(ref alias) => {
+                        out.write_str(alias)?;
+                        true
+                    }
+                    None => {
+                        if let Some(part) = module.split(SEP).last() {
+                            out.write_str(part)?;
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                };
+
+                if let Some(ref name) = *name {
+                    if has_module {
+                        out.write_str(SEP)?;
+                    }
+
+                    out.write_str(name)?;
+                }
             }
         }
 
@@ -148,28 +176,14 @@ impl<'el> Custom for Python<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a, M, N>(module: M, name: N) -> Python<'a>
+pub fn imported<'a, M>(module: M) -> Python<'a>
 where
     M: Into<Cow<'a, str>>,
-    N: Into<Cow<'a, str>>,
 {
     Python::Imported {
         module: module.into(),
-        name: name.into(),
-    }
-}
-
-/// Setup an imported alias element.
-pub fn imported_alias<'a, M, N, A>(module: M, name: N, alias: A) -> Python<'a>
-where
-    M: Into<Cow<'a, str>>,
-    N: Into<Cow<'a, str>>,
-    A: Into<Cow<'a, str>>,
-{
-    Python::ImportedAlias {
-        module: module.into(),
-        name: name.into(),
-        alias: alias.into(),
+        alias: None,
+        name: None,
     }
 }
 
@@ -188,12 +202,18 @@ mod tests {
 
     #[test]
     fn test_imported() {
-        let dbg = imported("collections", "named_tuple".to_string());
         let mut toks: Tokens<Python> = Tokens::new();
-        toks.push(toks!(&dbg));
+        toks.push(toks![
+            imported("collections").name("named_tuple".to_string())
+        ]);
+        toks.push(toks![imported("collections")]);
+        toks.push(toks![
+            imported("collections").alias("c").name("named_tuple")
+        ]);
+        toks.push(toks![imported("collections").alias("c")]);
 
         assert_eq!(
-            Ok("import collections\n\ncollections.named_tuple\n"),
+            Ok("import collections\nimport collections as c\n\ncollections.named_tuple\ncollections\nc.named_tuple\nc\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
