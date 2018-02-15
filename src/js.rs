@@ -129,31 +129,23 @@ impl<'el> Custom for JavaScript<'el> {
 }
 
 /// Setup an imported alias element.
-pub fn imported_alias<'a>(
-    module: Cow<'a, str>,
-    name: Cow<'a, str>,
-    alias: Cow<'a, str>,
-) -> JavaScript<'a> {
+pub fn imported_alias<'a, M, N, A>(module: M, name: N, alias: A) -> JavaScript<'a>
+where
+    M: Into<Cow<'a, str>>,
+    N: Into<Cow<'a, str>>,
+    A: Into<Cow<'a, str>>,
+{
     JavaScript::ImportedAlias {
-        module: module,
-        name: name,
-        alias: alias,
+        module: module.into(),
+        name: name.into(),
+        alias: alias.into(),
     }
-}
-
-/// Setup an imported alias element from borrowed components.
-pub fn imported_alias_ref<'a>(module: &'a str, name: &'a str, alias: &'a str) -> JavaScript<'a> {
-    imported_alias(
-        Cow::Borrowed(module),
-        Cow::Borrowed(name),
-        Cow::Borrowed(alias),
-    )
 }
 
 #[cfg(test)]
 mod tests {
     use tokens::Tokens;
-    use super::JavaScript;
+    use super::{imported_alias, JavaScript};
     use quoted::Quoted;
 
     #[test]
@@ -179,5 +171,17 @@ mod tests {
         let mut toks: Tokens<JavaScript> = Tokens::new();
         toks.append("hello \n world".quoted());
         assert_eq!(Ok(String::from("\"hello \\n world\"")), toks.to_string());
+    }
+
+    #[test]
+    fn test_imported() {
+        let dbg = imported_alias("collections", "vec".to_string(), "list");
+        let mut toks: Tokens<JavaScript> = Tokens::new();
+        toks.push(toks!(&dbg));
+
+        assert_eq!(
+            Ok("import * as list from \"collections.js\";\n\nlist.vec\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
+        );
     }
 }
