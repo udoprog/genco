@@ -147,41 +147,29 @@ impl<'el> Custom for Rust<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a>(module: Cow<'a, str>, name: Cow<'a, str>) -> Rust<'a> {
+pub fn imported<'a, M, N>(module: M, name: N) -> Rust<'a>
+where
+    M: Into<Cow<'a, str>>,
+    N: Into<Cow<'a, str>>,
+{
     Rust::Imported {
-        module: module,
-        name: name,
-    }
-}
-
-/// Setup an imported element from borrowed components.
-pub fn imported_ref<'a>(module: &'a str, name: &'a str) -> Rust<'a> {
-    Rust::Imported {
-        module: Cow::Borrowed(module),
-        name: Cow::Borrowed(name),
+        module: module.into(),
+        name: name.into(),
     }
 }
 
 /// Setup an imported alias element.
-pub fn imported_alias<'a>(
-    module: Cow<'a, str>,
-    name: Cow<'a, str>,
-    alias: Cow<'a, str>,
-) -> Rust<'a> {
+pub fn imported_alias<'a, M, N, A>(module: M, name: N, alias: A) -> Rust<'a>
+where
+    M: Into<Cow<'a, str>>,
+    N: Into<Cow<'a, str>>,
+    A: Into<Cow<'a, str>>,
+{
     Rust::ImportedAlias {
-        module: module,
-        name: name,
-        alias: alias,
+        module: module.into(),
+        name: name.into(),
+        alias: alias.into(),
     }
-}
-
-/// Setup an imported alias element from borrowed components.
-pub fn imported_alias_ref<'a>(module: &'a str, name: &'a str, alias: &'a str) -> Rust<'a> {
-    imported_alias(
-        Cow::Borrowed(module),
-        Cow::Borrowed(name),
-        Cow::Borrowed(alias),
-    )
 }
 
 #[cfg(test)]
@@ -189,7 +177,7 @@ mod tests {
     use tokens::Tokens;
     use rust::Rust;
     use quoted::Quoted;
-    use super::imported_ref;
+    use super::imported;
 
     #[test]
     fn test_string() {
@@ -202,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_imported() {
-        let dbg = imported_ref("std::fmt", "Debug");
+        let dbg = imported("std::fmt", "Debug");
         let mut toks: Tokens<Rust> = Tokens::new();
         toks.push(toks!(&dbg));
 

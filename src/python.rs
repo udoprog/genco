@@ -148,47 +148,35 @@ impl<'el> Custom for Python<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a>(module: Cow<'a, str>, name: Cow<'a, str>) -> Python<'a> {
+pub fn imported<'a, M, N>(module: M, name: N) -> Python<'a>
+where
+    M: Into<Cow<'a, str>>,
+    N: Into<Cow<'a, str>>,
+{
     Python::Imported {
-        module: module,
-        name: name,
-    }
-}
-
-/// Setup an imported element from borrowed components.
-pub fn imported_ref<'a>(module: &'a str, name: &'a str) -> Python<'a> {
-    Python::Imported {
-        module: Cow::Borrowed(module),
-        name: Cow::Borrowed(name),
+        module: module.into(),
+        name: name.into(),
     }
 }
 
 /// Setup an imported alias element.
-pub fn imported_alias<'a>(
-    module: Cow<'a, str>,
-    name: Cow<'a, str>,
-    alias: Cow<'a, str>,
-) -> Python<'a> {
+pub fn imported_alias<'a, M, N, A>(module: M, name: N, alias: A) -> Python<'a>
+where
+    M: Into<Cow<'a, str>>,
+    N: Into<Cow<'a, str>>,
+    A: Into<Cow<'a, str>>,
+{
     Python::ImportedAlias {
-        module: module,
-        name: name,
-        alias: alias,
+        module: module.into(),
+        name: name.into(),
+        alias: alias.into(),
     }
-}
-
-/// Setup an imported alias element from borrowed components.
-pub fn imported_alias_ref<'a>(module: &'a str, name: &'a str, alias: &'a str) -> Python<'a> {
-    imported_alias(
-        Cow::Borrowed(module),
-        Cow::Borrowed(name),
-        Cow::Borrowed(alias),
-    )
 }
 
 #[cfg(test)]
 mod tests {
     use tokens::Tokens;
-    use super::{imported_ref, Python};
+    use super::{imported, Python};
     use quoted::Quoted;
 
     #[test]
@@ -200,7 +188,7 @@ mod tests {
 
     #[test]
     fn test_imported() {
-        let dbg = imported_ref("collections", "named_tuple");
+        let dbg = imported("collections", "named_tuple".to_string());
         let mut toks: Tokens<Python> = Tokens::new();
         toks.push(toks!(&dbg));
 
