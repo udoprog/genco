@@ -325,6 +325,17 @@ impl<'el> Java<'el> {
         }
     }
 
+    /// Check if variable is primitive.
+    pub fn is_primitive(&self) -> bool {
+        use self::Java::*;
+
+        match *self {
+            ref p if *p == VOID => false,
+            Primitive { .. } => true,
+            _ => false,
+        }
+    }
+
     /// Get type as optional.
     pub fn as_optional(&self) -> Option<&Optional<'el>> {
         use self::Java::*;
@@ -490,6 +501,19 @@ mod tests {
     use tokens::Tokens;
     use java::Java;
     use quoted::Quoted;
+
+    #[test]
+    fn test_primitive() {
+        assert!(SHORT.is_primitive());
+        assert!(INTEGER.is_primitive());
+        assert!(LONG.is_primitive());
+        assert!(FLOAT.is_primitive());
+        assert!(DOUBLE.is_primitive());
+        assert!(BOOLEAN.is_primitive());
+        assert!(CHAR.is_primitive());
+        assert!(BYTE.is_primitive());
+        assert!(!VOID.is_primitive());
+    }
 
     #[test]
     fn test_string() {
