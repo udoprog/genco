@@ -116,6 +116,9 @@ impl<'el> IntoTokens<'el, Java<'el>> for Enum<'el> {
                 let mut variants = self.variants.join(sep);
                 variants.append(";");
                 body.append(variants);
+            } else {
+                // Required for _all_ enums.
+                body.append(";");
             }
 
             if !self.fields.is_empty() {
