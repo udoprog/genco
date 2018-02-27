@@ -77,6 +77,14 @@ impl<'el, C: 'el> Tokens<'el, C> {
         self.elements.push(Push(Borrowed(tokens.into())));
     }
 
+    /// Insert the given element.
+    pub fn insert<E>(&mut self, pos: usize, element: E)
+    where
+        E: Into<Element<'el, C>>,
+    {
+        self.elements.insert(pos, element.into());
+    }
+
     /// Append the given element.
     pub fn append<E>(&mut self, element: E)
     where

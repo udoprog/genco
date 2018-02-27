@@ -1,9 +1,9 @@
 //! Data structure for methods.
 
 use {Cons, IntoTokens, Tokens};
-use java::{Argument, BlockComment, Java, Modifier, VOID};
+use csharp::{Argument, BlockComment, Csharp, Modifier};
 
-/// Model for Java Methods.
+/// Model for Csharp Methods.
 #[derive(Debug, Clone)]
 pub struct Method<'el> {
     /// Method modifiers.
@@ -11,15 +11,15 @@ pub struct Method<'el> {
     /// Arguments for the constructor.
     pub arguments: Vec<Argument<'el>>,
     /// Body of the constructor.
-    pub body: Tokens<'el, Java<'el>>,
+    pub body: Tokens<'el, Csharp<'el>>,
     /// Return type.
-    pub returns: Java<'el>,
+    pub returns: Csharp<'el>,
     /// Generic parameters.
-    pub parameters: Tokens<'el, Java<'el>>,
+    pub parameters: Tokens<'el, Csharp<'el>>,
     /// Comments associated with this method.
     pub comments: Vec<Cons<'el>>,
-    /// Annotations for the constructor.
-    annotations: Tokens<'el, Java<'el>>,
+    /// attributes for the constructor.
+    attributes: Tokens<'el, Csharp<'el>>,
     /// Name of the method.
     name: Cons<'el>,
 }
@@ -36,20 +36,20 @@ impl<'el> Method<'el> {
             modifiers: vec![Public],
             arguments: vec![],
             body: Tokens::new(),
-            returns: VOID,
+            returns: Csharp::Void,
             parameters: Tokens::new(),
             comments: Vec::new(),
-            annotations: Tokens::new(),
+            attributes: Tokens::new(),
             name: name.into(),
         }
     }
 
-    /// Push an annotation.
-    pub fn annotation<A>(&mut self, annotation: A)
+    /// Push a attribute.
+    pub fn attribute<T>(&mut self, attribute: T)
     where
-        A: IntoTokens<'el, Java<'el>>,
+        T: IntoTokens<'el, Csharp<'el>>,
     {
-        self.annotations.push(annotation.into_tokens());
+        self.attributes.push(attribute.into_tokens());
     }
 
     /// Name of method.
@@ -58,18 +58,16 @@ impl<'el> Method<'el> {
     }
 }
 
-into_tokens_impl_from!(Method<'el>, Java<'el>);
+into_tokens_impl_from!(Method<'el>, Csharp<'el>);
 
-impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
-    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
+impl<'el> IntoTokens<'el, Csharp<'el>> for Method<'el> {
+    fn into_tokens(self) -> Tokens<'el, Csharp<'el>> {
         let mut sig = Tokens::new();
 
         sig.extend(self.modifiers.into_tokens());
         sig.append(self.returns);
-
         sig.append({
             let mut n = Tokens::new();
-
             n.append(self.name);
 
             if !self.parameters.is_empty() {
@@ -78,12 +76,12 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
                 n.append(">");
             }
 
-            let args: Vec<Tokens<Java>> = self.arguments
+            let args: Vec<Tokens<Csharp>> = self.arguments
                 .into_iter()
                 .map(IntoTokens::into_tokens)
                 .collect();
 
-            let args: Tokens<Java> = args.into_tokens();
+            let args: Tokens<Csharp> = args.into_tokens();
 
             n.append(toks!["(", args.join(", "), ")"]);
 
@@ -93,7 +91,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
         let mut s = Tokens::new();
 
         s.push_unless_empty(BlockComment(self.comments));
-        s.push_unless_empty(self.annotations);
+        s.push_unless_empty(self.attributes);
 
         let sig = sig.join_spacing();
 
@@ -111,11 +109,11 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
 
 #[cfg(test)]
 mod tests {
-    use super::Method;
+    use csharp::Method;
     use tokens::Tokens;
 
     fn build_method() -> Method<'static> {
-        let mut c = Method::new("foo");
+        let mut c = Method::new("Foo");
         c.parameters.append("T");
         c
     }
@@ -126,9 +124,7 @@ mod tests {
         c.comments.push("Hello World".into());
         let t = Tokens::from(c);
         assert_eq!(
-            Ok(String::from(
-                "/**\n * Hello World\n */\npublic void foo<T>();",
-            )),
+            Ok(String::from("/// Hello World\npublic void Foo<T>();",)),
             t.to_string()
         );
     }
@@ -136,6 +132,6 @@ mod tests {
     #[test]
     fn test_no_comments() {
         let t = Tokens::from(build_method());
-        assert_eq!(Ok(String::from("public void foo<T>();")), t.to_string());
+        assert_eq!(Ok(String::from("public void Foo<T>();")), t.to_string());
     }
 }

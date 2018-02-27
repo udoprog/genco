@@ -1,13 +1,9 @@
 //! Data structure for interfaces.
 
-use tokens::Tokens;
-use java::Java;
-use cons::Cons;
-use super::modifier::Modifier;
-use super::method::Method;
-use into_tokens::IntoTokens;
+use {Cons, Csharp, Element, IntoTokens, Tokens};
+use csharp::{Method, Modifier};
 
-/// Model for Java Interfaces.
+/// Model for Csharp Interfaces.
 #[derive(Debug, Clone)]
 pub struct Interface<'el> {
     /// Interface modifiers.
@@ -15,13 +11,13 @@ pub struct Interface<'el> {
     /// Declared methods.
     pub methods: Vec<Method<'el>>,
     /// Extra body (added to end of interface).
-    pub body: Tokens<'el, Java<'el>>,
+    pub body: Tokens<'el, Csharp<'el>>,
     /// What this interface extends.
-    pub extends: Tokens<'el, Java<'el>>,
+    pub extends: Vec<Csharp<'el>>,
     /// Generic parameters.
-    pub parameters: Tokens<'el, Java<'el>>,
-    /// Annotations for the constructor.
-    annotations: Tokens<'el, Java<'el>>,
+    pub parameters: Tokens<'el, Csharp<'el>>,
+    /// Attributes for the constructor.
+    attributes: Tokens<'el, Csharp<'el>>,
     /// Name of interface.
     name: Cons<'el>,
 }
@@ -36,19 +32,19 @@ impl<'el> Interface<'el> {
             modifiers: vec![Modifier::Public],
             methods: vec![],
             body: Tokens::new(),
-            extends: Tokens::new(),
+            extends: vec![],
             parameters: Tokens::new(),
-            annotations: Tokens::new(),
+            attributes: Tokens::new(),
             name: name.into(),
         }
     }
 
-    /// Push an annotation.
-    pub fn annotation<A>(&mut self, annotation: A)
+    /// Push an attribute.
+    pub fn attribute<T>(&mut self, attribute: T)
     where
-        A: IntoTokens<'el, Java<'el>>,
+        T: IntoTokens<'el, Csharp<'el>>,
     {
-        self.annotations.push(annotation.into_tokens());
+        self.attributes.push(attribute.into_tokens());
     }
 
     /// Name of interface.
@@ -57,11 +53,11 @@ impl<'el> Interface<'el> {
     }
 }
 
-into_tokens_impl_from!(Interface<'el>, Java<'el>);
+into_tokens_impl_from!(Interface<'el>, Csharp<'el>);
 
-impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
-    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
-        let mut sig = Tokens::new();
+impl<'el> IntoTokens<'el, Csharp<'el>> for Interface<'el> {
+    fn into_tokens(self) -> Tokens<'el, Csharp<'el>> {
+        let mut sig: Tokens<Csharp> = Tokens::new();
 
         sig.extend(self.modifiers.into_tokens());
 
@@ -69,6 +65,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
 
         sig.append({
             let mut n = Tokens::new();
+
             n.append(self.name);
 
             if !self.parameters.is_empty() {
@@ -81,14 +78,20 @@ impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
         });
 
         if !self.extends.is_empty() {
-            sig.append("extends");
-            sig.append(self.extends.join(", "));
+            sig.append(":");
+            sig.append(
+                self.extends
+                    .into_iter()
+                    .map(Element::from)
+                    .collect::<Tokens<_>>()
+                    .join(", "),
+            );
         }
 
         let mut s = Tokens::new();
 
-        if !self.annotations.is_empty() {
-            s.push(self.annotations);
+        if !self.attributes.is_empty() {
+            s.push(self.attributes);
         }
 
         s.push(toks![sig.join_spacing(), " {"]);
@@ -112,21 +115,20 @@ impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
 
 #[cfg(test)]
 mod tests {
-    use super::Interface;
-    use java::Java;
+    use Csharp;
+    use csharp::{local, Interface};
     use tokens::Tokens;
-    use java::local;
 
     #[test]
-    fn test_vec() {
+    fn test_interface() {
         let mut i = Interface::new("Foo");
         i.parameters.append("T");
-        i.extends = local("Super").into();
+        i.extends = vec![local("Super")];
 
-        let t: Tokens<Java> = i.into();
+        let t: Tokens<Csharp> = i.into();
 
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("public interface Foo<T> extends Super {\n}"), out);
+        assert_eq!(Ok("public interface Foo<T> : Super {\n}"), out);
     }
 }

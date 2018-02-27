@@ -77,16 +77,13 @@ impl<'el> IntoTokens<'el, Java<'el>> for Enum<'el> {
 
         let mut sig = Tokens::new();
 
-        if !self.modifiers.is_empty() {
-            sig.append(self.modifiers);
-            sig.append(" ");
-        }
+        sig.extend(self.modifiers.into_tokens());
 
-        sig.append("enum ");
+        sig.append("enum");
         sig.append(self.name.clone());
 
         if let Some(extends) = self.extends {
-            sig.append("extends ");
+            sig.append("extends");
             sig.append(extends);
         }
 
@@ -96,7 +93,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Enum<'el> {
                 .map::<Element<_>, _>(Into::into)
                 .collect();
 
-            sig.append("implements ");
+            sig.append("implements");
             sig.append(implements.join(", "));
         }
 
@@ -106,7 +103,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Enum<'el> {
             s.push(self.annotations);
         }
 
-        s.push(toks![sig, " {"]);
+        s.push(toks![sig.join_spacing(), " {"]);
 
         s.nested({
             let mut body = Tokens::new();

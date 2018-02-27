@@ -1,59 +1,59 @@
 //! Data structure for fields
 
-use {Cons, Element, IntoTokens, Java, Tokens};
+use {Cons, Csharp, Element, IntoTokens, Tokens};
 use con_::Con;
-use java::{BlockComment, Modifier};
+use csharp::{BlockComment, Modifier};
 
-/// Model for Java Fields.
+/// Model for Csharp Fields.
 #[derive(Debug, Clone)]
 pub struct Field<'el> {
-    /// Annotations of field.
-    pub annotations: Tokens<'el, Java<'el>>,
+    /// Attributes of field.
+    pub attributes: Tokens<'el, Csharp<'el>>,
     /// Modifiers of field.
     pub modifiers: Vec<Modifier>,
     /// Comments associated with this field.
     pub comments: Vec<Cons<'el>>,
+    /// Block of field.
+    pub block: Option<Tokens<'el, Csharp<'el>>>,
     /// Type of field.
-    ty: Java<'el>,
+    ty: Csharp<'el>,
     /// Name of field.
     name: Cons<'el>,
-    /// Initializer of field.
-    initializer: Option<Tokens<'el, Java<'el>>>,
 }
 
 impl<'el> Field<'el> {
     /// Create a new field.
     pub fn new<T, N>(ty: T, name: N) -> Field<'el>
     where
-        T: Into<Java<'el>>,
+        T: Into<Csharp<'el>>,
         N: Into<Cons<'el>>,
     {
         use self::Modifier::*;
 
         Field {
-            annotations: Tokens::new(),
-            modifiers: vec![Private, Final],
+            attributes: Tokens::new(),
+            modifiers: vec![Private],
             comments: vec![],
+            block: None,
             ty: ty.into(),
             name: name.into(),
-            initializer: None,
         }
     }
 
-    /// Push an annotation.
-    pub fn annotation<A>(&mut self, annotation: A)
+    /// Push an attribute.
+    pub fn attribute<T>(&mut self, attribute: T)
     where
-        A: IntoTokens<'el, Java<'el>>,
+        T: IntoTokens<'el, Csharp<'el>>,
     {
-        self.annotations.push(annotation.into_tokens());
+        self.attributes.push(attribute.into_tokens());
     }
 
-    /// Set initializer for field.
-    pub fn initializer<I>(&mut self, initializer: I)
+    /// Set block for field.
+    pub fn block<I>(&mut self, block: I)
     where
-        I: IntoTokens<'el, Java<'el>>,
+        I: IntoTokens<'el, Csharp<'el>>,
     {
-        self.initializer = Some(initializer.into_tokens());
+        self.block = Some(block.into_tokens());
     }
 
     /// The variable of the field.
@@ -62,21 +62,21 @@ impl<'el> Field<'el> {
     }
 
     /// The type of the field.
-    pub fn ty(&self) -> Java<'el> {
+    pub fn ty(&self) -> Csharp<'el> {
         self.ty.clone()
     }
 }
 
-into_tokens_impl_from!(Field<'el>, Java<'el>);
+into_tokens_impl_from!(Field<'el>, Csharp<'el>);
 
-impl<'el> IntoTokens<'el, Java<'el>> for Field<'el> {
-    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
+impl<'el> IntoTokens<'el, Csharp<'el>> for Field<'el> {
+    fn into_tokens(self) -> Tokens<'el, Csharp<'el>> {
         let mut tokens = Tokens::new();
 
         tokens.push_unless_empty(BlockComment(self.comments));
 
-        if !self.annotations.is_empty() {
-            tokens.push(self.annotations);
+        if !self.attributes.is_empty() {
+            tokens.push(self.attributes);
             tokens.append(Element::PushSpacing);
         }
 
@@ -88,9 +88,14 @@ impl<'el> IntoTokens<'el, Java<'el>> for Field<'el> {
             sig.append(self.ty);
             sig.append(self.name);
 
-            if let Some(initializer) = self.initializer {
-                sig.append("=");
-                sig.append(initializer);
+            if let Some(block) = self.block {
+                sig.append({
+                    let mut b = Tokens::new();
+                    b.append("{");
+                    b.nested(block);
+                    b.push("}");
+                    b
+                });
             }
 
             sig.join_spacing()
@@ -100,7 +105,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Field<'el> {
     }
 }
 
-impl<'el> From<Field<'el>> for Element<'el, Java<'el>> {
+impl<'el> From<Field<'el>> for Element<'el, Csharp<'el>> {
     fn from(f: Field<'el>) -> Self {
         Element::Append(Con::Owned(f.into_tokens()))
     }
@@ -108,11 +113,11 @@ impl<'el> From<Field<'el>> for Element<'el, Java<'el>> {
 
 #[cfg(test)]
 mod tests {
+    use csharp::{Field, INT32};
     use tokens::Tokens;
-    use java::{Field, INTEGER};
 
     fn field() -> Field<'static> {
-        Field::new(INTEGER, "foo")
+        Field::new(INT32, "foo")
     }
 
     #[test]
@@ -121,9 +126,7 @@ mod tests {
         c.comments.push("Hello World".into());
         let t: Tokens<_> = c.into();
         assert_eq!(
-            Ok(String::from(
-                "/**\n * Hello World\n */\nprivate final int foo",
-            )),
+            Ok(String::from("/// Hello World\nprivate Int32 foo")),
             t.to_string()
         );
     }
@@ -131,6 +134,6 @@ mod tests {
     #[test]
     fn test_no_comments() {
         let t = Tokens::from(field());
-        assert_eq!(Ok(String::from("private final int foo")), t.to_string());
+        assert_eq!(Ok(String::from("private Int32 foo")), t.to_string());
     }
 }
