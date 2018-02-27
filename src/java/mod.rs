@@ -8,7 +8,9 @@ mod method;
 mod class;
 mod enum_;
 mod interface;
+mod utils;
 
+pub use self::utils::BlockComment;
 pub use self::constructor::Constructor;
 pub use self::field::Field;
 pub use self::argument::Argument;

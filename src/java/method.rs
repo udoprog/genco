@@ -1,13 +1,7 @@
 //! Data structure for methods.
 
-use tokens::Tokens;
-use java::Java;
-use element::Element;
-use super::argument::Argument;
-use super::modifier::Modifier;
-use super::VOID;
-use cons::Cons;
-use into_tokens::IntoTokens;
+use {Cons, IntoTokens, Tokens};
+use java::{Argument, BlockComment, Java, Modifier, VOID};
 
 /// Model for Java Methods.
 #[derive(Debug, Clone)]
@@ -77,17 +71,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
 
         let mut sig = Tokens::new();
 
-        if !self.comments.is_empty() {
-            sig.push("/**");
-
-            for line in self.comments {
-                sig.push(" * ");
-                sig.append(line);
-            }
-
-            sig.push(" */");
-            sig.append(Element::PushSpacing);
-        }
+        sig.push_unless_empty(BlockComment(self.comments));
 
         if !self.modifiers.is_empty() {
             sig.append(self.modifiers);
@@ -137,7 +121,7 @@ mod tests {
     fn test_with_comments() {
         let mut c = build_method();
         c.comments.push("Hello World".into());
-        let t: Tokens<_> = c.into();
+        let t = Tokens::from(c);
         assert_eq!(
             Ok(String::from(
                 "/**\n * Hello World\n */\npublic void foo<T>();",
@@ -148,8 +132,7 @@ mod tests {
 
     #[test]
     fn test_no_comments() {
-        let c = build_method();
-        let t: Tokens<_> = c.into();
+        let t = Tokens::from(build_method());
         assert_eq!(Ok(String::from("public void foo<T>();")), t.to_string());
     }
 }
