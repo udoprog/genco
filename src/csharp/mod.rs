@@ -109,6 +109,8 @@ pub struct Type<'el> {
     path: Vec<Cons<'el>>,
     /// Arguments of the class.
     arguments: Vec<Csharp<'el>>,
+    /// Use as qualified type.
+    qualified: bool,
 }
 
 /// Csharp token specialization.
@@ -178,6 +180,7 @@ impl<'el> Csharp<'el> {
                     name: class.name.clone(),
                     path: path,
                     arguments: vec![],
+                    qualified: class.qualified,
                 })
             }
             ref csharp => csharp.clone(),
@@ -240,12 +243,9 @@ impl<'el> Csharp<'el> {
                 _ => {}
             }
 
-            // TODO: formulate better strategy for imports.
-            if namespace == SYSTEM {
-                if !imported.contains(namespace) {
-                    out.push(toks!("using ", namespace, ";"));
-                    imported.insert(namespace.to_string());
-                }
+            if !imported.contains(namespace) {
+                out.push(toks!("using ", namespace, ";"));
+                imported.insert(namespace.to_string());
             }
 
             extra
@@ -268,8 +268,22 @@ impl<'el> Csharp<'el> {
                 name: cls.name.clone(),
                 path: cls.path.clone(),
                 arguments: arguments,
+                qualified: cls.qualified,
             }),
             ref csharp => csharp.clone(),
+        }
+    }
+
+    /// Make this type into a qualified type that is always used with a namespace.
+    pub fn qualified(self) -> Csharp<'el> {
+        use self::Csharp::*;
+
+        match self {
+            Class(cls) => Class(Type {
+                qualified: true,
+                ..cls
+            }),
+            csharp => csharp,
         }
     }
 
@@ -429,23 +443,25 @@ impl<'el> Custom for Csharp<'el> {
                 out.write_str("void")?;
             }
             Class(ref cls) => {
-                // TODO: support importing some things.
-                if cls.namespace.as_ref() == SYSTEM {
-                    let file_namespace = extra.namespace.as_ref().map(|p| p.as_ref());
-                    let imported = extra
-                        .imported_names
-                        .get(cls.name.as_ref())
-                        .map(String::as_str);
-                    let pkg = Some(cls.namespace.as_ref());
+                {
+                    let qualified = match cls.qualified {
+                        true => true,
+                        false => {
+                            let file_namespace = extra.namespace.as_ref().map(|p| p.as_ref());
+                            let imported = extra
+                                .imported_names
+                                .get(cls.name.as_ref())
+                                .map(String::as_str);
+                            let pkg = Some(cls.namespace.as_ref());
+                            imported != pkg && file_namespace != pkg
+                        }
+                    };
 
-                    if imported != pkg && file_namespace != pkg {
+                    if qualified {
                         out.write_str(cls.namespace.as_ref())?;
                         out.write_str(SEP)?;
                     }
                 }
-
-                out.write_str(cls.namespace.as_ref())?;
-                out.write_str(SEP)?;
 
                 {
                     out.write_str(cls.name.as_ref())?;
@@ -548,6 +564,7 @@ pub fn using<'a, P: Into<Cons<'a>>, N: Into<Cons<'a>>>(namespace: P, name: N) ->
         name: name.into(),
         path: vec![],
         arguments: vec![],
+        qualified: false,
     })
 }
 
