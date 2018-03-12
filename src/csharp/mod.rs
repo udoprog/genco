@@ -126,11 +126,13 @@ pub enum Csharp<'el> {
     /// An array of some type.
     Array(Box<Csharp<'el>>),
     /// A struct of some type.
-    Struct(Box<Csharp<'el>>),
+    Struct(Type<'el>),
     /// The special `void` type.
     Void,
     /// A class, with or without arguments, using from somewhere.
     Class(Type<'el>),
+    /// An enum of some type.
+    Enum(Type<'el>),
     /// A local name with no specific qualification.
     Local {
         /// Name of class.
@@ -187,6 +189,14 @@ impl<'el> Csharp<'el> {
         }
     }
 
+    fn inner_imports<'a>(ty: &'a Type<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
+        for argument in &ty.arguments {
+            Self::type_imports(argument, modules);
+        }
+
+        modules.insert((ty.namespace.as_ref(), ty.name.as_ref()));
+    }
+
     fn type_imports<'a>(csharp: &'a Csharp<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
         use self::Csharp::*;
 
@@ -194,18 +204,17 @@ impl<'el> Csharp<'el> {
             Simple { alias, .. } => {
                 modules.insert((SYSTEM, alias));
             }
-            Class(ref class) => {
-                for argument in &class.arguments {
-                    Self::type_imports(argument, modules);
-                }
-
-                modules.insert((class.namespace.as_ref(), class.name.as_ref()));
+            Class(ref inner) => {
+                Self::inner_imports(inner, modules);
             }
             Array(ref inner) => {
                 Self::type_imports(inner, modules);
             }
             Struct(ref inner) => {
-                Self::type_imports(inner, modules);
+                Self::inner_imports(inner, modules);
+            }
+            Enum(ref inner) => {
+                Self::inner_imports(inner, modules);
             }
             Optional(ref value) => {
                 Self::type_imports(value, modules);
@@ -274,6 +283,26 @@ impl<'el> Csharp<'el> {
         }
     }
 
+    /// Convert this type into a struct.
+    pub fn into_struct(self) -> Csharp<'el> {
+        use self::Csharp::*;
+
+        match self {
+            Class(inner) => Struct(inner),
+            csharp => csharp,
+        }
+    }
+
+    /// Convert this type into an enum.
+    pub fn into_enum(self) -> Csharp<'el> {
+        use self::Csharp::*;
+
+        match self {
+            Class(inner) => Enum(inner),
+            csharp => csharp,
+        }
+    }
+
     /// Make this type into a qualified type that is always used with a namespace.
     pub fn qualified(self) -> Csharp<'el> {
         use self::Csharp::*;
@@ -318,11 +347,10 @@ impl<'el> Csharp<'el> {
 
         match *self {
             Simple { ref name, .. } => Cons::Borrowed(name),
-            Class(ref cls) => cls.name.clone(),
+            Enum(ref inner) | Struct(ref inner) | Class(ref inner) => inner.name.clone(),
             Local { ref name, .. } => name.clone(),
             Optional(ref value) => value.name(),
             Array(ref inner) => inner.name(),
-            Struct(ref inner) => inner.name(),
             Void => Cons::Borrowed("void"),
         }
     }
@@ -333,11 +361,10 @@ impl<'el> Csharp<'el> {
 
         match *self {
             Simple { .. } => Some(Cons::Borrowed(SYSTEM)),
-            Class(ref cls) => Some(cls.namespace.clone()),
+            Enum(ref inner) | Struct(ref inner) | Class(ref inner) => Some(inner.namespace.clone()),
             Local { .. } => None,
             Optional(ref value) => value.namespace(),
             Array(ref inner) => inner.namespace(),
-            Struct(ref inner) => inner.namespace(),
             Void => None,
         }
     }
@@ -347,7 +374,7 @@ impl<'el> Csharp<'el> {
         use self::Csharp::*;
 
         match *self {
-            Class(ref cls) => Some(&cls.arguments),
+            Class(ref inner) => Some(&inner.arguments),
             Optional(ref value) => value.arguments(),
             _ => None,
         }
@@ -420,6 +447,63 @@ impl<'el> Csharp<'el> {
             _ => None,
         }
     }
+
+    fn inner_format(
+        &self,
+        inner: &Type<'el>,
+        out: &mut Formatter,
+        extra: &mut <Self as Custom>::Extra,
+        level: usize
+    ) -> fmt::Result {
+        {
+            let qualified = match inner.qualified {
+                true => true,
+                false => {
+                    let file_namespace = extra.namespace.as_ref().map(|p| p.as_ref());
+                    let imported = extra
+                        .imported_names
+                        .get(inner.name.as_ref())
+                        .map(String::as_str);
+                    let pkg = Some(inner.namespace.as_ref());
+                    imported != pkg && file_namespace != pkg
+                }
+            };
+
+            if qualified {
+                out.write_str(inner.namespace.as_ref())?;
+                out.write_str(SEP)?;
+            }
+        }
+
+        {
+            out.write_str(inner.name.as_ref())?;
+
+            let mut it = inner.path.iter();
+
+            while let Some(n) = it.next() {
+                out.write_str(".")?;
+                out.write_str(n.as_ref())?;
+            }
+        }
+
+        if !inner.arguments.is_empty() {
+            out.write_str("<")?;
+
+            let mut it = inner.arguments.iter().peekable();
+
+            while let Some(argument) = it.next() {
+                argument.format(out, extra, level + 1usize)?;
+
+                if it.peek().is_some() {
+                    out.write_str(", ")?;
+                }
+            }
+
+            out.write_str(">")?;
+        }
+
+        Ok(())
+    }
 }
 
 impl<'el> Custom for Csharp<'el> {
@@ -436,59 +520,11 @@ impl<'el> Custom for Csharp<'el> {
                 inner.format(out, extra, level)?;
                 out.write_str("[]")?;
             }
-            Struct(ref inner) => {
-                inner.format(out, extra, level)?;
-            }
             Void => {
                 out.write_str("void")?;
             }
-            Class(ref cls) => {
-                {
-                    let qualified = match cls.qualified {
-                        true => true,
-                        false => {
-                            let file_namespace = extra.namespace.as_ref().map(|p| p.as_ref());
-                            let imported = extra
-                                .imported_names
-                                .get(cls.name.as_ref())
-                                .map(String::as_str);
-                            let pkg = Some(cls.namespace.as_ref());
-                            imported != pkg && file_namespace != pkg
-                        }
-                    };
-
-                    if qualified {
-                        out.write_str(cls.namespace.as_ref())?;
-                        out.write_str(SEP)?;
-                    }
-                }
-
-                {
-                    out.write_str(cls.name.as_ref())?;
-
-                    let mut it = cls.path.iter();
-
-                    while let Some(n) = it.next() {
-                        out.write_str(".")?;
-                        out.write_str(n.as_ref())?;
-                    }
-                }
-
-                if !cls.arguments.is_empty() {
-                    out.write_str("<")?;
-
-                    let mut it = cls.arguments.iter().peekable();
-
-                    while let Some(argument) = it.next() {
-                        argument.format(out, extra, level + 1usize)?;
-
-                        if it.peek().is_some() {
-                            out.write_str(", ")?;
-                        }
-                    }
-
-                    out.write_str(">")?;
-                }
+            Enum(ref inner) | Struct(ref inner) | Class(ref inner) => {
+                self.inner_format(inner, out, extra, level)?;
             }
             Local { ref name } => {
                 out.write_str(name.as_ref())?;
@@ -568,6 +604,11 @@ pub fn using<'a, P: Into<Cons<'a>>, N: Into<Cons<'a>>>(namespace: P, name: N) ->
     })
 }
 
+/// Setup a struct type.
+pub fn struct_<'el, I: Into<Csharp<'el>>>(value: I) -> Csharp<'el> {
+    value.into().into_struct()
+}
+
 /// Setup a local element from borrowed components.
 pub fn local<'el, N: Into<Cons<'el>>>(name: N) -> Csharp<'el> {
     Csharp::Local { name: name.into() }
@@ -576,11 +617,6 @@ pub fn local<'el, N: Into<Cons<'el>>>(name: N) -> Csharp<'el> {
 /// Setup an array type.
 pub fn array<'el, I: Into<Csharp<'el>>>(value: I) -> Csharp<'el> {
     Csharp::Array(Box::new(value.into()))
-}
-
-/// Setup a struct type.
-pub fn struct_<'el, I: Into<Csharp<'el>>>(value: I) -> Csharp<'el> {
-    Csharp::Struct(Box::new(value.into()))
 }
 
 /// Setup an optional type.
