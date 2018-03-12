@@ -402,8 +402,7 @@ impl<'el> Csharp<'el> {
         use self::Csharp::*;
 
         match *self {
-            Simple { .. } => false,
-            Struct(_) => false,
+            Enum(_) | Struct(_) | Simple { .. } => false,
             _ => true,
         }
     }
@@ -434,6 +433,16 @@ impl<'el> Csharp<'el> {
 
         match *self {
             Struct(_) => true,
+            _ => false,
+        }
+    }
+
+    /// Check if type is an enum.
+    pub fn is_enum(&self) -> bool {
+        use self::Csharp::*;
+
+        match *self {
+            Enum(_) => true,
             _ => false,
         }
     }
