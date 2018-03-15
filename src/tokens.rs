@@ -43,6 +43,29 @@ impl<'el, C: 'el> Tokens<'el, C> {
         self.elements.push(Nested(Owned(tokens.into_tokens())));
     }
 
+    /// Push a nested definition.
+    pub fn nested_into<B>(&mut self, builder: B) -> ()
+    where
+        B: FnOnce(&mut Tokens<'el, C>) -> ()
+    {
+        let mut t = Tokens::new();
+        builder(&mut t);
+        self.nested(t);
+    }
+
+    /// Push a nested definition.
+    ///
+    /// This is a fallible version that expected the builder to return a result.
+    pub fn try_nested_into<E, B>(&mut self, builder: B) -> Result<(), E>
+    where
+        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>
+    {
+        let mut t = Tokens::new();
+        builder(&mut t)?;
+        self.nested(t);
+        Ok(())
+    }
+
     /// Push a nested reference to a definition.
     pub fn nested_ref(&mut self, tokens: &'el Tokens<'el, C>) {
         self.elements.push(Nested(Borrowed(tokens)));
@@ -54,6 +77,29 @@ impl<'el, C: 'el> Tokens<'el, C> {
         T: IntoTokens<'el, C>,
     {
         self.elements.push(Push(Owned(tokens.into_tokens())));
+    }
+
+    /// Push a new created definition, guaranteed to be preceded with one newline.
+    pub fn push_into<B>(&mut self, builder: B) -> ()
+    where
+        B: FnOnce(&mut Tokens<'el, C>) -> ()
+    {
+        let mut t = Tokens::new();
+        builder(&mut t);
+        self.push(t);
+    }
+
+    /// Push a new created definition, guaranteed to be preceded with one newline.
+    ///
+    /// This is a fallible version that expected the builder to return a result.
+    pub fn try_push_into<E, B>(&mut self, builder: B) -> Result<(), E>
+    where
+        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>
+    {
+        let mut t = Tokens::new();
+        builder(&mut t)?;
+        self.push(t);
+        Ok(())
     }
 
     /// Push the given set of tokens, unless it is empty.
