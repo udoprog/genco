@@ -10,7 +10,7 @@
 
 use super::into_tokens::IntoTokens;
 use super::formatter::Formatter;
-use super::element::Element::{self, Nested, Push};
+use super::element::Element::{self, Append, Nested, Push};
 use super::write_tokens::WriteTokens;
 use std::collections::LinkedList;
 use super::custom::Custom;
@@ -46,7 +46,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a nested definition.
     pub fn nested_into<B>(&mut self, builder: B) -> ()
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> ()
+        B: FnOnce(&mut Tokens<'el, C>) -> (),
     {
         let mut t = Tokens::new();
         builder(&mut t);
@@ -58,7 +58,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is a fallible version that expected the builder to return a result.
     pub fn try_nested_into<E, B>(&mut self, builder: B) -> Result<(), E>
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>
+        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>,
     {
         let mut t = Tokens::new();
         builder(&mut t)?;
@@ -82,7 +82,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a new created definition, guaranteed to be preceded with one newline.
     pub fn push_into<B>(&mut self, builder: B) -> ()
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> ()
+        B: FnOnce(&mut Tokens<'el, C>) -> (),
     {
         let mut t = Tokens::new();
         builder(&mut t);
@@ -94,7 +94,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is a fallible version that expected the builder to return a result.
     pub fn try_push_into<E, B>(&mut self, builder: B) -> Result<(), E>
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>
+        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>,
     {
         let mut t = Tokens::new();
         builder(&mut t)?;
@@ -144,6 +144,22 @@ impl<'el, C: 'el> Tokens<'el, C> {
         self.elements.push(Element::Borrowed(element));
     }
 
+    /// Append the given set of tokens, unless it is empty.
+    ///
+    /// This is useful when you wish to preserve the structure of nested and joined tokens.
+    pub fn append_unless_empty<T>(&mut self, tokens: T)
+    where
+        T: IntoTokens<'el, C>,
+    {
+        let tokens = tokens.into_tokens();
+
+        if tokens.is_empty() {
+            return;
+        }
+
+        self.elements.push(Append(Owned(tokens)));
+    }
+
     /// Extend with another set of tokens.
     pub fn extend<I>(&mut self, it: I)
     where
@@ -184,11 +200,6 @@ impl<'el, C: Custom> Tokens<'el, C> {
         Ok(())
     }
 
-    /// Format token as file.
-    pub fn to_file(self) -> result::Result<String, fmt::Error> {
-        self.to_file_with(C::Extra::default())
-    }
-
     /// Format token as file with the given extra.
     pub fn to_file_with(self, mut extra: C::Extra) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
@@ -196,16 +207,23 @@ impl<'el, C: Custom> Tokens<'el, C> {
         Ok(output)
     }
 
-    /// Format the tokens.
-    pub fn to_string(self) -> result::Result<String, fmt::Error> {
-        self.to_string_with(C::Extra::default())
-    }
-
     /// Format the tokens with the given extra.
     pub fn to_string_with(self, mut extra: C::Extra) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
         output.write_tokens(self, &mut extra)?;
         Ok(output)
+    }
+}
+
+impl<'el, E: Default, C: Custom<Extra = E>> Tokens<'el, C> {
+    /// Format token as file.
+    pub fn to_file(self) -> result::Result<String, fmt::Error> {
+        self.to_file_with(C::Extra::default())
+    }
+
+    /// Format the tokens.
+    pub fn to_string(self) -> result::Result<String, fmt::Error> {
+        self.to_string_with(C::Extra::default())
     }
 }
 

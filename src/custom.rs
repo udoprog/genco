@@ -10,7 +10,7 @@ where
     Self: Sized,
 {
     /// Extra data associated with building a formatting element.
-    type Extra: Default;
+    type Extra;
 
     /// Format the custom element.
     fn format(&self, _out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {
