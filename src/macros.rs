@@ -20,6 +20,34 @@ macro_rules! toks {
     ($($x:expr,)*) => {toks!($($x),*)}
 }
 
+/// Helper macro to reduce boilerplate needed with pushed token expressions.
+#[macro_export]
+macro_rules! push {
+    ($dest:ident, $($x:expr),*) => {
+        $dest.push({
+            let mut _t = $crate::Tokens::new();
+            $(_t.append(Clone::clone(&$x));)*
+            _t
+        })
+    };
+
+    ($dest:ident, $($x:expr,)*) => {push!($dest, $($x),*)};
+}
+
+/// Helper macro to reduce boilerplate needed with nested token expressions.
+#[macro_export]
+macro_rules! nested {
+    ($dest:ident, $($x:expr)*) => {
+        $dest.nested({
+            let mut _t = $crate::Tokens::new();
+            $(_t.append(Clone::clone(&$x));)*
+            _t
+        })
+    };
+
+    ($dest:ident, $($x:expr,)*) => {nested!($dest, $($x),*)};
+}
+
 macro_rules! into_tokens_impl_from {
     ($type:ty, $custom:ty) => {
         impl<'el> From<$type> for Tokens<'el, $custom> {
@@ -27,7 +55,7 @@ macro_rules! into_tokens_impl_from {
                 value.into_tokens()
             }
         }
-    }
+    };
 }
 
 macro_rules! into_tokens_impl_from_generic {
