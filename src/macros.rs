@@ -37,7 +37,7 @@ macro_rules! push {
 /// Helper macro to reduce boilerplate needed with nested token expressions.
 #[macro_export]
 macro_rules! nested {
-    ($dest:ident, $($x:expr)*) => {
+    ($dest:ident, $($x:expr),*) => {
         $dest.nested({
             let mut _t = $crate::Tokens::new();
             $(_t.append(Clone::clone(&$x));)*
