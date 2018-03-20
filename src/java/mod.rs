@@ -241,6 +241,23 @@ impl<'el> Java<'el> {
         }
     }
 
+    /// Get the raw type.
+    ///
+    /// A raw type is one without generic arguments.
+    pub fn as_raw(&self) -> Java<'el> {
+        use self::Java::*;
+
+        match *self {
+            Class(ref cls) => Class(Type {
+                package: cls.package.clone(),
+                name: cls.name.clone(),
+                path: cls.path.clone(),
+                arguments: vec![],
+            }),
+            ref java => java.clone(),
+        }
+    }
+
     /// Get a guaranteed boxed version of a type.
     pub fn as_boxed(&self) -> Java<'el> {
         use self::Java::*;
