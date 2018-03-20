@@ -3,6 +3,7 @@
 use std::rc::Rc;
 use std::ops::Deref;
 use std::borrow::Cow;
+use std::fmt;
 
 /// A managed string that permits immutable borrowing.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -58,5 +59,11 @@ impl<'el> From<Cow<'el, str>> for Cons<'el> {
             Owned(string) => Cons::Rc(Rc::new(string)),
             Borrowed(string) => Cons::Borrowed(string),
         }
+    }
+}
+
+impl<'el> fmt::Display for Cons<'el> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        self.as_ref().fmt(fmt)
     }
 }
