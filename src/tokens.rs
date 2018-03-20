@@ -8,16 +8,14 @@
 //! toks.append("foo");
 //! ```
 
-use super::into_tokens::IntoTokens;
-use super::formatter::Formatter;
-use super::element::Element::{self, Append, Nested, Push};
-use super::write_tokens::WriteTokens;
+use {Custom, Element, Formatter, IntoTokens, WriteTokens};
+use element::Element::{Append, Nested, Push};
 use std::collections::LinkedList;
-use super::custom::Custom;
 use std::fmt;
 use std::result;
-use con_::Con::{Borrowed, Owned};
+use con_::Con::{self, Borrowed, Owned};
 use std::vec;
+use std::rc::Rc;
 use std::iter::FromIterator;
 
 /// A set of tokens.
@@ -169,10 +167,16 @@ impl<'el, C: 'el> Tokens<'el, C> {
     }
 
     /// Walk over all elements.
-    pub fn walk_custom(&self) -> WalkCustomIter<C> {
+    pub fn walk_custom(&self) -> WalkCustom<C> {
         let mut queue = LinkedList::new();
         queue.extend(self.elements.iter());
-        WalkCustomIter { queue: queue }
+        WalkCustom { queue: queue }
+    }
+
+    /// Add an registered custom element that is _not_ rendered.
+    pub fn register(&mut self, custom: C) {
+        self.elements
+            .push(Element::Registered(Con::Rc(Rc::new(custom))));
     }
 
     /// Check if tokens contain no elements.
@@ -359,11 +363,11 @@ impl<'el, C> FromIterator<Element<'el, C>> for Tokens<'el, C> {
     }
 }
 
-pub struct WalkCustomIter<'el, C: 'el> {
+pub struct WalkCustom<'el, C: 'el> {
     queue: LinkedList<&'el Element<'el, C>>,
 }
 
-impl<'el, C: 'el> Iterator for WalkCustomIter<'el, C> {
+impl<'el, C: 'el> Iterator for WalkCustom<'el, C> {
     type Item = &'el C;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -382,6 +386,7 @@ impl<'el, C: 'el> Iterator for WalkCustomIter<'el, C> {
                     self.queue.extend(tokens.as_ref().elements.iter());
                 }
                 Custom(ref custom) => return Some(custom.as_ref()),
+                Registered(ref custom) => return Some(custom.as_ref()),
                 _ => {}
             }
         }

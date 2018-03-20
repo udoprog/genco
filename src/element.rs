@@ -1,11 +1,8 @@
 //! A single element
 
-use super::formatter::Formatter;
-use super::custom::Custom;
+use {Cons, Custom, Formatter, Tokens};
 use std::fmt;
-use super::tokens::Tokens;
 use super::con_::Con;
-use super::cons::Cons;
 
 use std::rc::Rc;
 
@@ -28,6 +25,8 @@ pub enum Element<'el, C: 'el> {
     Quoted(Cons<'el>),
     /// Language-specific items.
     Custom(Con<'el, C>),
+    /// A custom element that is not rendered.
+    Registered(Con<'el, C>),
     /// Push an empty line.
     PushSpacing,
     /// Unconditionally push a line.
@@ -44,6 +43,7 @@ impl<'el, C: Custom> Element<'el, C> {
         use self::Element::*;
 
         match *self {
+            Registered(_) => {}
             Rc(ref element) => {
                 element.format(out, extra, level)?;
             }
