@@ -12,11 +12,13 @@ mod tokens;
 mod into_tokens;
 mod write_tokens;
 mod cons;
-pub mod java;
 pub mod csharp;
+pub mod go;
+pub mod java;
 pub mod js;
-pub mod rust;
 pub mod python;
+pub mod rust;
+pub mod swift;
 
 pub use self::custom::Custom;
 pub use self::element::Element;

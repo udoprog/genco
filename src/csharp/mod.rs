@@ -462,7 +462,7 @@ impl<'el> Csharp<'el> {
         inner: &Type<'el>,
         out: &mut Formatter,
         extra: &mut <Self as Custom>::Extra,
-        level: usize
+        level: usize,
     ) -> fmt::Result {
         {
             let qualified = match inner.qualified {
