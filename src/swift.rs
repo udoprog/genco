@@ -133,7 +133,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, Swift};
-    use genco::{Quoted, Tokens};
+    use {Quoted, Tokens};
 
     #[test]
     fn test_string() {

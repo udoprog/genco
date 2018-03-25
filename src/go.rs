@@ -164,7 +164,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, Extra, Go};
-    use genco::{Quoted, Tokens};
+    use {Quoted, Tokens};
 
     #[test]
     fn test_string() {
