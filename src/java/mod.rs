@@ -86,7 +86,7 @@ pub const VOID: Java<'static> = Java::Primitive {
 };
 
 /// A class.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, Serialize)]
 pub struct Type<'el> {
     /// Package of the class.
     package: Cons<'el>,
@@ -99,7 +99,7 @@ pub struct Type<'el> {
 }
 
 /// An optional type.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, Serialize)]
 pub struct Optional<'el> {
     /// The type that is optional.
     pub value: Box<Java<'el>>,
@@ -108,7 +108,8 @@ pub struct Optional<'el> {
 }
 
 /// Java token specialization.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum Java<'el> {
     /// Primitive type.
     Primitive {

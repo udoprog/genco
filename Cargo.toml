@@ -10,3 +10,7 @@ documentation = "https://docs.rs/genco"
 description = """
 Even simpler code generation for Rust.
 """
+
+[dependencies]
+serde = {version = "1.0"}
+serde_derive = {version = "1.0"}
