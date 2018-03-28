@@ -65,18 +65,17 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
         let mut sig = Tokens::new();
 
         sig.extend(self.modifiers.into_tokens());
+
+        if !self.parameters.is_empty() {
+            sig.append(toks!["<", self.parameters.join(", "), ">"]);
+        }
+
         sig.append(self.returns);
 
         sig.append({
             let mut n = Tokens::new();
 
             n.append(self.name);
-
-            if !self.parameters.is_empty() {
-                n.append("<");
-                n.append(self.parameters.join(", "));
-                n.append(">");
-            }
 
             let args: Vec<Tokens<Java>> = self.arguments
                 .into_iter()
@@ -127,7 +126,7 @@ mod tests {
         let t = Tokens::from(c);
         assert_eq!(
             Ok(String::from(
-                "/**\n * Hello World\n */\npublic void foo<T>();",
+                "/**\n * Hello World\n */\npublic <T> void foo();",
             )),
             t.to_string()
         );
@@ -136,6 +135,6 @@ mod tests {
     #[test]
     fn test_no_comments() {
         let t = Tokens::from(build_method());
-        assert_eq!(Ok(String::from("public void foo<T>();")), t.to_string());
+        assert_eq!(Ok(String::from("public <T> void foo();")), t.to_string());
     }
 }
