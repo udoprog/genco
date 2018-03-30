@@ -1,6 +1,6 @@
 [package]
 name = "genco"
-version = "0.3.14"
+version = "0.3.15"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
