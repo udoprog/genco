@@ -7,7 +7,7 @@ use {Cons, Custom, Formatter, IntoTokens, Tokens};
 static SEP: &'static str = "::";
 
 /// A name.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Name<'el> {
     /// Name  of class.
     name: Cons<'el>,
@@ -58,7 +58,7 @@ impl<'el> From<Cons<'el>> for Name<'el> {
 }
 
 /// Rust token specialization.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Rust<'el> {
     /// Module of the imported name.
     module: Option<Cons<'el>>,
@@ -242,7 +242,9 @@ mod tests {
 
     #[test]
     fn test_imported_with_arguments() {
-        let dbg = imported("std::fmt", "Debug").alias("dbg").with_arguments(vec![local("T")]);
+        let dbg = imported("std::fmt", "Debug")
+            .alias("dbg")
+            .with_arguments(vec![local("T")]);
         let mut toks: Tokens<Rust> = Tokens::new();
         toks.push(toks!(&dbg));
 
