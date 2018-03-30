@@ -25,7 +25,7 @@ impl<'el> Name<'el> {
 
             out.write_str("<")?;
 
-            if let Some(n) = it.next() {
+            while let Some(n) = it.next() {
                 n.format(out, extra, level + 1)?;
 
                 if it.peek().is_some() {
@@ -244,12 +244,12 @@ mod tests {
     fn test_imported_with_arguments() {
         let dbg = imported("std::fmt", "Debug")
             .alias("dbg")
-            .with_arguments(vec![local("T")]);
+            .with_arguments(vec![local("T"), local("U")]);
         let mut toks: Tokens<Rust> = Tokens::new();
         toks.push(toks!(&dbg));
 
         assert_eq!(
-            Ok("use std::fmt as dbg;\n\ndbg::Debug<T>\n"),
+            Ok("use std::fmt as dbg;\n\ndbg::Debug<T, U>\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
