@@ -72,13 +72,24 @@ into_tokens_impl_from!(Rust<'el>, Rust<'el>);
 into_tokens_impl_from!(&'el Rust<'el>, Rust<'el>);
 
 impl<'el> Rust<'el> {
+    fn walk_custom<'a, 'b: 'a>(
+        custom: &'a Rust<'b>,
+        modules: &mut BTreeSet<(&'a str, Option<&'a Cons<'b>>)>,
+    ) {
+        if let Some(module) = custom.module.as_ref() {
+            modules.insert((module.as_ref(), custom.alias.as_ref()));
+        }
+
+        for arg in &custom.name.arguments {
+            Self::walk_custom(arg, modules);
+        }
+    }
+
     fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            if let Some(module) = custom.module.as_ref() {
-                modules.insert((module.as_ref(), custom.alias.as_ref()));
-            }
+            Self::walk_custom(&custom, &mut modules);
         }
 
         if modules.is_empty() {
