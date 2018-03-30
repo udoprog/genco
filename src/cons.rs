@@ -4,7 +4,6 @@ use std::rc::Rc;
 use std::ops::Deref;
 use std::borrow::Cow;
 use std::fmt;
-use serde;
 
 /// A managed string that permits immutable borrowing.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -13,15 +12,6 @@ pub enum Cons<'el> {
     Borrowed(&'el str),
     /// A refcounted string.
     Rc(Rc<String>),
-}
-
-impl<'el> serde::Serialize for Cons<'el> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(self.as_ref())
-    }
 }
 
 impl<'a> AsRef<str> for Cons<'a> {

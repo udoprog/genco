@@ -1,10 +1,6 @@
 //! ## Simple and flexible code generator (genco)
 #![deny(missing_docs)]
 
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-
 #[macro_use]
 mod macros;
 mod con_;
