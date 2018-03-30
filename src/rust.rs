@@ -1,34 +1,71 @@
 //! Specialization for Rust code generation.
 
-use super::custom::Custom;
-use super::formatter::Formatter;
-use std::fmt::{self, Write};
-use super::tokens::Tokens;
 use std::collections::BTreeSet;
-use std::borrow::Cow;
-use super::into_tokens::IntoTokens;
+use std::fmt::{self, Write};
+use {Cons, Custom, Formatter, IntoTokens, Tokens};
 
 static SEP: &'static str = "::";
 
+/// A name.
+#[derive(Debug, Clone)]
+pub struct Name<'el> {
+    /// Name  of class.
+    name: Cons<'el>,
+    /// Arguments of the class.
+    arguments: Vec<Rust<'el>>,
+}
+
+impl<'el> Name<'el> {
+    /// Format the name.
+    fn format(&self, out: &mut Formatter, extra: &mut (), level: usize) -> fmt::Result {
+        out.write_str(self.name.as_ref())?;
+
+        if !self.arguments.is_empty() {
+            let mut it = self.arguments.iter().peekable();
+
+            out.write_str("<")?;
+
+            if let Some(n) = it.next() {
+                n.format(out, extra, level + 1)?;
+
+                if it.peek().is_some() {
+                    out.write_str(", ")?;
+                }
+            }
+
+            out.write_str(">")?;
+        }
+
+        Ok(())
+    }
+
+    /// Add generic arguments to the given type.
+    pub fn with_arguments(&self, arguments: Vec<Rust<'el>>) -> Name<'el> {
+        Name {
+            name: self.name.clone(),
+            arguments: arguments,
+        }
+    }
+}
+
+impl<'el> From<Cons<'el>> for Name<'el> {
+    fn from(value: Cons<'el>) -> Self {
+        Name {
+            name: value,
+            arguments: vec![],
+        }
+    }
+}
+
 /// Rust token specialization.
 #[derive(Debug, Clone)]
-pub enum Rust<'el> {
-    /// An imported name.
-    Imported {
-        /// Module of the imported name.
-        module: Cow<'el, str>,
-        /// Name imported.
-        name: Cow<'el, str>,
-    },
-    /// An imported module as an alias.
-    ImportedAlias {
-        /// Module of the imported name.
-        module: Cow<'el, str>,
-        /// Name imported.
-        name: Cow<'el, str>,
-        /// Alias of module.
-        alias: Cow<'el, str>,
-    },
+pub struct Rust<'el> {
+    /// Module of the imported name.
+    module: Option<Cons<'el>>,
+    /// Alias of module.
+    alias: Option<Cons<'el>>,
+    /// Name imported.
+    name: Name<'el>,
 }
 
 into_tokens_impl_from!(Rust<'el>, Rust<'el>);
@@ -36,19 +73,12 @@ into_tokens_impl_from!(&'el Rust<'el>, Rust<'el>);
 
 impl<'el> Rust<'el> {
     fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
-        use self::Rust::*;
-
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            match *custom {
-                Imported { ref module, .. } => modules.insert((module.as_ref(), None)),
-                ImportedAlias {
-                    ref module,
-                    ref alias,
-                    ..
-                } => modules.insert((module.as_ref(), Some(alias.as_ref()))),
-            };
+            if let Some(module) = custom.module.as_ref() {
+                modules.insert((module.as_ref(), custom.alias.as_ref()));
+            }
         }
 
         if modules.is_empty() {
@@ -65,7 +95,7 @@ impl<'el> Rust<'el> {
 
             if let Some(alias) = alias {
                 s.append(" as ");
-                s.append(alias);
+                s.append(alias.as_ref());
             }
 
             s.append(";");
@@ -75,39 +105,38 @@ impl<'el> Rust<'el> {
 
         Some(out)
     }
+
+    /// Alias the given type.
+    pub fn alias<A: Into<Cons<'el>>>(self, alias: A) -> Rust<'el> {
+        Rust {
+            alias: Some(alias.into()),
+            ..self
+        }
+    }
+
+    /// Add generic arguments to the given type.
+    pub fn with_arguments(&self, arguments: Vec<Rust<'el>>) -> Rust<'el> {
+        Rust {
+            module: self.module.clone(),
+            name: self.name.with_arguments(arguments),
+            alias: self.alias.clone(),
+        }
+    }
 }
 
 impl<'el> Custom for Rust<'el> {
     type Extra = ();
 
-    fn format(&self, out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {
-        use self::Rust::*;
-
-        match *self {
-            Imported {
-                ref module,
-                ref name,
-                ..
-            } => {
-                if let Some(part) = module.split(SEP).last() {
-                    out.write_str(part)?;
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(name)?;
-            }
-            ImportedAlias {
-                ref alias,
-                ref name,
-                ..
-            } => {
-                out.write_str(alias)?;
-                out.write_str(SEP)?;
-                out.write_str(name)?;
-            }
+    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
+        if let Some(alias) = self.alias.as_ref() {
+            out.write_str(alias)?;
+            out.write_str(SEP)?;
+        } else if let Some(part) = self.module.as_ref().and_then(|m| m.split(SEP).last()) {
+            out.write_str(part)?;
+            out.write_str(SEP)?;
         }
 
-        Ok(())
+        self.name.format(out, extra, level)
     }
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
@@ -149,35 +178,34 @@ impl<'el> Custom for Rust<'el> {
 /// Setup an imported element.
 pub fn imported<'a, M, N>(module: M, name: N) -> Rust<'a>
 where
-    M: Into<Cow<'a, str>>,
-    N: Into<Cow<'a, str>>,
+    M: Into<Cons<'a>>,
+    N: Into<Cons<'a>>,
 {
-    Rust::Imported {
-        module: module.into(),
-        name: name.into(),
+    Rust {
+        module: Some(module.into()),
+        alias: None,
+        name: Name::from(name.into()),
     }
 }
 
-/// Setup an imported alias element.
-pub fn imported_alias<'a, M, N, A>(module: M, name: N, alias: A) -> Rust<'a>
+/// Setup a local element.
+pub fn local<'a, N>(name: N) -> Rust<'a>
 where
-    M: Into<Cow<'a, str>>,
-    N: Into<Cow<'a, str>>,
-    A: Into<Cow<'a, str>>,
+    N: Into<Cons<'a>>,
 {
-    Rust::ImportedAlias {
-        module: module.into(),
-        name: name.into(),
-        alias: alias.into(),
+    Rust {
+        module: None,
+        alias: None,
+        name: Name::from(name.into()),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use tokens::Tokens;
-    use rust::Rust;
+    use super::{imported, local};
     use quoted::Quoted;
-    use super::imported;
+    use rust::Rust;
+    use tokens::Tokens;
 
     #[test]
     fn test_string() {
@@ -196,6 +224,30 @@ mod tests {
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
+        );
+    }
+
+    #[test]
+    fn test_imported_alias() {
+        let dbg = imported("std::fmt", "Debug").alias("dbg");
+        let mut toks: Tokens<Rust> = Tokens::new();
+        toks.push(toks!(&dbg));
+
+        assert_eq!(
+            Ok("use std::fmt as dbg;\n\ndbg::Debug\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
+        );
+    }
+
+    #[test]
+    fn test_imported_with_arguments() {
+        let dbg = imported("std::fmt", "Debug").alias("dbg").with_arguments(vec![local("T")]);
+        let mut toks: Tokens<Rust> = Tokens::new();
+        toks.push(toks!(&dbg));
+
+        assert_eq!(
+            Ok("use std::fmt as dbg;\n\ndbg::Debug<T>\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
