@@ -66,6 +66,8 @@ pub struct Rust<'el> {
     alias: Option<Cons<'el>>,
     /// Name imported.
     name: Name<'el>,
+    /// Qualified import.
+    qualified: bool,
 }
 
 into_tokens_impl_from!(Rust<'el>, Rust<'el>);
@@ -74,10 +76,15 @@ into_tokens_impl_from!(&'el Rust<'el>, Rust<'el>);
 impl<'el> Rust<'el> {
     fn walk_custom<'a, 'b: 'a>(
         custom: &'a Rust<'b>,
-        modules: &mut BTreeSet<(&'a str, Option<&'a Cons<'b>>)>,
+        modules: &mut BTreeSet<(Cons<'a>, Option<&'a Cons<'b>>)>,
     ) {
         if let Some(module) = custom.module.as_ref() {
-            modules.insert((module.as_ref(), custom.alias.as_ref()));
+            if custom.qualified {
+                let module = Cons::from(format!("{}::{}", module, custom.name.name.as_ref()));
+                modules.insert((module, custom.alias.as_ref()));
+            } else {
+                modules.insert((Cons::from(module.as_ref()), custom.alias.as_ref()));
+            }
         }
 
         for arg in &custom.name.arguments {
@@ -131,6 +138,15 @@ impl<'el> Rust<'el> {
             module: self.module.clone(),
             name: self.name.with_arguments(arguments),
             alias: self.alias.clone(),
+            qualified: self.qualified,
+        }
+    }
+
+    /// Change to be a qualified import.
+    pub fn qualified(self) -> Rust<'el> {
+        Rust {
+            qualified: true,
+            ..self
         }
     }
 }
@@ -196,6 +212,7 @@ where
         module: Some(module.into()),
         alias: None,
         name: Name::from(name.into()),
+        qualified: false,
     }
 }
 
@@ -208,6 +225,7 @@ where
         module: None,
         alias: None,
         name: Name::from(name.into()),
+        qualified: false,
     }
 }
 
