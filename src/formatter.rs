@@ -1,6 +1,6 @@
 use std::fmt;
-use std::iter;
 use std::io;
+use std::iter;
 
 /// Facade for writing formatted strings to io::Write types.
 pub struct IoFmt<'write, W: 'write>(pub &'write mut W);

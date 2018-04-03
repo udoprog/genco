@@ -1,14 +1,14 @@
 //! Data structure for classes.
 
-use tokens::Tokens;
-use java::Java;
-use cons::Cons;
-use super::modifier::Modifier;
-use super::method::Method;
 use super::constructor::Constructor;
 use super::field::Field;
+use super::method::Method;
+use super::modifier::Modifier;
+use cons::Cons;
 use element::Element;
 use into_tokens::IntoTokens;
+use java::Java;
+use tokens::Tokens;
 
 /// Model for Java Classs.
 #[derive(Debug, Clone)]

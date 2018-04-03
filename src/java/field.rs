@@ -1,8 +1,8 @@
 //! Data structure for fields
 
-use {Cons, Element, IntoTokens, Java, Tokens};
 use con_::Con;
 use java::{BlockComment, Modifier};
+use {Cons, Element, IntoTokens, Java, Tokens};
 
 /// Model for Java Fields.
 #[derive(Debug, Clone)]
@@ -108,8 +108,8 @@ impl<'el> From<Field<'el>> for Element<'el, Java<'el>> {
 
 #[cfg(test)]
 mod tests {
-    use tokens::Tokens;
     use java::{Field, INTEGER};
+    use tokens::Tokens;
 
     fn field() -> Field<'static> {
         Field::new(INTEGER, "foo")

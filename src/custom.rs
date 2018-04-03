@@ -1,8 +1,8 @@
 //! Trait used for custom element.
 
-use std::fmt;
 use super::formatter::Formatter;
 use super::tokens::Tokens;
+use std::fmt;
 
 /// Trait that must be implemented by custom elements.
 pub trait Custom

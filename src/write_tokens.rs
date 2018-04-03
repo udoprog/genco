@@ -1,9 +1,9 @@
 //! Helper trait to treat different containers as immediate targets for tokens.
 
-use std::fmt;
-use super::tokens::Tokens;
-use super::formatter::Formatter;
 use super::custom::Custom;
+use super::formatter::Formatter;
+use super::tokens::Tokens;
+use std::fmt;
 
 /// Helper trait to write tokens immediately to containers.
 pub trait WriteTokens {

@@ -2,9 +2,9 @@
 
 use super::modifier::Modifier;
 use cons::Cons;
+use csharp::Csharp;
 use element::Element;
 use into_tokens::IntoTokens;
-use csharp::Csharp;
 use tokens::Tokens;
 
 /// Model for Csharp Enums.

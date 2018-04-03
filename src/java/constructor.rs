@@ -1,13 +1,13 @@
 //! Data structure for constructors
 
-use tokens::Tokens;
-use java::Java;
 use super::argument::Argument;
+use super::modifier::Modifier;
 use con_::Con::Owned;
 use cons::Cons;
-use super::modifier::Modifier;
 use element::Element;
 use into_tokens::IntoTokens;
+use java::Java;
+use tokens::Tokens;
 
 /// Model for Java Constructors.
 #[derive(Debug, Clone)]
@@ -84,9 +84,9 @@ impl<'el> IntoTokens<'el, Java<'el>> for (Cons<'el>, Constructor<'el>) {
 #[cfg(test)]
 mod tests {
     use super::Constructor;
+    use cons::Cons;
     use java::Java;
     use tokens::Tokens;
-    use cons::Cons;
 
     #[test]
     fn test_vec() {

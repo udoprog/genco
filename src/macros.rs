@@ -49,7 +49,7 @@ macro_rules! nested {
 }
 
 macro_rules! into_tokens_impl_from {
-    ($type: ty, $custom: ty) => {
+    ($type:ty, $custom:ty) => {
         impl<'el> From<$type> for Tokens<'el, $custom> {
             fn from(value: $type) -> Tokens<'el, $custom> {
                 value.into_tokens()
@@ -59,7 +59,7 @@ macro_rules! into_tokens_impl_from {
 }
 
 macro_rules! into_tokens_impl_from_generic {
-    ($type: ty) => {
+    ($type:ty) => {
         impl<'el, C> From<$type> for Tokens<'el, C> {
             fn from(value: $type) -> Tokens<'el, C> {
                 value.into_tokens()
@@ -70,9 +70,9 @@ macro_rules! into_tokens_impl_from_generic {
 
 #[cfg(test)]
 mod tests {
+    use js::JavaScript;
     use quoted::Quoted;
     use tokens::Tokens;
-    use js::JavaScript;
 
     #[test]
     fn test_quoted() {

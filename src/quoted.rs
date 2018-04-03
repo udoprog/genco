@@ -1,7 +1,7 @@
 //! Trait to convert to quoted.
 
-use super::element::Element;
 use super::cons::Cons;
+use super::element::Element;
 use std::rc::Rc;
 
 /// Trait to convert types to quoted elements.

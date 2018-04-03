@@ -1,8 +1,8 @@
 //! A single element
 
-use {Cons, Custom, Formatter, Tokens};
-use std::fmt;
 use super::con_::Con;
+use std::fmt;
+use {Cons, Custom, Formatter, Tokens};
 
 use std::rc::Rc;
 

@@ -1,7 +1,7 @@
 //! Data structure for methods.
 
-use {Cons, IntoTokens, Tokens};
 use java::{Argument, BlockComment, Java, Modifier, VOID};
+use {Cons, IntoTokens, Tokens};
 
 /// Model for Java Methods.
 #[derive(Debug, Clone)]

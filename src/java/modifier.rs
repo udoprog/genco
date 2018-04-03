@@ -1,7 +1,7 @@
 //! Individual java modifier
 
-use {Custom, Element, IntoTokens, Tokens};
 use std::collections::BTreeSet;
+use {Custom, Element, IntoTokens, Tokens};
 
 /// A Java modifier.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]

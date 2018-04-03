@@ -2,11 +2,11 @@
 
 use super::custom::Custom;
 use super::formatter::Formatter;
-use std::fmt::{self, Write};
-use std::borrow::Cow;
-use super::tokens::Tokens;
-use std::collections::BTreeSet;
 use super::into_tokens::IntoTokens;
+use super::tokens::Tokens;
+use std::borrow::Cow;
+use std::collections::BTreeSet;
+use std::fmt::{self, Write};
 
 static SEP: &'static str = ".";
 
@@ -189,9 +189,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use tokens::Tokens;
     use super::{imported, Python};
     use quoted::Quoted;
+    use tokens::Tokens;
 
     #[test]
     fn test_string() {

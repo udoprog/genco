@@ -1,8 +1,8 @@
 //! Data structure for fields
 
-use {Cons, Csharp, Element, IntoTokens, Tokens};
 use con_::Con;
 use csharp::{BlockComment, Modifier};
+use {Cons, Csharp, Element, IntoTokens, Tokens};
 
 /// Model for Csharp Fields.
 #[derive(Debug, Clone)]

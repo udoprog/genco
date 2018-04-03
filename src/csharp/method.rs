@@ -1,7 +1,7 @@
 //! Data structure for methods.
 
-use {Cons, IntoTokens, Tokens};
 use csharp::{Argument, BlockComment, Csharp, Modifier};
+use {Cons, IntoTokens, Tokens};
 
 /// Model for Csharp Methods.
 #[derive(Debug, Clone)]

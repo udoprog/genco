@@ -1,10 +1,10 @@
 //! Data structure for constructors
 
-use tokens::Tokens;
-use java::Java;
 use super::modifier::Modifier;
 use cons::Cons;
 use into_tokens::IntoTokens;
+use java::Java;
+use tokens::Tokens;
 
 /// Model for Java Arguments to functions.
 #[derive(Debug, Clone)]

@@ -1,9 +1,9 @@
 //! Helper trait to take ownership of strings.
 
-use std::rc::Rc;
-use std::ops::Deref;
 use std::borrow::Cow;
 use std::fmt;
+use std::ops::Deref;
+use std::rc::Rc;
 
 /// A managed string that permits immutable borrowing.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]

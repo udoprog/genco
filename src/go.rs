@@ -7,7 +7,7 @@ use {Cons, Custom, Formatter, Quoted, Tokens};
 const SEP: &str = ".";
 
 /// Name of an imported type.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Name<'el> {
     /// Module of the imported name.
     module: Option<Cons<'el>>,
@@ -16,7 +16,7 @@ pub struct Name<'el> {
 }
 
 /// Go token specialization.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Go<'el> {
     /// A regular type.
     Type {

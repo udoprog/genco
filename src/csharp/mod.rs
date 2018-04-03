@@ -1,13 +1,13 @@
 //! Specialization for Csharp code generation.
 
-mod constructor;
-mod field;
-mod modifier;
 mod argument;
-mod method;
 mod class;
+mod constructor;
 mod enum_;
+mod field;
 mod interface;
+mod method;
+mod modifier;
 mod utils;
 
 pub use self::argument::Argument;
@@ -19,9 +19,9 @@ pub use self::interface::Interface;
 pub use self::method::Method;
 pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
-use {Cons, Custom, Formatter, IntoTokens, Tokens};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Write};
+use {Cons, Custom, Formatter, IntoTokens, Tokens};
 
 static SYSTEM: &'static str = "System";
 static SEP: &'static str = ".";

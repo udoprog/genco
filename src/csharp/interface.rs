@@ -1,7 +1,7 @@
 //! Data structure for interfaces.
 
-use {Cons, Csharp, Element, IntoTokens, Tokens};
 use csharp::{Method, Modifier};
+use {Cons, Csharp, Element, IntoTokens, Tokens};
 
 /// Model for Csharp Interfaces.
 #[derive(Debug, Clone)]

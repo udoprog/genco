@@ -1,32 +1,32 @@
 //! Specialization for Java code generation.
 
-mod constructor;
-mod field;
-mod modifier;
 mod argument;
-mod method;
 mod class;
+mod constructor;
 mod enum_;
+mod field;
 mod interface;
+mod method;
+mod modifier;
 mod utils;
 
-pub use self::utils::BlockComment;
-pub use self::constructor::Constructor;
-pub use self::field::Field;
 pub use self::argument::Argument;
-pub use self::modifier::Modifier;
-pub use self::method::Method;
-pub use self::enum_::Enum;
-pub use self::interface::Interface;
 pub use self::class::Class;
+pub use self::constructor::Constructor;
+pub use self::enum_::Enum;
+pub use self::field::Field;
+pub use self::interface::Interface;
+pub use self::method::Method;
+pub use self::modifier::Modifier;
+pub use self::utils::BlockComment;
 
 use super::cons::Cons;
 use super::custom::Custom;
 use super::formatter::Formatter;
 use super::into_tokens::IntoTokens;
-use std::fmt::{self, Write};
 use super::tokens::Tokens;
 use std::collections::{BTreeSet, HashMap};
+use std::fmt::{self, Write};
 
 static JAVA_LANG: &'static str = "java.lang";
 static SEP: &'static str = ".";
@@ -517,9 +517,9 @@ pub fn optional<'el, I: Into<Java<'el>>, F: Into<Java<'el>>>(value: I, field: F)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokens::Tokens;
     use java::Java;
     use quoted::Quoted;
+    use tokens::Tokens;
 
     #[test]
     fn test_primitive() {

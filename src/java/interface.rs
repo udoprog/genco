@@ -1,11 +1,11 @@
 //! Data structure for interfaces.
 
-use tokens::Tokens;
-use java::Java;
-use cons::Cons;
-use super::modifier::Modifier;
 use super::method::Method;
+use super::modifier::Modifier;
+use cons::Cons;
 use into_tokens::IntoTokens;
+use java::Java;
+use tokens::Tokens;
 
 /// Model for Java Interfaces.
 #[derive(Debug, Clone)]
@@ -114,8 +114,8 @@ impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
 mod tests {
     use super::Interface;
     use java::Java;
-    use tokens::Tokens;
     use java::local;
+    use tokens::Tokens;
 
     #[test]
     fn test_vec() {

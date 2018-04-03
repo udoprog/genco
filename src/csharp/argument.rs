@@ -2,8 +2,8 @@
 
 use super::modifier::Modifier;
 use cons::Cons;
-use into_tokens::IntoTokens;
 use csharp::Csharp;
+use into_tokens::IntoTokens;
 use tokens::Tokens;
 
 /// Model for C# Arguments to functions.

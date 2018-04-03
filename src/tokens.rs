@@ -8,15 +8,15 @@
 //! toks.append("foo");
 //! ```
 
-use {Custom, Element, Formatter, IntoTokens, WriteTokens};
+use con_::Con::{self, Borrowed, Owned};
 use element::Element::{Append, Nested, Push};
 use std::collections::LinkedList;
 use std::fmt;
-use std::result;
-use con_::Con::{self, Borrowed, Owned};
-use std::vec;
-use std::rc::Rc;
 use std::iter::FromIterator;
+use std::rc::Rc;
+use std::result;
+use std::vec;
+use {Custom, Element, Formatter, IntoTokens, WriteTokens};
 
 /// A set of tokens.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
