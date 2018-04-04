@@ -1,40 +1,67 @@
 //! Specialization for Swift code generation.
 
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
-use {Custom, Formatter, Tokens};
+use {Cons, Custom, Formatter, Tokens};
+
+/// Name of an imported type.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Name<'el> {
+    /// Module of the imported name.
+    module: Option<Cons<'el>>,
+    /// Name imported.
+    name: Cons<'el>,
+}
 
 /// Swift token specialization.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Swift<'el> {
-    /// An imported name.
-    Imported {
-        /// Module of the imported name.
-        module: Cow<'el, str>,
-        /// Name imported.
-        name: Cow<'el, str>,
+    /// A regular type.
+    Type {
+        /// The name being referenced.
+        name: Name<'el>,
     },
-    /// A local name.
-    Local {
-        /// The local name.
-        name: Cow<'el, str>,
+    /// A map, [<key>: <value>].
+    Map {
+        /// Key of the map.
+        key: Box<Swift<'el>>,
+        /// Value of the map.
+        value: Box<Swift<'el>>,
+    },
+    /// An array, [<inner>].
+    Array {
+        /// Inner value of the array.
+        inner: Box<Swift<'el>>,
     },
 }
 
 impl<'el> Swift<'el> {
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
+    fn type_imports<'a, 'b: 'a>(swift: &'b Swift<'b>, modules: &'a mut BTreeSet<&'b str>) {
         use self::Swift::*;
 
+        match *swift {
+            Type { ref name, .. } => {
+                if let Some(module) = name.module.as_ref() {
+                    modules.insert(module);
+                }
+            }
+            Map {
+                ref key, ref value, ..
+            } => {
+                Self::type_imports(key, modules);
+                Self::type_imports(value, modules);
+            }
+            Array { ref inner, .. } => {
+                Self::type_imports(inner, modules);
+            }
+        };
+    }
+
+    fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            match *custom {
-                Imported { ref module, .. } => {
-                    modules.insert(module.as_ref());
-                }
-                _ => {}
-            };
+            Self::type_imports(custom, &mut modules);
         }
 
         if modules.is_empty() {
@@ -59,15 +86,29 @@ impl<'el> Swift<'el> {
 impl<'el> Custom for Swift<'el> {
     type Extra = ();
 
-    fn format(&self, out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
         use self::Swift::*;
 
         match *self {
-            Imported { ref name, .. } => {
+            Type {
+                name: Name { ref name, .. },
+                ..
+            } => {
                 out.write_str(name)?;
             }
-            Local { ref name, .. } => {
-                out.write_str(name)?;
+            Map {
+                ref key, ref value, ..
+            } => {
+                out.write_str("[")?;
+                key.format(out, extra, level + 1)?;
+                out.write_str(": ")?;
+                value.format(out, extra, level + 1)?;
+                out.write_str("]")?;
+            }
+            Array { ref inner, .. } => {
+                out.write_str("[")?;
+                inner.format(out, extra, level + 1)?;
+                out.write_str("]")?;
             }
         }
 
@@ -113,26 +154,55 @@ impl<'el> Custom for Swift<'el> {
 /// Setup an imported element.
 pub fn imported<'a, M, N>(module: M, name: N) -> Swift<'a>
 where
-    M: Into<Cow<'a, str>>,
-    N: Into<Cow<'a, str>>,
+    M: Into<Cons<'a>>,
+    N: Into<Cons<'a>>,
 {
-    Swift::Imported {
-        module: module.into(),
-        name: name.into(),
+    Swift::Type {
+        name: Name {
+            module: Some(module.into()),
+            name: name.into(),
+        },
     }
 }
 
 /// Setup a local element.
 pub fn local<'a, N>(name: N) -> Swift<'a>
 where
-    N: Into<Cow<'a, str>>,
+    N: Into<Cons<'a>>,
 {
-    Swift::Local { name: name.into() }
+    Swift::Type {
+        name: Name {
+            module: None,
+            name: name.into(),
+        },
+    }
+}
+
+/// Setup a map.
+pub fn map<'a, K, V>(key: K, value: V) -> Swift<'a>
+where
+    K: Into<Swift<'a>>,
+    V: Into<Swift<'a>>,
+{
+    Swift::Map {
+        key: Box::new(key.into()),
+        value: Box::new(value.into()),
+    }
+}
+
+/// Setup an array.
+pub fn array<'a, I>(inner: I) -> Swift<'a>
+where
+    I: Into<Swift<'a>>,
+{
+    Swift::Array {
+        inner: Box::new(inner.into()),
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{imported, Swift};
+    use super::{array, imported, local, map, Swift};
     use {Quoted, Tokens};
 
     #[test]
@@ -152,6 +222,30 @@ mod tests {
 
         assert_eq!(
             Ok("import Foo\n\nDebug\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
+        );
+    }
+
+    #[test]
+    fn test_array() {
+        let dbg = array(imported("Foo", "Debug"));
+        let mut toks: Tokens<Swift> = Tokens::new();
+        toks.push(toks!(&dbg));
+
+        assert_eq!(
+            Ok("import Foo\n\n[Debug]\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
+        );
+    }
+
+    #[test]
+    fn test_map() {
+        let dbg = map(local("String"), imported("Foo", "Debug"));
+        let mut toks: Tokens<Swift> = Tokens::new();
+        toks.push(toks!(&dbg));
+
+        assert_eq!(
+            Ok("import Foo\n\n[String: Debug]\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
