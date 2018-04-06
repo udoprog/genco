@@ -1,29 +1,54 @@
 //! Specialization for Python code generation.
 
-use super::custom::Custom;
-use super::formatter::Formatter;
-use super::into_tokens::IntoTokens;
-use super::tokens::Tokens;
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
+use {Cons, Custom, Formatter, IntoTokens, Tokens};
 
 static SEP: &'static str = ".";
 
 /// Python token specialization.
-#[derive(Debug, Clone)]
-pub enum Python<'el> {
-    /// An imported module.
-    Imported {
-        /// Module of the imported name.
-        module: Cow<'el, str>,
-        /// Alias of module.
-        alias: Option<Cow<'el, str>>,
-        /// Name imported.
-        ///
-        /// If `None`, last component of module will be used.
-        name: Option<Cow<'el, str>>,
-    },
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Python<'el> {
+    /// Module of the imported name.
+    module: Option<Cons<'el>>,
+    /// Alias of module.
+    alias: Option<Cons<'el>>,
+    /// Name imported.
+    ///
+    /// If `None`, last component of module will be used.
+    name: Option<Cons<'el>>,
+}
+
+impl<'el> fmt::Display for Python<'el> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let has_module = match self.module {
+            Some(ref module) => match self.alias {
+                Some(ref alias) => {
+                    fmt.write_str(alias)?;
+                    true
+                }
+                None => {
+                    if let Some(part) = module.split(SEP).last() {
+                        fmt.write_str(part)?;
+                        true
+                    } else {
+                        false
+                    }
+                }
+            },
+            None => false,
+        };
+
+        if let Some(ref name) = self.name {
+            if has_module {
+                fmt.write_str(SEP)?;
+            }
+
+            fmt.write_str(name.as_ref())?;
+        }
+
+        Ok(())
+    }
 }
 
 into_tokens_impl_from!(Python<'el>, Python<'el>);
@@ -31,18 +56,18 @@ into_tokens_impl_from!(&'el Python<'el>, Python<'el>);
 
 impl<'el> Python<'el> {
     fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
-        use self::Python::*;
-
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            match *custom {
-                Imported {
-                    ref module,
-                    ref alias,
-                    ..
-                } => modules.insert((module.as_ref(), alias.as_ref().map(AsRef::as_ref))),
-            };
+            let Python {
+                ref module,
+                ref alias,
+                ..
+            } = *custom;
+
+            if let Some(ref module) = *module {
+                modules.insert((module.as_ref(), alias.as_ref().map(AsRef::as_ref)));
+            }
         }
 
         if modules.is_empty() {
@@ -69,28 +94,18 @@ impl<'el> Python<'el> {
     }
 
     /// Set alias for python element.
-    pub fn alias<A: Into<Cow<'el, str>>>(self, new_alias: A) -> Python<'el> {
-        use self::Python::*;
-
-        match self {
-            Imported { module, name, .. } => Python::Imported {
-                module: module,
-                alias: Some(new_alias.into()),
-                name: name,
-            },
+    pub fn alias<N: Into<Cons<'el>>>(self, new_alias: N) -> Python<'el> {
+        Python {
+            alias: Some(new_alias.into()),
+            ..self
         }
     }
 
     /// Set name for python element.
-    pub fn name<A: Into<Cow<'el, str>>>(self, new_name: A) -> Python<'el> {
-        use self::Python::*;
-
-        match self {
-            Imported { module, alias, .. } => Python::Imported {
-                module: module,
-                alias: alias,
-                name: Some(new_name.into()),
-            },
+    pub fn name<N: Into<Cons<'el>>>(self, new_name: N) -> Python<'el> {
+        Python {
+            name: Some(new_name.into()),
+            ..self
         }
     }
 }
@@ -99,41 +114,7 @@ impl<'el> Custom for Python<'el> {
     type Extra = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {
-        use self::Python::*;
-
-        match *self {
-            Imported {
-                ref module,
-                ref alias,
-                ref name,
-                ..
-            } => {
-                let has_module = match *alias {
-                    Some(ref alias) => {
-                        out.write_str(alias)?;
-                        true
-                    }
-                    None => {
-                        if let Some(part) = module.split(SEP).last() {
-                            out.write_str(part)?;
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                };
-
-                if let Some(ref name) = *name {
-                    if has_module {
-                        out.write_str(SEP)?;
-                    }
-
-                    out.write_str(name)?;
-                }
-            }
-        }
-
-        Ok(())
+        write!(out, "{}", self)
     }
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
@@ -178,18 +159,30 @@ impl<'el> Custom for Python<'el> {
 /// Setup an imported element.
 pub fn imported<'a, M>(module: M) -> Python<'a>
 where
-    M: Into<Cow<'a, str>>,
+    M: Into<Cons<'a>>,
 {
-    Python::Imported {
-        module: module.into(),
+    Python {
+        module: Some(module.into()),
         alias: None,
         name: None,
     }
 }
 
+/// Setup a local element.
+pub fn local<'a, N>(name: N) -> Python<'a>
+where
+    N: Into<Cons<'a>>,
+{
+    Python {
+        module: None,
+        alias: None,
+        name: Some(name.into()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{imported, Python};
+    use super::{imported, local, Python};
     use quoted::Quoted;
     use tokens::Tokens;
 
@@ -203,9 +196,7 @@ mod tests {
     #[test]
     fn test_imported() {
         let mut toks: Tokens<Python> = Tokens::new();
-        toks.push(toks![
-            imported("collections").name("named_tuple".to_string())
-        ]);
+        toks.push(toks![imported("collections").name("named_tuple")]);
         toks.push(toks![imported("collections")]);
         toks.push(toks![
             imported("collections").alias("c").name("named_tuple")
@@ -216,5 +207,13 @@ mod tests {
             Ok("import collections\nimport collections as c\n\ncollections.named_tuple\ncollections\nc.named_tuple\nc\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
+    }
+
+    #[test]
+    fn test_local() {
+        let mut toks: Tokens<Python> = Tokens::new();
+        toks.push(toks![local("dict")]);
+
+        assert_eq!(Ok("dict\n"), toks.to_file().as_ref().map(|s| s.as_str()));
     }
 }
