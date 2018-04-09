@@ -18,6 +18,8 @@ pub struct Constructor<'el> {
     pub arguments: Vec<Argument<'el>>,
     /// Body of the constructor.
     pub body: Tokens<'el, Java<'el>>,
+    /// Exception thrown by the constructor.
+    pub throws: Option<Tokens<'el, Java<'el>>>,
     /// Annotations for the constructor.
     annotations: Tokens<'el, Java<'el>>,
 }
@@ -29,6 +31,7 @@ impl<'el> Constructor<'el> {
             modifiers: vec![Modifier::Public],
             annotations: Tokens::new(),
             arguments: Vec::new(),
+            throws: None,
             body: Tokens::new(),
         }
     }
@@ -67,6 +70,11 @@ impl<'el> IntoTokens<'el, Java<'el>> for (Cons<'el>, Constructor<'el>) {
             sig.append(toks![name, "()"]);
         }
 
+        if let Some(throws) = c.throws {
+            sig.append("throws");
+            sig.append(throws);
+        }
+
         let mut s = Tokens::new();
 
         if !c.annotations.is_empty() {
@@ -96,5 +104,16 @@ mod tests {
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
         assert_eq!(Ok("public Foo() {\n}"), out);
+    }
+
+    #[test]
+    fn test_throws() {
+        let mut c = Constructor::new();
+        c.throws = Some("Exception".into());
+        let t: Tokens<Java> = (Cons::Borrowed("Foo"), c).into();
+
+        let s = t.to_string();
+        let out = s.as_ref().map(|s| s.as_str());
+        assert_eq!(Ok("public Foo() throws Exception {\n}"), out);
     }
 }

@@ -18,6 +18,8 @@ pub struct Method<'el> {
     pub parameters: Tokens<'el, Java<'el>>,
     /// Comments associated with this method.
     pub comments: Vec<Cons<'el>>,
+    /// Exception thrown by the method.
+    pub throws: Option<Tokens<'el, Java<'el>>>,
     /// Annotations for the constructor.
     annotations: Tokens<'el, Java<'el>>,
     /// Name of the method.
@@ -39,6 +41,7 @@ impl<'el> Method<'el> {
             returns: VOID,
             parameters: Tokens::new(),
             comments: Vec::new(),
+            throws: None,
             annotations: Tokens::new(),
             name: name.into(),
         }
@@ -89,6 +92,11 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
             n
         });
 
+        if let Some(throws) = self.throws {
+            sig.append("throws");
+            sig.append(throws);
+        }
+
         let mut s = Tokens::new();
 
         s.push_unless_empty(BlockComment(self.comments));
@@ -136,5 +144,14 @@ mod tests {
     fn test_no_comments() {
         let t = Tokens::from(build_method());
         assert_eq!(Ok(String::from("public <T> void foo();")), t.to_string());
+    }
+
+    #[test]
+    fn test_throws() {
+        let mut m = build_method();
+        m.throws = Some("Exception".into());
+
+        let t = Tokens::from(m);
+        assert_eq!(Ok(String::from("public <T> void foo() throws Exception;")), t.to_string());
     }
 }
