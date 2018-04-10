@@ -53,7 +53,7 @@ impl<'el> JavaScript<'el> {
 
         for custom in tokens.walk_custom() {
             match (&custom.module, &custom.alias) {
-                (&Some(ref module), None) => {
+                (&Some(ref module), &None) => {
                     sets.entry(module.as_ref())
                         .or_insert_with(Tokens::new)
                         .append(custom.name.as_ref());
