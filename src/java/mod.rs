@@ -378,6 +378,11 @@ impl<'el> Java<'el> {
             .map(|opt| (*opt.value).clone())
             .unwrap_or_else(|| self.clone())
     }
+
+    /// Check if type is generic.
+    pub fn is_generic(&self) -> bool {
+        self.arguments().map(|a| !a.is_empty()).unwrap_or(false)
+    }
 }
 
 impl<'el> Custom for Java<'el> {
