@@ -2,13 +2,58 @@
 
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
+use std::rc::Rc;
 use {Cons, Custom, Formatter, IntoTokens, Tokens};
 
 static SEP: &'static str = "::";
 
+/// The inferred reference.
+#[derive(Debug, Clone, Copy)]
+pub struct Ref;
+
+/// The static reference.
+#[derive(Debug, Clone, Copy)]
+pub struct StaticRef;
+
+/// Reference information about a name.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub enum Reference<'el> {
+    /// An anonymous reference.
+    Ref,
+    /// A static reference.
+    StaticRef,
+    /// A named reference.
+    Named(Cons<'el>),
+}
+
+impl From<Ref> for Reference<'static> {
+    fn from(_: Ref) -> Self {
+        Reference::Ref
+    }
+}
+
+impl From<StaticRef> for Reference<'static> {
+    fn from(_: StaticRef) -> Self {
+        Reference::StaticRef
+    }
+}
+
+impl From<Rc<String>> for Reference<'static> {
+    fn from(value: Rc<String>) -> Self {
+        Reference::Named(Cons::from(value))
+    }
+}
+
+impl<'el> From<&'el str> for Reference<'el> {
+    fn from(value: &'el str) -> Self {
+        Reference::Named(Cons::from(value))
+    }
+}
+
 /// A name.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Name<'el> {
+    reference: Option<Reference<'el>>,
     /// Name  of class.
     name: Cons<'el>,
     /// Arguments of the class.
@@ -18,6 +63,22 @@ pub struct Name<'el> {
 impl<'el> Name<'el> {
     /// Format the name.
     fn format(&self, out: &mut Formatter, extra: &mut (), level: usize) -> fmt::Result {
+        if let Some(reference) = self.reference.as_ref() {
+            match *reference {
+                Reference::StaticRef => {
+                    out.write_str("&'static ")?;
+                }
+                Reference::Named(ref name) => {
+                    out.write_str("&'")?;
+                    out.write_str(name.as_ref())?;
+                    out.write_str(" ")?;
+                }
+                Reference::Ref => {
+                    out.write_str("&")?;
+                }
+            }
+        }
+
         out.write_str(self.name.as_ref())?;
 
         if !self.arguments.is_empty() {
@@ -40,10 +101,18 @@ impl<'el> Name<'el> {
     }
 
     /// Add generic arguments to the given type.
-    pub fn with_arguments(&self, arguments: Vec<Rust<'el>>) -> Name<'el> {
+    pub fn with_arguments(self, arguments: Vec<Rust<'el>>) -> Name<'el> {
         Name {
-            name: self.name.clone(),
             arguments: arguments,
+            ..self
+        }
+    }
+
+    /// Create a name with the given reference.
+    pub fn reference<R: Into<Reference<'el>>>(self, reference: R) -> Name<'el> {
+        Name {
+            reference: Some(reference.into()),
+            ..self
         }
     }
 }
@@ -51,6 +120,7 @@ impl<'el> Name<'el> {
 impl<'el> From<Cons<'el>> for Name<'el> {
     fn from(value: Cons<'el>) -> Self {
         Name {
+            reference: None,
             name: value,
             arguments: vec![],
         }
@@ -133,12 +203,10 @@ impl<'el> Rust<'el> {
     }
 
     /// Add generic arguments to the given type.
-    pub fn with_arguments(&self, arguments: Vec<Rust<'el>>) -> Rust<'el> {
+    pub fn with_arguments(self, arguments: Vec<Rust<'el>>) -> Rust<'el> {
         Rust {
-            module: self.module.clone(),
             name: self.name.with_arguments(arguments),
-            alias: self.alias.clone(),
-            qualified: self.qualified,
+            ..self
         }
     }
 
@@ -147,6 +215,16 @@ impl<'el> Rust<'el> {
         Rust {
             qualified: true,
             ..self
+        }
+    }
+
+    /// Make the type a reference.
+    pub fn reference<R: Into<Reference<'el>>>(self, reference: R) -> Rust<'el> {
+        Rust {
+            module: self.module,
+            name: self.name.reference(reference),
+            alias: self.alias,
+            qualified: self.qualified,
         }
     }
 }
