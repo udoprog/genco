@@ -15,7 +15,7 @@ pub struct Enum<'el> {
     /// Enum modifiers.
     pub modifiers: Vec<Modifier>,
     /// What this enum implements.
-    pub implements: Vec<Tokens<'el, Csharp<'el>>>,
+    pub implements: Vec<Csharp<'el>>,
     /// Attributes for the constructor.
     attributes: Tokens<'el, Csharp<'el>>,
     /// Name of enum.
@@ -63,6 +63,15 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Enum<'el> {
         sig.append("enum");
         sig.append(self.name.clone());
 
+        let mut extends = Tokens::new();
+
+        extends.extend(self.implements.into_iter().map(Element::from));
+
+        if !extends.is_empty() {
+            sig.append(":");
+            sig.append(extends.join(", "));
+        }
+
         let mut s = Tokens::new();
 
         if !self.attributes.is_empty() {
@@ -90,7 +99,7 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Enum<'el> {
 #[cfg(test)]
 mod tests {
     use super::Enum;
-    use csharp::Csharp;
+    use csharp::{self, Csharp};
     use tokens::Tokens;
 
     #[test]
@@ -105,5 +114,21 @@ mod tests {
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
         assert_eq!(Ok("public enum Foo {\n  FOO(1),\n  BAR(2)\n}",), out);
+    }
+
+    #[test]
+    fn test_implements() {
+        let mut c = Enum::new("Foo");
+
+        c.implements = vec![csharp::local("long")];
+
+        c.variants.append("FOO(1)");
+        c.variants.append("BAR(2)");
+
+        let t: Tokens<Csharp> = c.into();
+
+        let s = t.to_string();
+        let out = s.as_ref().map(|s| s.as_str());
+        assert_eq!(Ok("public enum Foo : long {\n  FOO(1),\n  BAR(2)\n}",), out);
     }
 }
