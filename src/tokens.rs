@@ -25,7 +25,7 @@ pub struct Tokens<'el, C: 'el> {
 }
 
 /// Generic methods.
-impl<'el, C: 'el> Tokens<'el, C> {
+impl<'el, C: 'el> Tokens<'el, C> where C: PartialEq + Eq {
     /// Create a new set of tokens.
     pub fn new() -> Tokens<'el, C> {
         Tokens {
@@ -134,7 +134,11 @@ impl<'el, C: 'el> Tokens<'el, C> {
     where
         E: Into<Element<'el, C>>,
     {
-        self.elements.push(element.into());
+        let element = element.into();
+
+        if Element::None != element {
+            self.elements.push(element);
+        }
     }
 
     /// Append a reference to a definition.
@@ -232,7 +236,7 @@ impl<'el, E: Default, C: Custom<Extra = E>> Tokens<'el, C> {
 }
 
 /// Methods only available for clonable elements.
-impl<'el, C: Clone> Tokens<'el, C> {
+impl<'el, C> Tokens<'el, C> where C: Clone + PartialEq + Eq {
     /// Join the set of tokens on the given element.
     pub fn join<E>(self, element: E) -> Tokens<'el, C>
     where
@@ -241,7 +245,7 @@ impl<'el, C: Clone> Tokens<'el, C> {
         let element = element.into();
 
         let len = self.elements.len();
-        let mut it = self.elements.into_iter();
+        let mut it = self.elements.into_iter().filter(|e| *e != Element::None);
 
         let mut out: Vec<Element<'el, C>> = Vec::with_capacity(match len {
             v if v < 1 => v,
@@ -391,7 +395,7 @@ impl<'el, C: 'el> Iterator for WalkCustom<'el, C> {
             }
         }
 
-        None
+        Option::None
     }
 }
 

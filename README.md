@@ -44,3 +44,34 @@ function foo(v) {
 }
 foo("Hello");
 ```
+
+## Language Support
+
+This section contains example code for some of the supported languages.
+
+For more information, see [docs.rs/genco](https://docs.rs/genco).
+
+#### Dart
+
+Simple support for importing names.
+
+```rust
+#[macro_use]
+extern crate genco;
+
+fn main() {
+    use genco::dart::imported;
+
+    let m = imported("dart:math").alias("m");
+    let sqrt = m.name("sqrt");
+
+    let mut t = toks!();
+    t.push("void main() {");
+    t.nested({
+        let mut body = toks!();
+        body.push(toks!("print(", "The Square Root Is:".quoted(), " + ", sqrt, "(42));"));
+        body
+    });
+    t.push("}");
+}
+```

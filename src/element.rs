@@ -27,6 +27,8 @@ pub enum Element<'el, C: 'el> {
     Custom(Con<'el, C>),
     /// A custom element that is not rendered.
     Registered(Con<'el, C>),
+    /// Empty element which renders nothing.
+    None,
     /// Push an empty line.
     PushSpacing,
     /// Unconditionally push a line.
@@ -44,6 +46,7 @@ impl<'el, C: Custom> Element<'el, C> {
 
         match *self {
             Registered(_) => {}
+            None => {}
             Rc(ref element) => {
                 element.format(out, extra, level)?;
             }
