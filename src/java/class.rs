@@ -98,7 +98,8 @@ impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
         }
 
         if !self.implements.is_empty() {
-            let implements: Tokens<_> = self.implements
+            let implements: Tokens<_> = self
+                .implements
                 .into_iter()
                 .map::<Element<_>, _>(Into::into)
                 .collect();

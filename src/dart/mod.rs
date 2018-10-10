@@ -14,22 +14,16 @@ use super::tokens::Tokens;
 use std::fmt::{self, Write};
 
 static SEP: &'static str = ".";
-static CORE_DART: &'static str = "core:dart";
+pub static DART_CORE: &'static str = "dart:core";
 
 /// Integer built-in type.
-pub const INT: Dart<'static> = Dart::BuiltIn {
-    name: "int",
-};
+pub const INT: Dart<'static> = Dart::BuiltIn { name: "int" };
 
 /// Double built-in type.
-pub const DOUBLE: Dart<'static> = Dart::BuiltIn {
-    name: "double",
-};
+pub const DOUBLE: Dart<'static> = Dart::BuiltIn { name: "double" };
 
 /// Boolean built-in type.
-pub const BOOL: Dart<'static> = Dart::BuiltIn {
-    name: "bool",
-};
+pub const BOOL: Dart<'static> = Dart::BuiltIn { name: "bool" };
 
 /// All information about a single type.
 #[derive(Default, Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -65,15 +59,16 @@ into_tokens_impl_from!(&'el Dart<'el>, Dart<'el>);
 
 /// Extra data for Dart formatting.
 #[derive(Debug, Default)]
-pub struct Extra {
-}
+pub struct Extra {}
 
-impl Extra {
-}
+impl Extra {}
 
 impl<'el> Dart<'el> {
     /// Resolve all imports.
-    fn imports<'a, 'b: 'a>(input: &'b Tokens<'a, Dart<'el>>, _: &mut Extra) -> Tokens<'a, Dart<'el>> {
+    fn imports<'a, 'b: 'a>(
+        input: &'b Tokens<'a, Dart<'el>>,
+        _: &mut Extra,
+    ) -> Tokens<'a, Dart<'el>> {
         use quoted::Quoted;
         use std::collections::BTreeSet;
 
@@ -82,7 +77,7 @@ impl<'el> Dart<'el> {
         for custom in input.walk_custom() {
             if let Dart::Type(ref ty) = *custom {
                 if let Some(path) = ty.path.as_ref() {
-                    if path.as_ref() == CORE_DART {
+                    if path.as_ref() == DART_CORE {
                         continue;
                     }
 
@@ -163,6 +158,23 @@ impl<'el> Dart<'el> {
         }
     }
 
+    /// Check if this type belongs to a core package.
+    pub fn is_core(&self) -> bool {
+        use self::Dart::*;
+
+        let ty = match *self {
+            Type(ref ty) => ty,
+            BuiltIn { .. } => return true,
+            Void => return true,
+            Dynamic => return true,
+        };
+
+        match ty.path.as_ref() {
+            Some(path) => path.as_ref() == DART_CORE,
+            None => false,
+        }
+    }
+
     /// Check if type is generic.
     pub fn is_generic(&self) -> bool {
         self.arguments().map(|a| !a.is_empty()).unwrap_or(false)
@@ -176,10 +188,7 @@ impl<'el> Custom for Dart<'el> {
         use self::Dart::*;
 
         match *self {
-            BuiltIn {
-                ref name,
-                ..
-            } => {
+            BuiltIn { ref name, .. } => {
                 out.write_str(name.as_ref())?;
             }
             Void => out.write_str("void")?,

@@ -330,7 +330,8 @@ impl<'el> Csharp<'el> {
                 },
             ) => l_name == r_name,
             (&Class(ref l), &Class(ref r)) => {
-                l.namespace == r.namespace && l.name == r.name
+                l.namespace == r.namespace
+                    && l.name == r.name
                     && l.arguments.len() == r.arguments.len()
                     && l.arguments
                         .iter()

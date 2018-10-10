@@ -76,7 +76,8 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Method<'el> {
                 n.append(">");
             }
 
-            let args: Vec<Tokens<Csharp>> = self.arguments
+            let args: Vec<Tokens<Csharp>> = self
+                .arguments
                 .into_iter()
                 .map(IntoTokens::into_tokens)
                 .collect();

@@ -115,9 +115,9 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Interface<'el> {
 
 #[cfg(test)]
 mod tests {
-    use Csharp;
     use csharp::{local, Interface};
     use tokens::Tokens;
+    use Csharp;
 
     #[test]
     fn test_interface() {

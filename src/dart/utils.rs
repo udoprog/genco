@@ -1,4 +1,4 @@
-use {Cons, Element, Dart, Tokens};
+use {Cons, Dart, Element, Tokens};
 
 /// Format a doc comment where each line is preceeded by `///`.
 pub struct DocComment<'el>(pub Vec<Cons<'el>>);

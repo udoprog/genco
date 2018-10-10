@@ -113,8 +113,8 @@ impl<'el> IntoTokens<'el, Java<'el>> for Interface<'el> {
 #[cfg(test)]
 mod tests {
     use super::Interface;
-    use java::Java;
     use java::local;
+    use java::Java;
     use tokens::Tokens;
 
     #[test]

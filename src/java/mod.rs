@@ -289,7 +289,9 @@ impl<'el> Java<'el> {
                 },
             ) => l_primitive == r_primitive,
             (&Class(ref l), &Class(ref r)) => {
-                l.package == r.package && l.name == r.name && l.arguments.len() == r.arguments.len()
+                l.package == r.package
+                    && l.name == r.name
+                    && l.arguments.len() == r.arguments.len()
                     && l.arguments
                         .iter()
                         .zip(r.arguments.iter())

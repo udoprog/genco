@@ -80,7 +80,8 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
 
             n.append(self.name);
 
-            let args: Vec<Tokens<Java>> = self.arguments
+            let args: Vec<Tokens<Java>> = self
+                .arguments
                 .into_iter()
                 .map(IntoTokens::into_tokens)
                 .collect();
@@ -152,6 +153,9 @@ mod tests {
         m.throws = Some("Exception".into());
 
         let t = Tokens::from(m);
-        assert_eq!(Ok(String::from("public <T> void foo() throws Exception;")), t.to_string());
+        assert_eq!(
+            Ok(String::from("public <T> void foo() throws Exception;")),
+            t.to_string()
+        );
     }
 }

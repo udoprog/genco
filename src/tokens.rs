@@ -25,7 +25,10 @@ pub struct Tokens<'el, C: 'el> {
 }
 
 /// Generic methods.
-impl<'el, C: 'el> Tokens<'el, C> where C: PartialEq + Eq {
+impl<'el, C: 'el> Tokens<'el, C>
+where
+    C: PartialEq + Eq,
+{
     /// Create a new set of tokens.
     pub fn new() -> Tokens<'el, C> {
         Tokens {
@@ -236,7 +239,10 @@ impl<'el, E: Default, C: Custom<Extra = E>> Tokens<'el, C> {
 }
 
 /// Methods only available for clonable elements.
-impl<'el, C> Tokens<'el, C> where C: Clone + PartialEq + Eq {
+impl<'el, C> Tokens<'el, C>
+where
+    C: Clone + PartialEq + Eq,
+{
     /// Join the set of tokens on the given element.
     pub fn join<E>(self, element: E) -> Tokens<'el, C>
     where
