@@ -14,6 +14,7 @@ use super::tokens::Tokens;
 use std::fmt::{self, Write};
 
 static SEP: &'static str = ".";
+/// dart:core package.
 pub static DART_CORE: &'static str = "dart:core";
 
 /// Integer built-in type.
@@ -155,6 +156,19 @@ impl<'el> Dart<'el> {
         match *self {
             BuiltIn { .. } => true,
             _ => false,
+        }
+    }
+
+    /// Convert into raw type.
+    /// Raw types have no alias, nor generic arguments.
+    pub fn raw(&self) -> Dart<'el> {
+        match *self {
+            Dart::Type(ref ty) => Dart::Type(Type {
+                arguments: vec![],
+                alias: None,
+                ..ty.clone()
+            }),
+            ref other => other.clone(),
         }
     }
 
