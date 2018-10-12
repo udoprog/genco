@@ -299,9 +299,9 @@ mod tests {
 
     #[test]
     fn test_builtin() {
-        assert!(INTEGER.is_built_in());
+        assert!(INT.is_built_in());
         assert!(DOUBLE.is_built_in());
-        assert!(BOOLEAN.is_built_in());
+        assert!(BOOL.is_built_in());
         assert!(!Dart::Void.is_built_in());
     }
 
