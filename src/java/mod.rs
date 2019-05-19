@@ -142,6 +142,17 @@ pub struct Extra<'el> {
 }
 
 impl<'el> Extra<'el> {
+    /// Create an Extra instance.
+    pub fn new<P>(package: P) -> Self
+    where
+        P: Into<Cons<'el>>,
+    {
+        Extra {
+            package: Some(package.into()),
+            imported: HashMap::new(),
+        }
+    }
+
     /// Set the package name to build.
     pub fn package<P>(&mut self, package: P)
     where
