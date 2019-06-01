@@ -20,6 +20,8 @@ pub enum Modifier {
     Static,
     /// final
     Final,
+    /// Native
+    Native
 }
 
 impl Modifier {
@@ -35,6 +37,7 @@ impl Modifier {
             Abstract => "abstract",
             Static => "static",
             Final => "final",
+            Native => "native"
         }
     }
 }
