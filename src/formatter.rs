@@ -16,7 +16,7 @@ where
 
 /// Formatter implementation for write types.
 pub struct Formatter<'write> {
-    write: &'write mut fmt::Write,
+    write: &'write mut dyn fmt::Write,
     /// if last line was empty.
     current_line_empty: bool,
     /// Current indentation level.
@@ -27,7 +27,7 @@ pub struct Formatter<'write> {
 
 impl<'write> Formatter<'write> {
     /// Create a new write formatter.
-    pub fn new(write: &mut fmt::Write) -> Formatter {
+    pub fn new(write: &mut dyn fmt::Write) -> Formatter {
         Formatter {
             write: write,
             current_line_empty: true,

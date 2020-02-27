@@ -47,7 +47,7 @@ impl<'el> JavaScript<'el> {
         format!("{}.js", parts.join(PATH_SEP))
     }
 
-    fn imports(tokens: &'el Tokens<'el, Self>) -> Option<Tokens<'el, Self>> {
+    fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
         let mut sets = BTreeMap::new();
         let mut wildcard = BTreeSet::new();
 
@@ -129,7 +129,7 @@ impl<'el> Custom for JavaScript<'el> {
     }
 
     fn write_file<'a>(
-        tokens: Tokens<'a, JavaScript<'a>>,
+        tokens: Tokens<'a, Self>,
         out: &mut Formatter,
         extra: &mut Self::Extra,
         level: usize,
