@@ -1,7 +1,7 @@
 //! Individual java modifier
 
+use crate::{Custom, Element, IntoTokens, Tokens};
 use std::collections::BTreeSet;
-use {Custom, Element, IntoTokens, Tokens};
 
 /// A Java modifier.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -21,7 +21,7 @@ pub enum Modifier {
     /// final
     Final,
     /// Native
-    Native
+    Native,
 }
 
 impl Modifier {
@@ -37,7 +37,7 @@ impl Modifier {
             Abstract => "abstract",
             Static => "static",
             Final => "final",
-            Native => "native"
+            Native => "native",
         }
     }
 }
@@ -61,8 +61,8 @@ impl<'el, C: Custom> IntoTokens<'el, C> for Vec<Modifier> {
 #[cfg(test)]
 mod tests {
     use super::Modifier;
-    use java::Java;
-    use tokens::Tokens;
+    use crate::java::Java;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_vec() {

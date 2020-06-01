@@ -1,7 +1,7 @@
 //! Individual java modifier
 
+use crate::{Custom, Element, IntoTokens, Tokens};
 use std::collections::BTreeSet;
-use {Custom, Element, IntoTokens, Tokens};
 
 /// A Java modifier.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
@@ -43,8 +43,8 @@ impl<'el, C: Custom> IntoTokens<'el, C> for Vec<Modifier> {
 #[cfg(test)]
 mod tests {
     use super::Modifier;
-    use dart::Dart;
-    use tokens::Tokens;
+    use crate::dart::Dart;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_vec() {

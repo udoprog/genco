@@ -1,11 +1,11 @@
 //! Data structure for enums.
 
 use super::modifier::Modifier;
-use cons::Cons;
-use csharp::Csharp;
-use element::Element;
-use into_tokens::IntoTokens;
-use tokens::Tokens;
+use crate::cons::Cons;
+use crate::csharp::Csharp;
+use crate::element::Element;
+use crate::into_tokens::IntoTokens;
+use crate::tokens::Tokens;
 
 /// Model for Csharp Enums.
 #[derive(Debug, Clone)]
@@ -99,8 +99,8 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Enum<'el> {
 #[cfg(test)]
 mod tests {
     use super::Enum;
-    use csharp::{self, Csharp};
-    use tokens::Tokens;
+    use crate::csharp::{self, Csharp};
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_vec() {

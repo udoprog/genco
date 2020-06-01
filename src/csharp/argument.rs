@@ -1,10 +1,10 @@
 //! Data structure for constructors
 
 use super::modifier::Modifier;
-use cons::Cons;
-use csharp::Csharp;
-use into_tokens::IntoTokens;
-use tokens::Tokens;
+use crate::cons::Cons;
+use crate::csharp::Csharp;
+use crate::into_tokens::IntoTokens;
+use crate::tokens::Tokens;
 
 /// Model for C# Arguments to functions.
 #[derive(Debug, Clone)]

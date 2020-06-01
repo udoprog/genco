@@ -1,8 +1,8 @@
 //! Specialization for JavaScript code generation.
 
+use crate::{Cons, Custom, Formatter, IntoTokens, Quoted, Tokens};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
-use {Cons, Custom, Formatter, IntoTokens, Quoted, Tokens};
 
 static SEP: &'static str = ".";
 static PATH_SEP: &'static str = "/";
@@ -173,8 +173,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, local, JavaScript};
-    use quoted::Quoted;
-    use tokens::Tokens;
+    use crate::quoted::Quoted;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_function() {

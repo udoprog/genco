@@ -184,9 +184,9 @@ macro_rules! into_tokens_impl_from_generic {
 
 #[cfg(test)]
 mod tests {
-    use js::JavaScript;
-    use quoted::Quoted;
-    use tokens::Tokens;
+    use crate::js::JavaScript;
+    use crate::quoted::Quoted;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_quoted() {

@@ -8,15 +8,15 @@
 //! toks.append("foo");
 //! ```
 
-use con_::Con::{self, Borrowed, Owned};
-use element::Element::{Append, Nested, Push};
+use crate::con_::Con::{self, Borrowed, Owned};
+use crate::element::Element::{Append, Nested, Push};
+use crate::{Custom, Element, Formatter, IntoTokens, WriteTokens};
 use std::collections::LinkedList;
 use std::fmt;
 use std::iter::FromIterator;
 use std::rc::Rc;
 use std::result;
 use std::vec;
-use {Custom, Element, Formatter, IntoTokens, WriteTokens};
 
 /// A set of tokens.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -408,7 +408,7 @@ impl<'el, C: 'el> Iterator for WalkCustom<'el, C> {
 #[cfg(test)]
 mod tests {
     use super::Tokens;
-    use custom::Custom;
+    use crate::custom::Custom;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct Lang(u32);

@@ -524,9 +524,9 @@ pub fn optional<'el, I: Into<Java<'el>>, F: Into<Java<'el>>>(value: I, field: F)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use java::Java;
-    use quoted::Quoted;
-    use tokens::Tokens;
+    use crate::java::Java;
+    use crate::quoted::Quoted;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_primitive() {

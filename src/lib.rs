@@ -39,8 +39,8 @@ pub use self::write_tokens::WriteTokens;
 
 #[cfg(test)]
 mod tests {
-    use rust::Rust;
-    use tokens::Tokens;
+    use crate::rust::Rust;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_nested() {

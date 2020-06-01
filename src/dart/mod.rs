@@ -70,7 +70,7 @@ impl<'el> Dart<'el> {
         input: &'b Tokens<'a, Dart<'el>>,
         _: &mut Extra,
     ) -> Tokens<'a, Dart<'el>> {
-        use quoted::Quoted;
+        use crate::quoted::Quoted;
         use std::collections::BTreeSet;
 
         let mut modules = BTreeSet::new();
@@ -293,9 +293,9 @@ pub fn local<'el, N: Into<Cons<'el>>>(name: N) -> Dart<'el> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dart::Dart;
-    use quoted::Quoted;
-    use tokens::Tokens;
+    use crate::dart::Dart;
+    use crate::quoted::Quoted;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_builtin() {
@@ -324,7 +324,8 @@ mod tests {
             import2.name("b"),
             import_alias.name("c"),
             import_relative.name("d"),
-        ].join_spacing();
+        ]
+        .join_spacing();
 
         let expected = vec![
             "import \"../http.dart\";",

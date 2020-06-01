@@ -1,4 +1,4 @@
-use {Cons, Csharp, Element, IntoTokens, Tokens};
+use crate::{Cons, Csharp, Element, IntoTokens, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 pub struct BlockComment<'el>(pub Vec<Cons<'el>>);

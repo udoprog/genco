@@ -2,12 +2,12 @@
 
 use super::argument::Argument;
 use super::modifier::Modifier;
-use con_::Con::Owned;
-use cons::Cons;
-use element::Element;
-use into_tokens::IntoTokens;
-use java::Java;
-use tokens::Tokens;
+use crate::con_::Con::Owned;
+use crate::cons::Cons;
+use crate::element::Element;
+use crate::into_tokens::IntoTokens;
+use crate::java::Java;
+use crate::tokens::Tokens;
 
 /// Model for Java Constructors.
 #[derive(Debug, Clone)]
@@ -92,9 +92,9 @@ impl<'el> IntoTokens<'el, Java<'el>> for (Cons<'el>, Constructor<'el>) {
 #[cfg(test)]
 mod tests {
     use super::Constructor;
-    use cons::Cons;
-    use java::Java;
-    use tokens::Tokens;
+    use crate::cons::Cons;
+    use crate::java::Java;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_vec() {

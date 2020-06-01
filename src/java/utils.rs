@@ -1,4 +1,4 @@
-use {Cons, Element, IntoTokens, Java, Tokens};
+use crate::{Cons, Element, IntoTokens, Java, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 pub struct BlockComment<'el>(pub Vec<Cons<'el>>);

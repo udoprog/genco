@@ -2,12 +2,12 @@
 
 use super::argument::Argument;
 use super::modifier::Modifier;
-use con_::Con::Owned;
-use cons::Cons;
-use csharp::Csharp;
-use element::Element;
-use into_tokens::IntoTokens;
-use tokens::Tokens;
+use crate::con_::Con::Owned;
+use crate::cons::Cons;
+use crate::csharp::Csharp;
+use crate::element::Element;
+use crate::into_tokens::IntoTokens;
+use crate::tokens::Tokens;
 
 /// Model for Csharp Constructors.
 #[derive(Debug, Clone)]
@@ -92,9 +92,9 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for (Cons<'el>, Constructor<'el>) {
 #[cfg(test)]
 mod tests {
     use super::Constructor;
-    use cons::Cons;
-    use csharp::Csharp;
-    use tokens::Tokens;
+    use crate::cons::Cons;
+    use crate::csharp::Csharp;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_vec() {

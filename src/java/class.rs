@@ -4,11 +4,11 @@ use super::constructor::Constructor;
 use super::field::Field;
 use super::method::Method;
 use super::modifier::Modifier;
-use cons::Cons;
-use element::Element;
-use into_tokens::IntoTokens;
-use java::Java;
-use tokens::Tokens;
+use crate::cons::Cons;
+use crate::element::Element;
+use crate::into_tokens::IntoTokens;
+use crate::java::Java;
+use crate::tokens::Tokens;
 
 /// Model for Java Classs.
 #[derive(Debug, Clone)]
@@ -154,8 +154,8 @@ impl<'el> IntoTokens<'el, Java<'el>> for Class<'el> {
 #[cfg(test)]
 mod tests {
     use super::Class;
-    use java::{local, Java};
-    use tokens::Tokens;
+    use crate::java::{local, Java};
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_vec() {

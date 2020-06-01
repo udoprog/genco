@@ -1,7 +1,7 @@
 //! Data structure for methods.
 
-use csharp::{Argument, BlockComment, Csharp, Modifier};
-use {Cons, IntoTokens, Tokens};
+use crate::csharp::{Argument, BlockComment, Csharp, Modifier};
+use crate::{Cons, IntoTokens, Tokens};
 
 /// Model for Csharp Methods.
 #[derive(Debug, Clone)]
@@ -110,8 +110,8 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Method<'el> {
 
 #[cfg(test)]
 mod tests {
-    use csharp::Method;
-    use tokens::Tokens;
+    use crate::csharp::Method;
+    use crate::tokens::Tokens;
 
     fn build_method() -> Method<'static> {
         let mut c = Method::new("Foo");

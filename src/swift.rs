@@ -1,8 +1,8 @@
 //! Specialization for Swift code generation.
 
+use crate::{Cons, Custom, Formatter, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
-use {Cons, Custom, Formatter, Tokens};
 
 /// Name of an imported type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -203,7 +203,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{array, imported, local, map, Swift};
-    use {Quoted, Tokens};
+    use crate::{Quoted, Tokens};
 
     #[test]
     fn test_string() {

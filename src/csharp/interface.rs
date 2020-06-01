@@ -1,7 +1,7 @@
 //! Data structure for interfaces.
 
-use csharp::{Method, Modifier};
-use {Cons, Csharp, Element, IntoTokens, Tokens};
+use crate::csharp::{Method, Modifier};
+use crate::{Cons, Csharp, Element, IntoTokens, Tokens};
 
 /// Model for Csharp Interfaces.
 #[derive(Debug, Clone)]
@@ -115,9 +115,9 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Interface<'el> {
 
 #[cfg(test)]
 mod tests {
-    use csharp::{local, Interface};
-    use tokens::Tokens;
-    use Csharp;
+    use crate::csharp::{local, Interface};
+    use crate::tokens::Tokens;
+    use crate::Csharp;
 
     #[test]
     fn test_interface() {

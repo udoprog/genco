@@ -1,8 +1,8 @@
 //! Specialization for Python code generation.
 
+use crate::{Cons, Custom, Formatter, IntoTokens, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
-use {Cons, Custom, Formatter, IntoTokens, Tokens};
 
 static SEP: &'static str = ".";
 
@@ -183,8 +183,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, local, Python};
-    use quoted::Quoted;
-    use tokens::Tokens;
+    use crate::quoted::Quoted;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_string() {
@@ -198,9 +198,9 @@ mod tests {
         let mut toks: Tokens<Python> = Tokens::new();
         toks.push(toks![imported("collections").name("named_tuple")]);
         toks.push(toks![imported("collections")]);
-        toks.push(toks![
-            imported("collections").alias("c").name("named_tuple")
-        ]);
+        toks.push(toks![imported("collections")
+            .alias("c")
+            .name("named_tuple")]);
         toks.push(toks![imported("collections").alias("c")]);
 
         assert_eq!(

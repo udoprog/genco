@@ -1,7 +1,7 @@
 //! Data structure for methods.
 
-use java::{Argument, BlockComment, Java, Modifier, VOID};
-use {Cons, IntoTokens, Tokens};
+use crate::java::{Argument, BlockComment, Java, Modifier, VOID};
+use crate::{Cons, IntoTokens, Tokens};
 
 /// Model for Java Methods.
 #[derive(Debug, Clone)]
@@ -120,7 +120,7 @@ impl<'el> IntoTokens<'el, Java<'el>> for Method<'el> {
 #[cfg(test)]
 mod tests {
     use super::Method;
-    use tokens::Tokens;
+    use crate::tokens::Tokens;
 
     fn build_method() -> Method<'static> {
         let mut c = Method::new("foo");

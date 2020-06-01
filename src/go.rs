@@ -1,8 +1,8 @@
 //! Specialization for Go code generation.
 
+use crate::{Cons, Custom, Formatter, Quoted, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
-use {Cons, Custom, Formatter, Quoted, Tokens};
 
 const SEP: &str = ".";
 
@@ -245,7 +245,7 @@ pub fn interface<'a>() -> Go<'a> {
 #[cfg(test)]
 mod tests {
     use super::{array, imported, interface, map, Extra, Go};
-    use {Quoted, Tokens};
+    use crate::{Quoted, Tokens};
 
     #[test]
     fn test_string() {

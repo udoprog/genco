@@ -19,9 +19,9 @@ pub use self::interface::Interface;
 pub use self::method::Method;
 pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
+use crate::{Cons, Custom, Formatter, IntoTokens, Tokens};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Write};
-use {Cons, Custom, Formatter, IntoTokens, Tokens};
 
 static SYSTEM: &'static str = "System";
 static SEP: &'static str = ".";
@@ -637,9 +637,9 @@ pub fn optional<'el, I: Into<Csharp<'el>>>(value: I) -> Csharp<'el> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use csharp::Csharp;
-    use quoted::Quoted;
-    use tokens::Tokens;
+    use crate::csharp::Csharp;
+    use crate::quoted::Quoted;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_simple() {

@@ -1,8 +1,8 @@
 //! Data structure for fields
 
-use con_::Con;
-use csharp::{BlockComment, Modifier};
-use {Cons, Csharp, Element, IntoTokens, Tokens};
+use crate::con_::Con;
+use crate::csharp::{BlockComment, Modifier};
+use crate::{Cons, Csharp, Element, IntoTokens, Tokens};
 
 /// Model for Csharp Fields.
 #[derive(Debug, Clone)]
@@ -113,8 +113,8 @@ impl<'el> From<Field<'el>> for Element<'el, Csharp<'el>> {
 
 #[cfg(test)]
 mod tests {
-    use csharp::{Field, INT32};
-    use tokens::Tokens;
+    use crate::csharp::{Field, INT32};
+    use crate::tokens::Tokens;
 
     fn field() -> Field<'static> {
         Field::new(INT32, "foo")

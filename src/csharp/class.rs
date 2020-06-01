@@ -4,11 +4,11 @@ use super::constructor::Constructor;
 use super::field::Field;
 use super::method::Method;
 use super::modifier::Modifier;
-use cons::Cons;
-use csharp::Csharp;
-use element::Element;
-use into_tokens::IntoTokens;
-use tokens::Tokens;
+use crate::cons::Cons;
+use crate::csharp::Csharp;
+use crate::element::Element;
+use crate::into_tokens::IntoTokens;
+use crate::tokens::Tokens;
 
 /// Model for Csharp Classs.
 #[derive(Debug, Clone)]
@@ -152,8 +152,8 @@ impl<'el> IntoTokens<'el, Csharp<'el>> for Class<'el> {
 #[cfg(test)]
 mod tests {
     use super::Class;
-    use csharp::{local, Csharp};
-    use tokens::Tokens;
+    use crate::csharp::{local, Csharp};
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_class() {

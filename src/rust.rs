@@ -1,9 +1,9 @@
 //! Specialization for Rust code generation.
 
+use crate::{Cons, Custom, Formatter, IntoTokens, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 use std::rc::Rc;
-use {Cons, Custom, Formatter, IntoTokens, Tokens};
 
 static SEP: &'static str = "::";
 
@@ -310,9 +310,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, local};
-    use quoted::Quoted;
-    use rust::Rust;
-    use tokens::Tokens;
+    use crate::quoted::Quoted;
+    use crate::rust::Rust;
+    use crate::tokens::Tokens;
 
     #[test]
     fn test_string() {
