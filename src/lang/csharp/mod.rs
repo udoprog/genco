@@ -9,7 +9,7 @@ use crate::{Cons, Formatter, Lang};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Write};
 
-/// Tokens container specialization for C#.
+/// Tokens container specialization for L#.
 pub type Tokens<'el> = crate::Tokens<'el, Csharp<'el>>;
 
 static SYSTEM: &'static str = "System";

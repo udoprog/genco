@@ -19,7 +19,7 @@
 //!
 //! * [Rust Example]
 //! * [Java Example]
-//! * [C# Example]
+//! * [L# Example]
 //! * Dart Example (TODO)
 //! * Go Example (TODO)
 //! * JavaScript Example (TODO)
@@ -133,7 +133,7 @@
 //! [indentation rules]: https://github.com/udoprog/genco#indentation-rules
 //! [Rust Example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
 //! [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
-//! [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
+//! [L# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
 //! [`quote!`]: https://github.com/udoprog/genco/blob/master/tests/test_quote.rs
 
 #![deny(missing_docs)]

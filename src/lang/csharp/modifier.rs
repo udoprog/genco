@@ -1,4 +1,4 @@
-//! Individual C# modifier
+//! Individual L# modifier
 
 use crate::csharp::Tokens;
 use crate::{Csharp, FormatTokens};

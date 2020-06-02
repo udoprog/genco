@@ -18,14 +18,14 @@ use std::vec;
 
 /// A set of tokens.
 #[derive(Debug, Clone, Default)]
-pub struct Tokens<'el, C: 'el> {
-    pub(crate) elements: Vec<Element<'el, C>>,
+pub struct Tokens<'el, L: 'el> {
+    pub(crate) elements: Vec<Element<'el, L>>,
 }
 
 /// Generic methods.
-impl<'el, C: 'el> Tokens<'el, C> {
+impl<'el, L: 'el> Tokens<'el, L> {
     /// Create a new set of tokens.
-    pub fn new() -> Tokens<'el, C> {
+    pub fn new() -> Tokens<'el, L> {
         Tokens {
             elements: Vec::new(),
         }
@@ -34,7 +34,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a nested definition.
     pub fn nested<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, C>,
+        T: FormatTokens<'el, L>,
     {
         self.elements.push(Element::Indent);
         tokens.into_tokens(self);
@@ -44,7 +44,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a nested definition.
     pub fn nested_into<B>(&mut self, builder: B) -> ()
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> (),
+        B: FnOnce(&mut Tokens<'el, L>) -> (),
     {
         let mut t = Tokens::new();
         builder(&mut t);
@@ -56,7 +56,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is a fallible version that expected the builder to return a result.
     pub fn try_nested_into<E, B>(&mut self, builder: B) -> Result<(), E>
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>,
+        B: FnOnce(&mut Tokens<'el, L>) -> Result<(), E>,
     {
         let mut t = Tokens::new();
         builder(&mut t)?;
@@ -65,7 +65,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     }
 
     /// Push a nested reference to a definition.
-    pub fn nested_ref(&mut self, tokens: &'el Tokens<'el, C>) {
+    pub fn nested_ref(&mut self, tokens: &'el Tokens<'el, L>) {
         self.elements.push(Element::Indent);
         self.elements
             .extend(tokens.elements.iter().map(Element::Borrowed));
@@ -75,7 +75,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a definition, guaranteed to be preceded with one newline.
     pub fn push<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, C>,
+        T: FormatTokens<'el, L>,
     {
         self.elements.push(Element::PushSpacing);
         tokens.into_tokens(self);
@@ -84,7 +84,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a new created definition, guaranteed to be preceded with one newline.
     pub fn push_into<B>(&mut self, builder: B) -> ()
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> (),
+        B: FnOnce(&mut Tokens<'el, L>) -> (),
     {
         let mut t = Tokens::new();
         builder(&mut t);
@@ -96,7 +96,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is a fallible version that expected the builder to return a result.
     pub fn try_push_into<E, B>(&mut self, builder: B) -> Result<(), E>
     where
-        B: FnOnce(&mut Tokens<'el, C>) -> Result<(), E>,
+        B: FnOnce(&mut Tokens<'el, L>) -> Result<(), E>,
     {
         let mut t = Tokens::new();
         builder(&mut t)?;
@@ -109,7 +109,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is useful when you wish to preserve the structure of nested and joined tokens.
     pub fn push_unless_empty<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, C>,
+        T: FormatTokens<'el, L>,
     {
         if !tokens.is_empty() {
             self.elements.push(Element::PushSpacing);
@@ -120,7 +120,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Insert the given element.
     pub fn insert<E>(&mut self, pos: usize, element: E)
     where
-        E: Into<Element<'el, C>>,
+        E: Into<Element<'el, L>>,
     {
         self.elements.insert(pos, element.into());
     }
@@ -128,13 +128,13 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Append the given element.
     pub fn append<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, C>,
+        T: FormatTokens<'el, L>,
     {
         tokens.into_tokens(self)
     }
 
     /// Append a reference to a definition.
-    pub fn append_ref(&mut self, element: &'el Element<'el, C>) {
+    pub fn append_ref(&mut self, element: &'el Element<'el, L>) {
         self.elements.push(Element::Borrowed(element));
     }
 
@@ -143,7 +143,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is useful when you wish to preserve the structure of nested and joined tokens.
     pub fn append_unless_empty<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, C>,
+        T: FormatTokens<'el, L>,
     {
         if tokens.is_empty() {
             return;
@@ -155,20 +155,20 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Extend with another set of tokens.
     pub fn extend<I>(&mut self, it: I)
     where
-        I: IntoIterator<Item = Element<'el, C>>,
+        I: IntoIterator<Item = Element<'el, L>>,
     {
         self.elements.extend(it.into_iter());
     }
 
     /// Walk over all elements.
-    pub fn walk_custom(&self) -> WalkCustom<C> {
+    pub fn walk_custom(&self) -> WalkCustom<L> {
         let mut queue = LinkedList::new();
         queue.extend(self.elements.iter());
         WalkCustom { queue: queue }
     }
 
     /// Add an registered custom element that is _not_ rendered.
-    pub fn register(&mut self, custom: C) {
+    pub fn register(&mut self, custom: L) {
         self.elements
             .push(Element::Registered(Con::Rc(Rc::new(custom))));
     }
@@ -204,18 +204,18 @@ impl<'el, C: 'el> Tokens<'el, C> {
     }
 }
 
-impl<'el, C> IntoIterator for Tokens<'el, C> {
-    type Item = Element<'el, C>;
-    type IntoIter = vec::IntoIter<Element<'el, C>>;
+impl<'el, L> IntoIterator for Tokens<'el, L> {
+    type Item = Element<'el, L>;
+    type IntoIter = vec::IntoIter<Element<'el, L>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
     }
 }
 
-impl<'el, C: Lang<'el>> Tokens<'el, C> {
+impl<'el, L: Lang<'el>> Tokens<'el, L> {
     /// Format the tokens.
-    pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
+    pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
         for element in &self.elements {
             element.format(out, config, level)?;
         }
@@ -224,54 +224,54 @@ impl<'el, C: Lang<'el>> Tokens<'el, C> {
     }
 
     /// Format token as file with the given configuration.
-    pub fn to_file_with(self, mut config: C::Config) -> result::Result<String, fmt::Error> {
+    pub fn to_file_with(self, mut config: L::Config) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
         output.write_file(self, &mut config)?;
         Ok(output)
     }
 
     /// Format the tokens with the given configuration.
-    pub fn to_string_with(self, mut config: C::Config) -> result::Result<String, fmt::Error> {
+    pub fn to_string_with(self, mut config: L::Config) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
         output.write_tokens(self, &mut config)?;
         Ok(output)
     }
 }
 
-impl<'el, E: Config + Default, C: Lang<'el, Config = E>> Tokens<'el, C> {
+impl<'el, E: Config + Default, L: Lang<'el, Config = E>> Tokens<'el, L> {
     /// Format token as file.
     pub fn to_file(self) -> result::Result<String, fmt::Error> {
-        self.to_file_with(C::Config::default())
+        self.to_file_with(L::Config::default())
     }
 
     /// Format the tokens.
     pub fn to_string(self) -> result::Result<String, fmt::Error> {
-        self.to_string_with(C::Config::default())
+        self.to_string_with(L::Config::default())
     }
 }
 
-impl<'el, C> FromIterator<&'el Element<'el, C>> for Tokens<'el, C> {
-    fn from_iter<I: IntoIterator<Item = &'el Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
+impl<'el, L> FromIterator<&'el Element<'el, L>> for Tokens<'el, L> {
+    fn from_iter<I: IntoIterator<Item = &'el Element<'el, L>>>(iter: I) -> Tokens<'el, L> {
         Tokens {
             elements: iter.into_iter().map(|e| Element::Borrowed(e)).collect(),
         }
     }
 }
 
-impl<'el, C> FromIterator<Element<'el, C>> for Tokens<'el, C> {
-    fn from_iter<I: IntoIterator<Item = Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
+impl<'el, L> FromIterator<Element<'el, L>> for Tokens<'el, L> {
+    fn from_iter<I: IntoIterator<Item = Element<'el, L>>>(iter: I) -> Tokens<'el, L> {
         Tokens {
             elements: iter.into_iter().collect(),
         }
     }
 }
 
-pub struct WalkCustom<'el, C: 'el> {
-    queue: LinkedList<&'el Element<'el, C>>,
+pub struct WalkCustom<'el, L: 'el> {
+    queue: LinkedList<&'el Element<'el, L>>,
 }
 
-impl<'el, C: 'el> Iterator for WalkCustom<'el, C> {
-    type Item = &'el C;
+impl<'el, L: 'el> Iterator for WalkCustom<'el, L> {
+    type Item = &'el L;
 
     fn next(&mut self) -> Option<Self::Item> {
         use self::Element::*;

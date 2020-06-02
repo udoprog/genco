@@ -3,9 +3,9 @@
 use super::{Cons, Element, ErasedElement, Lang, Tokens};
 
 /// Helper trait to convert something into tokens.
-pub trait FormatTokens<'el, C> {
+pub trait FormatTokens<'el, L> {
     /// Convert the type into tokens.
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>);
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>);
 
     /// Hint to test if we are empty.
     fn is_empty(&self) -> bool {
@@ -13,7 +13,7 @@ pub trait FormatTokens<'el, C> {
     }
 }
 
-impl<'el, C> FormatTokens<'el, C> for Tokens<'el, C> {
+impl<'el, L> FormatTokens<'el, L> for Tokens<'el, L> {
     fn into_tokens(self, tokens: &mut Self) {
         tokens.elements.extend(self.elements);
     }
@@ -24,8 +24,8 @@ impl<'el, C> FormatTokens<'el, C> for Tokens<'el, C> {
 }
 
 /// Convert collection to tokens.
-impl<'el, C> FormatTokens<'el, C> for Vec<Tokens<'el, C>> {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+impl<'el, L> FormatTokens<'el, L> for Vec<Tokens<'el, L>> {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         for t in self {
             tokens.elements.extend(t.elements);
         }
@@ -37,73 +37,73 @@ impl<'el, C> FormatTokens<'el, C> for Vec<Tokens<'el, C>> {
 }
 
 /// Convert element to tokens.
-impl<'el, C> FormatTokens<'el, C> for Element<'el, C> {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+impl<'el, L> FormatTokens<'el, L> for Element<'el, L> {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self);
     }
 }
 
 /// Convert an erased element to tokens.
-impl<'el, C> FormatTokens<'el, C> for ErasedElement<'el> {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+impl<'el, L> FormatTokens<'el, L> for ErasedElement<'el> {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert custom elements.
-impl<'el, C> FormatTokens<'el, C> for C
+impl<'el, L> FormatTokens<'el, L> for L
 where
-    C: Lang<'el>,
+    L: Lang<'el>,
 {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into())
     }
 }
 
 /// Convert custom elements.
-impl<'el, C> FormatTokens<'el, C> for &'el C
+impl<'el, L> FormatTokens<'el, L> for &'el L
 where
-    C: Lang<'el>,
+    L: Lang<'el>,
 {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into())
     }
 }
 
 /// Convert borrowed strings.
-impl<'el, C> FormatTokens<'el, C> for &'el str {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+impl<'el, L> FormatTokens<'el, L> for &'el str {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert borrowed strings.
-impl<'el, C> FormatTokens<'el, C> for &'el String {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+impl<'el, L> FormatTokens<'el, L> for &'el String {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.as_str().into());
     }
 }
 
 /// Convert strings.
-impl<'el, C> FormatTokens<'el, C> for String {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+impl<'el, L> FormatTokens<'el, L> for String {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert stringy things.
-impl<'el, C> FormatTokens<'el, C> for Cons<'el> {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+impl<'el, L> FormatTokens<'el, L> for Cons<'el> {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert stringy things.
-impl<'el, C, T> FormatTokens<'el, C> for Option<T>
+impl<'el, L, T> FormatTokens<'el, L> for Option<T>
 where
-    T: FormatTokens<'el, C>,
+    T: FormatTokens<'el, L>,
 {
-    fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         if let Some(inner) = self {
             inner.into_tokens(tokens);
         }

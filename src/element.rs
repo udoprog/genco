@@ -8,19 +8,19 @@ use std::rc::Rc;
 
 /// A single element in a set of tokens.
 #[derive(Debug, Clone)]
-pub enum Element<'el, C> {
+pub enum Element<'el, L> {
     /// A refcounted member.
-    Rc(Rc<Element<'el, C>>),
+    Rc(Rc<Element<'el, L>>),
     /// A borrowed element.
-    Borrowed(&'el Element<'el, C>),
+    Borrowed(&'el Element<'el, L>),
     /// A borrowed string.
     Literal(Cons<'el>),
     /// A borrowed quoted string.
     Quoted(Cons<'el>),
     /// Language-specific items.
-    Lang(Con<'el, C>),
+    Lang(Con<'el, L>),
     /// A custom element that is not rendered.
-    Registered(Con<'el, C>),
+    Registered(Con<'el, L>),
     /// Push an empty line.
     PushSpacing,
     /// Unconditionally push a line.
@@ -37,7 +37,7 @@ pub enum Element<'el, C> {
     None,
 }
 
-impl<'el, C> Element<'el, C> {
+impl<'el, L> Element<'el, L> {
     /// Test if the element is none.
     pub fn is_none(&self) -> bool {
         match self {
@@ -47,7 +47,7 @@ impl<'el, C> Element<'el, C> {
     }
 }
 
-impl<'el, C: 'el> From<ErasedElement<'el>> for Element<'el, C> {
+impl<'el, L: 'el> From<ErasedElement<'el>> for Element<'el, L> {
     fn from(erased: ErasedElement<'el>) -> Self {
         match erased {
             ErasedElement::Quoted(text) => Self::Quoted(text),
@@ -55,9 +55,9 @@ impl<'el, C: 'el> From<ErasedElement<'el>> for Element<'el, C> {
     }
 }
 
-impl<'el, C: Lang<'el>> Element<'el, C> {
+impl<'el, L: Lang<'el>> Element<'el, L> {
     /// Format the given element.
-    pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
+    pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
         use self::Element::*;
 
         match *self {
@@ -73,7 +73,7 @@ impl<'el, C: Lang<'el>> Element<'el, C> {
                 out.write_str(literal.as_ref())?;
             }
             Quoted(ref literal) => {
-                C::quote_string(out, literal.as_ref())?;
+                L::quote_string(out, literal.as_ref())?;
             }
             Lang(ref custom) => {
                 custom.as_ref().format(out, config, level)?;
@@ -106,50 +106,50 @@ impl<'el, C: Lang<'el>> Element<'el, C> {
     }
 }
 
-impl<'el, C: Lang<'el>> From<C> for Element<'el, C> {
-    fn from(value: C) -> Self {
+impl<'el, L: Lang<'el>> From<L> for Element<'el, L> {
+    fn from(value: L) -> Self {
         Element::Lang(Con::Owned(value))
     }
 }
 
-impl<'el, C: Lang<'el>> From<&'el C> for Element<'el, C> {
-    fn from(value: &'el C) -> Self {
+impl<'el, L: Lang<'el>> From<&'el L> for Element<'el, L> {
+    fn from(value: &'el L) -> Self {
         Element::Lang(Con::Borrowed(value))
     }
 }
 
-impl<'el, C> From<String> for Element<'el, C> {
+impl<'el, L> From<String> for Element<'el, L> {
     fn from(value: String) -> Self {
         Element::Literal(value.into())
     }
 }
 
-impl<'el, C> From<&'el str> for Element<'el, C> {
+impl<'el, L> From<&'el str> for Element<'el, L> {
     fn from(value: &'el str) -> Self {
         Element::Literal(value.into())
     }
 }
 
-impl<'el, C> From<Rc<String>> for Element<'el, C> {
+impl<'el, L> From<Rc<String>> for Element<'el, L> {
     fn from(value: Rc<String>) -> Self {
         Element::Literal(value.into())
     }
 }
 
-impl<'el, C> From<Cons<'el>> for Element<'el, C> {
+impl<'el, L> From<Cons<'el>> for Element<'el, L> {
     fn from(value: Cons<'el>) -> Self {
         Element::Literal(value)
     }
 }
 
-impl<'el, C> From<&'el Element<'el, C>> for Element<'el, C> {
-    fn from(value: &'el Element<'el, C>) -> Self {
+impl<'el, L> From<&'el Element<'el, L>> for Element<'el, L> {
+    fn from(value: &'el Element<'el, L>) -> Self {
         Element::Borrowed(value)
     }
 }
 
-impl<'el, C> From<Rc<Element<'el, C>>> for Element<'el, C> {
-    fn from(value: Rc<Element<'el, C>>) -> Self {
+impl<'el, L> From<Rc<Element<'el, L>>> for Element<'el, L> {
+    fn from(value: Rc<Element<'el, L>>) -> Self {
         Element::Rc(value)
     }
 }
