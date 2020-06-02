@@ -1,54 +1,58 @@
 # GenCo
 
-[![Build Status](https://travis-ci.org/udoprog/genco.svg?branch=master)](https://travis-ci.org/udoprog/genco)
+[![Build Status](https://github.com/udoprog/genco/workflows/Rust/badge.svg)](https://github.com/udoprog/genco/actions)
 [![crates.io](https://img.shields.io/crates/v/genco.svg?maxAge=2592000)](https://crates.io/crates/genco)
 
-GenCo is an even simpler code generator for Rust, specifically written for use in [reproto][reproto].
+GenCo is an even simpler code generator for Rust, written for use in [reproto].
 
-It does not deal with language-specific syntax, instead it can do some of the basic necessities
-through specialization.
+The workhorse of GenCo is the [`quote!`] macro. While tokens can be constructed,
+manually, [`quote!`] makes this process much easier.
 
-* Handle imports, if needed.
+GenCo does not deal with language-specific syntax, instead it limits itself to
+do the following basic necessities through specialization:
+
+* Handle and collapse import statements.
 * Quote strings according to language convention.
-* Indents and spaces your code according to [simple rules](#indentation-rules).
-
-[reproto]: https://github.com/reproto/reproto
+* Indents and spaces your code according to generic [indentation rules].
 
 ## Examples
 
-* [Rust Example](/examples/rust.rs)
-* [Java Example](/examples/rust.rs)
-* [C# Example](/examples/csharp.rs)
+The following are language specific examples for GenCo using the [`quote!`]
+macro.
 
-## Language Support
+* [Rust Example]
+* [Java Example]
+* [C# Example]
+* Dart Example (TODO)
+* Go Example (TODO)
+* JavaScript Example (TODO)
+* Python Example (TODO)
 
-This section contains example code for some of the supported languages.
-
-For more information, see [docs.rs/genco](https://docs.rs/genco).
-
-#### Dart
-
-Simple support for importing names.
+The following is a simple example showcasing code generation for Rust.
 
 ```rust
-#[macro_use]
-extern crate genco;
+#![feature(proc_macro_hygiene)]
 
-fn main() {
-    use genco::dart::imported;
+use genco::rust::imported;
+use genco::{quote, Rust, Tokens};
 
-    let m = imported("dart:math").alias("m");
-    let sqrt = m.name("sqrt");
+// Import the LittleEndian item, without referencing it through the last
+// module component it is part of.
+let little_endian = imported("byteorder", "LittleEndian").qualified();
+let big_endian = imported("byteorder", "BigEndian");
 
-    let mut t = toks!();
-    t.push("void main() {");
-    t.nested({
-        let mut body = toks!();
-        body.push(toks!("print(", "The Square Root Is:".quoted(), " + ", sqrt, "(42));"));
-        body
-    });
-    t.push("}");
-}
+// This is a trait, so only import it into the scope (unless we intent to
+// implement it).
+let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+
+let tokens: Tokens<Rust> = quote! {
+    @write_bytes_ext
+
+    let mut wtr = vec![];
+    wtr.write_u16::<#little_endian>(517).unwrap();
+    wtr.write_u16::<#big_endian>(768).unwrap();
+    assert_eq!(wtr, vec![5, 2, 3, 0]);
+};
 ```
 
 ## Indentation Rules
@@ -62,13 +66,15 @@ there are between them.
 So:
 
 ```rust
-quote!(fn   test());
+#![feature(proc_macro_hygiene)]
+
+let _: genco::Tokens<genco::Rust> = genco::quote!(fn   test() {});
 ```
 
 Becomes:
 
 ```rust
-fn test()
+fn test() {}
 ```
 
 **More that two line breaks** are collapsed.
@@ -76,14 +82,16 @@ fn test()
 So:
 
 ```rust
-quote! {
+#![feature(proc_macro_hygiene)]
+
+let _: genco::Tokens<genco::Rust> = genco::quote! {
     fn test() {
         println!("Hello...");
 
 
         println!("... World!");
     }
-}
+};
 ```
 
 Becomes:
@@ -105,12 +113,14 @@ level shallower.
 So:
 
 ```rust
-quote! {
+#![feature(proc_macro_hygiene)]
+
+let _: genco::Tokens<genco::Rust> = genco::quote! {
   fn test() {
       println!("Hello...");
       println!("... World!");
     }
-}
+};
 ```
 
 Becomes:
@@ -121,3 +131,10 @@ fn test() {
     println!("... World!");
 }
 ```
+
+[reproto]: https://github.com/reproto/reproto
+[indentation rules]: https://github.com/udoprog/genco#indentation-rules
+[Rust Example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
+[Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
+[C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
+[`quote!`]: https://github.com/udoprog/genco/blob/master/tests/test_quote.rs

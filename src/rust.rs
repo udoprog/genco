@@ -174,7 +174,7 @@ impl<'el> Rust<'el> {
         modules: &mut BTreeSet<(Cons<'a>, Option<&'a Cons<'b>>)>,
     ) {
         if let Some(module) = custom.module.as_ref() {
-            if custom.qualified {
+            if custom.qualified || custom.alias.is_some() {
                 let module = Cons::from(format!("{}::{}", module, custom.name.name.as_ref()));
                 modules.insert((module, custom.alias.as_ref()));
             } else {
@@ -201,6 +201,10 @@ impl<'el> Rust<'el> {
         let mut out = Tokens::new();
 
         for (module, alias) in modules {
+            if module.split("::").count() == 1 {
+                continue;
+            }
+
             let mut s = Tokens::new();
 
             s.append("use ");
@@ -261,9 +265,11 @@ impl<'el> Custom for Rust<'el> {
         if let Some(alias) = self.alias.as_ref() {
             out.write_str(alias)?;
             out.write_str(SEP)?;
-        } else if let Some(part) = self.module.as_ref().and_then(|m| m.split(SEP).last()) {
-            out.write_str(part)?;
-            out.write_str(SEP)?;
+        } else if !self.qualified {
+            if let Some(part) = self.module.as_ref().and_then(|m| m.split(SEP).last()) {
+                out.write_str(part)?;
+                out.write_str(SEP)?;
+            }
         }
 
         self.name.format(out, config, level)
@@ -362,26 +368,24 @@ mod tests {
 
     #[test]
     fn test_imported_alias() {
-        let dbg = imported("std::fmt", "Debug").alias("dbg");
+        let dbg = imported("std::fmt", "Debug");
         let mut toks: Tokens<Rust> = Tokens::new();
         toks.push(toks!(&dbg));
 
         assert_eq!(
-            Ok("use std::fmt as dbg;\n\ndbg::Debug\n"),
+            Ok("use std::fmt;\n\nfmt::Debug\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
 
     #[test]
     fn test_imported_with_arguments() {
-        let dbg = imported("std::fmt", "Debug")
-            .alias("dbg")
-            .with_arguments(vec![local("T"), local("U")]);
+        let dbg = imported("std::fmt", "Debug").with_arguments(vec![local("T"), local("U")]);
         let mut toks: Tokens<Rust> = Tokens::new();
         toks.push(toks!(&dbg));
 
         assert_eq!(
-            Ok("use std::fmt as dbg;\n\ndbg::Debug<T, U>\n"),
+            Ok("use std::fmt;\n\nfmt::Debug<T, U>\n"),
             toks.to_file().as_ref().map(|s| s.as_str())
         );
     }

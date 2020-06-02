@@ -8,14 +8,45 @@ use syn::parse::{ParseStream, Parse};
 use std::iter::FromIterator;
 use std::collections::VecDeque;
 
+/// Quotes the specified expression as a stream of tokens for use with genco.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+///
+/// use genco::rust::imported;
+/// use genco::{quote, Rust, Tokens};
+///
+/// // Import the LittleEndian item, without referencing it through the last
+/// // module component it is part of.
+/// let little_endian = imported("byteorder", "LittleEndian").qualified();
+/// let big_endian = imported("byteorder", "BigEndian");
+///
+/// // This is a trait, so only import it into the scope (unless we intent to
+/// // implement it).
+/// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+///
+/// let tokens: Tokens<Rust> = quote! {
+///     @write_bytes_ext
+/// 
+///     let mut wtr = vec![];
+///     wtr.write_u16::<#little_endian>(517).unwrap();
+///     wtr.write_u16::<#big_endian>(768).unwrap();
+///     assert_eq!(wtr, vec![5, 2, 3, 0]);
+/// };
+///
+/// println!("{}", tokens.to_file().unwrap());
+/// ```
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let Tokens(output) = parse_macro_input!(input as Tokens);
+    let Tokens(registers, output) = parse_macro_input!(input as Tokens);
 
     let output = TokenStream::from_iter(output);
 
     let gen = quote::quote! {{
         let mut __toks = genco::Tokens::new();
+        #(#registers;)*
         #output
         __toks
     }};
@@ -23,7 +54,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     gen.into()
 }
 
-struct Tokens(Vec<TokenTree>);
+struct Tokens(Vec<TokenStream>, Vec<TokenTree>);
 
 #[derive(Clone, Copy, Debug)]
 struct Cursor {
@@ -67,6 +98,8 @@ impl From<Span> for Cursor {
 impl Parse for Tokens {
     fn parse(input: ParseStream) -> Result<Self> {
         use std::iter::from_fn;
+
+        let mut registers = Vec::new();
 
         let mut tokens = Vec::new();
 
@@ -150,17 +183,6 @@ impl Parse for Tokens {
                         }
                     }
                 }
-                Item::Group(_, group) => {
-                    if !line_buffer.is_empty() {
-                        let s = LitStr::new(&line_buffer, Span::call_site());
-                        let group = Group::new(Delimiter::None, quote::quote!(__toks.append(#s);));
-                        tokens.push(TokenTree::Group(group));
-                        line_buffer.clear();
-                    }
-
-                    let group = Group::new(Delimiter::None, quote::quote!(__toks.append(Clone::clone(&#group));));
-                    tokens.push(TokenTree::Group(group));
-                }
                 Item::Expression(_, expr) => {
                     if !line_buffer.is_empty() {
                         let s = LitStr::new(&line_buffer, Span::call_site());
@@ -171,6 +193,9 @@ impl Parse for Tokens {
 
                     let group = Group::new(Delimiter::None, quote::quote!(__toks.append(Clone::clone(&#expr));));
                     tokens.push(TokenTree::Group(group));
+                }
+                Item::Register(_, expr) => {
+                    registers.push(quote::quote!(__toks.register(#expr)));
                 }
                 Item::DelimiterClose(_, delimiter) => {
                     match delimiter {
@@ -190,7 +215,7 @@ impl Parse for Tokens {
             line_buffer.clear();
         }
 
-        Ok(Self(tokens))
+        Ok(Self(registers, tokens))
     }
 }
 
@@ -198,8 +223,8 @@ impl Parse for Tokens {
 #[derive(Debug)]
 enum Item {
     Tree(TokenTree),
-    Group(Cursor, TokenStream),
     Expression(Cursor, TokenTree),
+    Register(Cursor, TokenTree),
     DelimiterClose(Cursor, Delimiter),
 }
 
@@ -207,8 +232,8 @@ impl Item {
     fn cursor(&self) -> Cursor {
         match self {
             Self::Tree(tt) => Cursor::from(tt.span()),
-            Self::Group(cursor, ..) => *cursor,
             Self::Expression(cursor, ..) => *cursor,
+            Self::Register(cursor, ..) => *cursor,
             Self::DelimiterClose(cursor, ..) => *cursor,
         }
     }
@@ -227,18 +252,33 @@ fn process_expressions(mut queue: impl FnMut(Item), mut it: impl Iterator<Item =
                 queue(Item::Tree(TokenTree::Punct(a)));
                 it.next().transpose()?
             }
+            // Escape sequence for register.
+            (TokenTree::Punct(mut a), Some(TokenTree::Punct(b))) if a.as_char() == '@' && b.as_char() == '@' => {
+                let span = a.span().join(b.span()).expect("failed to join spans");
+                a.set_span(span);
+                queue(Item::Tree(TokenTree::Punct(a)));
+                it.next().transpose()?
+            }
             // Context evaluation.
             (TokenTree::Punct(first), Some(argument)) if first.as_char() == '#' => {
                 let span = first.span().join(argument.span()).expect("failed to join spans");
                 let cursor = Cursor::from(span);
 
                 match argument {
-                    TokenTree::Group(group) if group.delimiter() == Delimiter::Parenthesis => {
-                        queue(Item::Group(cursor, group.stream()));
-                        it.next().transpose()?
-                    }
                     other => {
                         queue(Item::Expression(cursor, other));
+                        it.next().transpose()?
+                    }
+                }
+            }
+            // Register evaluation.
+            (TokenTree::Punct(first), Some(argument)) if first.as_char() == '@' => {
+                let span = first.span().join(argument.span()).expect("failed to join spans");
+                let cursor = Cursor::from(span);
+
+                match argument {
+                    other => {
+                        queue(Item::Register(cursor, other));
                         it.next().transpose()?
                     }
                 }

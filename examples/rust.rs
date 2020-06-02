@@ -1,20 +1,26 @@
 #![feature(proc_macro_hygiene)]
 
-use genco::{quote, Quoted, Rust, Tokens};
+use genco::rust::imported;
+use genco::{quote, Rust, Tokens};
 
 fn main() {
-    let test = "one".quoted();
+    // Import the LittleEndian item, without referencing it through the last
+    // module component it is part of.
+    let little_endian = imported("byteorder", "LittleEndian").qualified();
+    let big_endian = imported("byteorder", "BigEndian");
+
+    // This is a trait, so only import it into the scope (unless we intent to
+    // implement it).
+    let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
 
     let tokens: Tokens<Rust> = quote! {
-        fn test() -> u32 {
-            println!("{}", #(test));
+        @write_bytes_ext
 
-            42
-        }
+        let mut wtr = vec![];
+        wtr.write_u16::<#little_endian>(517).unwrap();
+        wtr.write_u16::<#big_endian>(768).unwrap();
+        assert_eq!(wtr, vec![5, 2, 3, 0]);
     };
 
-    assert_eq!(
-        "fn test() -> u32 {\n  println!(\"{}\", \"one\");\n\n  42\n}",
-        tokens.to_string().unwrap()
-    );
+    println!("{}", tokens.to_file().unwrap());
 }
