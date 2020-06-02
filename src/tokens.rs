@@ -8,22 +8,27 @@
 //! toks.append("foo");
 //! ```
 
-use crate::{Con, Config, Element, FormatTokens, Formatter, Lang, WriteTokens};
+use crate::{Config, Element, FormatTokens, Formatter, Lang, LangBox, LangItem, WriteTokens};
 use std::collections::LinkedList;
 use std::fmt;
 use std::iter::FromIterator;
-use std::rc::Rc;
 use std::result;
 use std::vec;
 
 /// A set of tokens.
-#[derive(Debug, Clone, Default)]
-pub struct Tokens<'el, L: 'el> {
+#[derive(Debug, Default)]
+pub struct Tokens<'el, L>
+where
+    L: Lang,
+{
     pub(crate) elements: Vec<Element<'el, L>>,
 }
 
 /// Generic methods.
-impl<'el, L: 'el> Tokens<'el, L> {
+impl<'el, L> Tokens<'el, L>
+where
+    L: Lang,
+{
     /// Create a new set of tokens.
     pub fn new() -> Tokens<'el, L> {
         Tokens {
@@ -37,7 +42,7 @@ impl<'el, L: 'el> Tokens<'el, L> {
         T: FormatTokens<'el, L>,
     {
         self.elements.push(Element::Indent);
-        tokens.into_tokens(self);
+        tokens.format_tokens(self);
         self.elements.push(Element::Unindent);
     }
 
@@ -78,7 +83,7 @@ impl<'el, L: 'el> Tokens<'el, L> {
         T: FormatTokens<'el, L>,
     {
         self.elements.push(Element::PushSpacing);
-        tokens.into_tokens(self);
+        tokens.format_tokens(self);
     }
 
     /// Push a new created definition, guaranteed to be preceded with one newline.
@@ -113,7 +118,7 @@ impl<'el, L: 'el> Tokens<'el, L> {
     {
         if !tokens.is_empty() {
             self.elements.push(Element::PushSpacing);
-            tokens.into_tokens(self);
+            tokens.format_tokens(self);
         }
     }
 
@@ -130,7 +135,7 @@ impl<'el, L: 'el> Tokens<'el, L> {
     where
         T: FormatTokens<'el, L>,
     {
-        tokens.into_tokens(self)
+        tokens.format_tokens(self)
     }
 
     /// Append a reference to a definition.
@@ -149,7 +154,7 @@ impl<'el, L: 'el> Tokens<'el, L> {
             return;
         }
 
-        tokens.into_tokens(self);
+        tokens.format_tokens(self);
     }
 
     /// Extend with another set of tokens.
@@ -161,16 +166,15 @@ impl<'el, L: 'el> Tokens<'el, L> {
     }
 
     /// Walk over all elements.
-    pub fn walk_custom(&self) -> WalkCustom<L> {
+    pub fn walk_custom(&self) -> WalkCustom<'_, 'el, L> {
         let mut queue = LinkedList::new();
         queue.extend(self.elements.iter());
         WalkCustom { queue: queue }
     }
 
     /// Add an registered custom element that is _not_ rendered.
-    pub fn register(&mut self, custom: L) {
-        self.elements
-            .push(Element::Registered(Con::Rc(Rc::new(custom))));
+    pub fn register(&mut self, custom: impl Into<LangBox<'el, L>>) {
+        self.elements.push(Element::Registered(custom.into()));
     }
 
     /// Check if tokens contain no elements.
@@ -204,7 +208,21 @@ impl<'el, L: 'el> Tokens<'el, L> {
     }
 }
 
-impl<'el, L> IntoIterator for Tokens<'el, L> {
+impl<'el, L> Clone for Tokens<'el, L>
+where
+    L: Lang,
+{
+    fn clone(&self) -> Self {
+        Self {
+            elements: self.elements.clone(),
+        }
+    }
+}
+
+impl<'el, L> IntoIterator for Tokens<'el, L>
+where
+    L: Lang,
+{
     type Item = Element<'el, L>;
     type IntoIter = vec::IntoIter<Element<'el, L>>;
 
@@ -213,7 +231,7 @@ impl<'el, L> IntoIterator for Tokens<'el, L> {
     }
 }
 
-impl<'el, L: Lang<'el>> Tokens<'el, L> {
+impl<'el, L: Lang> Tokens<'el, L> {
     /// Format the tokens.
     pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
         for element in &self.elements {
@@ -238,7 +256,7 @@ impl<'el, L: Lang<'el>> Tokens<'el, L> {
     }
 }
 
-impl<'el, E: Config + Default, L: Lang<'el, Config = E>> Tokens<'el, L> {
+impl<'el, E: Config + Default, L: Lang<Config = E>> Tokens<'el, L> {
     /// Format token as file.
     pub fn to_file(self) -> result::Result<String, fmt::Error> {
         self.to_file_with(L::Config::default())
@@ -250,7 +268,10 @@ impl<'el, E: Config + Default, L: Lang<'el, Config = E>> Tokens<'el, L> {
     }
 }
 
-impl<'el, L> FromIterator<&'el Element<'el, L>> for Tokens<'el, L> {
+impl<'el, L> FromIterator<&'el Element<'el, L>> for Tokens<'el, L>
+where
+    L: Lang,
+{
     fn from_iter<I: IntoIterator<Item = &'el Element<'el, L>>>(iter: I) -> Tokens<'el, L> {
         Tokens {
             elements: iter.into_iter().map(|e| Element::Borrowed(e)).collect(),
@@ -258,7 +279,10 @@ impl<'el, L> FromIterator<&'el Element<'el, L>> for Tokens<'el, L> {
     }
 }
 
-impl<'el, L> FromIterator<Element<'el, L>> for Tokens<'el, L> {
+impl<'el, L> FromIterator<Element<'el, L>> for Tokens<'el, L>
+where
+    L: Lang,
+{
     fn from_iter<I: IntoIterator<Item = Element<'el, L>>>(iter: I) -> Tokens<'el, L> {
         Tokens {
             elements: iter.into_iter().collect(),
@@ -266,12 +290,18 @@ impl<'el, L> FromIterator<Element<'el, L>> for Tokens<'el, L> {
     }
 }
 
-pub struct WalkCustom<'el, L: 'el> {
-    queue: LinkedList<&'el Element<'el, L>>,
+pub struct WalkCustom<'a, 'el, L>
+where
+    L: Lang,
+{
+    queue: LinkedList<&'a Element<'el, L>>,
 }
 
-impl<'el, L: 'el> Iterator for WalkCustom<'el, L> {
-    type Item = &'el L;
+impl<'a, 'el, L> Iterator for WalkCustom<'a, 'el, L>
+where
+    L: Lang,
+{
+    type Item = &'a dyn LangItem<L>;
 
     fn next(&mut self) -> Option<Self::Item> {
         use self::Element::*;
@@ -285,8 +315,8 @@ impl<'el, L: 'el> Iterator for WalkCustom<'el, L> {
                 Borrowed(ref element) => {
                     self.queue.push_back(element);
                 }
-                Lang(ref custom) => return Some(custom.as_ref()),
-                Registered(ref custom) => return Some(custom.as_ref()),
+                LangBox(ref item) => return Some(&*item),
+                Registered(ref item) => return Some(&*item),
                 _ => {}
             }
         }
@@ -297,33 +327,56 @@ impl<'el, L: 'el> Iterator for WalkCustom<'el, L> {
 
 #[cfg(test)]
 mod tests {
-    use crate::Tokens;
+    use crate as genco;
+    use crate::{quote, Formatter, LangItem, Tokens};
+    use std::fmt;
 
     /// Own little custom language for this test.
     #[derive(Debug, Clone, PartialEq, Eq)]
-    struct Lang(u32);
+    struct Import(u32);
 
-    impl<'el> crate::Lang<'el> for Lang {
+    impl_lang_item!(Import, Lang);
+
+    impl LangItem<Lang> for Import {
+        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+            use std::fmt::Write as _;
+            write!(out, "{}", self.0)
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
+        }
+    }
+
+    #[derive(Clone, Copy)]
+    struct Lang(());
+
+    impl<'el> crate::Lang for Lang {
         type Config = ();
+        type Import = Import;
     }
 
     #[test]
     fn test_walk_custom() {
         let mut toks: Tokens<Lang> = Tokens::new();
 
-        toks.push(toks!("1:1", Lang(1), "1:2"));
+        toks.push(quote!(1:1 #(Import(1)) 1:2));
 
         // static string
         toks.append("bar");
 
-        toks.nested(toks!("2:1", "2:2", toks!("3:1", "3:2"), Lang(2)));
+        toks.nested(quote!(2:1 2:2 #(quote!(3:1 3:2)) #(Import(2))));
 
         // owned literal
         toks.append(String::from("nope"));
 
-        let output: Vec<_> = toks.walk_custom().cloned().collect();
+        let output: Vec<_> = toks
+            .walk_custom()
+            .flat_map(|import| import.as_import())
+            .cloned()
+            .collect();
 
-        let expected = vec![Lang(1), Lang(2)];
+        let expected = vec![Import(1), Import(2)];
 
         assert_eq!(expected, output);
     }

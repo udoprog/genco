@@ -1,27 +1,42 @@
 //! Specialization for JavaScript code generation.
 
-use crate::{Cons, Formatter, Lang, Quoted, Tokens};
+use crate::{Cons, Formatter, Lang, LangItem, Quoted};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
+
+/// Tokens container specialization for Rust.
+pub type Tokens<'el> = crate::Tokens<'el, JavaScript>;
+
+impl_lang_item!(Imported, JavaScript);
 
 static SEP: &'static str = ".";
 static PATH_SEP: &'static str = "/";
 
-/// JavaScript token specialization.
+/// An imported item in JavaScript.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct JavaScript<'el> {
+pub struct Imported {
     /// Module of the imported name.
-    module: Option<Cons<'el>>,
+    module: Option<Cons<'static>>,
     /// Name imported.
-    name: Cons<'el>,
+    name: Cons<'static>,
     /// Alias of module.
-    alias: Option<Cons<'el>>,
+    alias: Option<Cons<'static>>,
 }
 
-impl<'el> fmt::Display for JavaScript<'el> {
+impl Imported {
+    /// Alias the given type.
+    pub fn alias<N: Into<Cons<'static>>>(self, alias: N) -> Self {
+        Self {
+            alias: Some(alias.into()),
+            ..self
+        }
+    }
+}
+
+impl fmt::Display for Imported {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(ref alias) = self.alias {
-            fmt.write_str(alias.as_ref())?;
+        if let Some(alias) = &self.alias {
+            fmt.write_str(alias)?;
             fmt.write_str(SEP)?;
         }
 
@@ -30,35 +45,44 @@ impl<'el> fmt::Display for JavaScript<'el> {
     }
 }
 
-impl<'el> JavaScript<'el> {
-    /// Alias the given type.
-    pub fn alias<N: Into<Cons<'el>>>(self, alias: N) -> JavaScript<'el> {
-        JavaScript {
-            alias: Some(alias.into()),
-            ..self
-        }
+impl LangItem<JavaScript> for Imported {
+    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        write!(out, "{}", self)
     }
 
+    fn as_import(&self) -> Option<&Self> {
+        Some(self)
+    }
+}
+
+/// JavaScript language specialization.
+pub struct JavaScript(());
+
+impl JavaScript {
+    /// Convert a module into a path.
     fn module_to_path(path: &str) -> String {
         let parts: Vec<&str> = path.split(SEP).collect();
         format!("{}.js", parts.join(PATH_SEP))
     }
 
-    fn imports(tokens: &Tokens<'el, Self>) -> Option<Tokens<'el, Self>> {
+    /// Translate imports into the necessary tokens.
+    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
         let mut sets = BTreeMap::new();
         let mut wildcard = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            match (&custom.module, &custom.alias) {
-                (&Some(ref module), &None) => {
-                    sets.entry(module.clone())
-                        .or_insert_with(Tokens::new)
-                        .append(custom.name.clone());
+            if let Some(custom) = custom.as_import() {
+                match (&custom.module, &custom.alias) {
+                    (&Some(ref module), &None) => {
+                        sets.entry(module.clone())
+                            .or_insert_with(Tokens::new)
+                            .append(custom.name.clone());
+                    }
+                    (&Some(ref module), &Some(ref alias)) => {
+                        wildcard.insert((module.clone(), alias.clone()));
+                    }
+                    _ => {}
                 }
-                (&Some(ref module), &Some(ref alias)) => {
-                    wildcard.insert((module.clone(), alias.clone()));
-                }
-                _ => {}
             }
         }
 
@@ -107,12 +131,9 @@ impl<'el> JavaScript<'el> {
     }
 }
 
-impl<'el> Lang<'el> for JavaScript<'el> {
+impl Lang for JavaScript {
     type Config = ();
-
-    fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {
-        write!(out, "{}", self)
-    }
+    type Import = Imported;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -137,7 +158,7 @@ impl<'el> Lang<'el> for JavaScript<'el> {
     }
 
     fn write_file(
-        tokens: Tokens<'el, Self>,
+        tokens: Tokens<'_>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -155,12 +176,12 @@ impl<'el> Lang<'el> for JavaScript<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'el, M, N>(module: M, name: N) -> JavaScript<'el>
+pub fn imported<'el, M, N>(module: M, name: N) -> Imported
 where
-    M: Into<Cons<'el>>,
-    N: Into<Cons<'el>>,
+    M: Into<Cons<'static>>,
+    N: Into<Cons<'static>>,
 {
-    JavaScript {
+    Imported {
         module: Some(module.into()),
         name: name.into(),
         alias: None,
@@ -168,11 +189,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<'el, N>(name: N) -> JavaScript<'el>
+pub fn local<'el, N>(name: N) -> Imported
 where
-    N: Into<Cons<'el>>,
+    N: Into<Cons<'static>>,
 {
-    JavaScript {
+    Imported {
         module: None,
         name: name.into(),
         alias: None,
@@ -181,13 +202,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{imported, local, JavaScript};
-    use crate::quoted::Quoted;
-    use crate::tokens::Tokens;
+    use super::{imported, local, Tokens};
+    use crate::Quoted;
 
     #[test]
     fn test_function() {
-        let mut file: Tokens<JavaScript> = Tokens::new();
+        let mut file = Tokens::new();
 
         file.push("function foo(v) {");
         file.nested(toks!("return v + ", ", World".quoted(), ";"));
@@ -205,14 +225,14 @@ mod tests {
 
     #[test]
     fn test_string() {
-        let mut toks: Tokens<JavaScript> = Tokens::new();
+        let mut toks = Tokens::new();
         toks.append("hello \n world".quoted());
         assert_eq!(Ok(String::from("\"hello \\n world\"")), toks.to_string());
     }
 
     #[test]
     fn test_imported() {
-        let mut toks: Tokens<JavaScript> = Tokens::new();
+        let mut toks = Tokens::new();
         toks.push(toks!(imported("collections", "vec").alias("list")));
         toks.push(toks!(imported("collections", "vec")));
 
@@ -225,7 +245,7 @@ mod tests {
     #[test]
     fn test_local() {
         let dbg = local("vec");
-        let mut toks: Tokens<JavaScript> = Tokens::new();
+        let mut toks = Tokens::new();
         toks.push(toks!(&dbg));
 
         assert_eq!(Ok("vec\n"), toks.to_file().as_ref().map(|s| s.as_str()));

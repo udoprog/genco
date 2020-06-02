@@ -1,67 +1,110 @@
 //! Specialization for Swift code generation.
 
-use crate::{Cons, Formatter, Lang, Tokens};
+use crate::{Cons, Formatter, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
+/// Tokens container specialization for Rust.
+pub type Tokens<'el> = crate::Tokens<'el, Swift>;
+
+impl_lang_item!(Imported, Swift);
+
 /// Name of an imported type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Name<'el> {
+pub struct Name {
     /// Module of the imported name.
-    module: Option<Cons<'el>>,
+    module: Option<Cons<'static>>,
     /// Name imported.
-    name: Cons<'el>,
+    name: Cons<'static>,
 }
 
 /// Swift token specialization.
+pub struct Swift(());
+
+/// An imported Swift element.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Swift<'el> {
+pub enum Imported {
     /// A regular type.
     Type {
         /// The name being referenced.
-        name: Name<'el>,
+        name: Name,
     },
     /// A map, [<key>: <value>].
     Map {
         /// Key of the map.
-        key: Box<Swift<'el>>,
+        key: Box<Imported>,
         /// Value of the map.
-        value: Box<Swift<'el>>,
+        value: Box<Imported>,
     },
     /// An array, [<inner>].
     Array {
         /// Inner value of the array.
-        inner: Box<Swift<'el>>,
+        inner: Box<Imported>,
     },
 }
 
-impl<'el> Swift<'el> {
-    fn type_imports(swift: &Swift<'el>, modules: &mut BTreeSet<Cons<'el>>) {
-        use self::Swift::*;
-
-        match *swift {
-            Type { ref name, .. } => {
+impl Imported {
+    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+        match self {
+            Self::Type { name, .. } => {
                 if let Some(module) = name.module.as_ref() {
                     modules.insert(module.clone());
                 }
             }
-            Map {
-                ref key, ref value, ..
-            } => {
-                Self::type_imports(key, modules);
-                Self::type_imports(value, modules);
+            Self::Map { key, value, .. } => {
+                key.type_imports(modules);
+                value.type_imports(modules);
             }
-            Array { ref inner, .. } => {
-                Self::type_imports(inner, modules);
+            Self::Array { inner, .. } => {
+                inner.type_imports(modules);
             }
         };
     }
+}
 
-    fn imports(tokens: &Tokens<'el, Self>) -> Option<Tokens<'el, Self>> {
+impl LangItem<Swift> for Imported {
+    /// Format the language item appropriately.
+    fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
+        match self {
+            Self::Type {
+                name: Name { name, .. },
+                ..
+            } => {
+                out.write_str(name)?;
+            }
+            Self::Map { key, value, .. } => {
+                out.write_str("[")?;
+                key.format(out, config, level + 1)?;
+                out.write_str(": ")?;
+                value.format(out, config, level + 1)?;
+                out.write_str("]")?;
+            }
+            Self::Array { inner, .. } => {
+                out.write_str("[")?;
+                inner.format(out, config, level + 1)?;
+                out.write_str("]")?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Coerce into an imported type.
+    ///
+    /// This is used for import resolution for custom language items.
+    fn as_import(&self) -> Option<&Self> {
+        Some(self)
+    }
+}
+
+impl Swift {
+    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            Self::type_imports(custom, &mut modules);
+            if let Some(import) = custom.as_import() {
+                import.type_imports(&mut modules);
+            }
         }
 
         if modules.is_empty() {
@@ -83,37 +126,9 @@ impl<'el> Swift<'el> {
     }
 }
 
-impl<'el> Lang<'el> for Swift<'el> {
+impl Lang for Swift {
     type Config = ();
-
-    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
-        use self::Swift::*;
-
-        match *self {
-            Type {
-                name: Name { ref name, .. },
-                ..
-            } => {
-                out.write_str(name)?;
-            }
-            Map {
-                ref key, ref value, ..
-            } => {
-                out.write_str("[")?;
-                key.format(out, config, level + 1)?;
-                out.write_str(": ")?;
-                value.format(out, config, level + 1)?;
-                out.write_str("]")?;
-            }
-            Array { ref inner, .. } => {
-                out.write_str("[")?;
-                inner.format(out, config, level + 1)?;
-                out.write_str("]")?;
-            }
-        }
-
-        Ok(())
-    }
+    type Import = Imported;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -135,7 +150,7 @@ impl<'el> Lang<'el> for Swift<'el> {
     }
 
     fn write_file(
-        tokens: Tokens<'el, Self>,
+        tokens: Tokens<'_>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -153,12 +168,12 @@ impl<'el> Lang<'el> for Swift<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a, M, N>(module: M, name: N) -> Swift<'a>
+pub fn imported<M, N>(module: M, name: N) -> Imported
 where
-    M: Into<Cons<'a>>,
-    N: Into<Cons<'a>>,
+    M: Into<Cons<'static>>,
+    N: Into<Cons<'static>>,
 {
-    Swift::Type {
+    Imported::Type {
         name: Name {
             module: Some(module.into()),
             name: name.into(),
@@ -167,11 +182,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<'a, N>(name: N) -> Swift<'a>
+pub fn local<N>(name: N) -> Imported
 where
-    N: Into<Cons<'a>>,
+    N: Into<Cons<'static>>,
 {
-    Swift::Type {
+    Imported::Type {
         name: Name {
             module: None,
             name: name.into(),
@@ -180,35 +195,36 @@ where
 }
 
 /// Setup a map.
-pub fn map<'a, K, V>(key: K, value: V) -> Swift<'a>
+pub fn map<K, V>(key: K, value: V) -> Imported
 where
-    K: Into<Swift<'a>>,
-    V: Into<Swift<'a>>,
+    K: Into<Imported>,
+    V: Into<Imported>,
 {
-    Swift::Map {
+    Imported::Map {
         key: Box::new(key.into()),
         value: Box::new(value.into()),
     }
 }
 
 /// Setup an array.
-pub fn array<'a, I>(inner: I) -> Swift<'a>
+pub fn array<'a, I>(inner: I) -> Imported
 where
-    I: Into<Swift<'a>>,
+    I: Into<Imported>,
 {
-    Swift::Array {
+    Imported::Array {
         inner: Box::new(inner.into()),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{array, imported, local, map, Swift};
-    use crate::{Quoted, Tokens};
+    use super::{array, imported, local, map, Tokens};
+    use crate as genco;
+    use crate::{quote, Quoted};
 
     #[test]
     fn test_string() {
-        let mut toks: Tokens<Swift> = Tokens::new();
+        let mut toks = Tokens::new();
         toks.append("hello \n world".quoted());
         let res = toks.to_string();
 
@@ -218,8 +234,8 @@ mod tests {
     #[test]
     fn test_imported() {
         let dbg = imported("Foo", "Debug");
-        let mut toks: Tokens<Swift> = Tokens::new();
-        toks.push(toks!(&dbg));
+        let mut toks = Tokens::new();
+        toks.push(quote!(#dbg));
 
         assert_eq!(
             Ok("import Foo\n\nDebug\n"),
@@ -230,8 +246,8 @@ mod tests {
     #[test]
     fn test_array() {
         let dbg = array(imported("Foo", "Debug"));
-        let mut toks: Tokens<Swift> = Tokens::new();
-        toks.push(toks!(&dbg));
+        let mut toks = Tokens::new();
+        toks.push(quote!(#dbg));
 
         assert_eq!(
             Ok("import Foo\n\n[Debug]\n"),
@@ -242,8 +258,8 @@ mod tests {
     #[test]
     fn test_map() {
         let dbg = map(local("String"), imported("Foo", "Debug"));
-        let mut toks: Tokens<Swift> = Tokens::new();
-        toks.push(toks!(&dbg));
+        let mut toks = Tokens::new();
+        toks.push(quote!(#dbg));
 
         assert_eq!(
             Ok("import Foo\n\n[String: Debug]\n"),

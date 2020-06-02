@@ -6,41 +6,46 @@ mod utils;
 pub use self::modifier::Modifier;
 pub use self::utils::DocComment;
 
-use crate::{Cons, Formatter, Lang};
+use crate::{Cons, Formatter, Lang, LangItem};
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Dart.
-pub type Tokens<'el> = crate::Tokens<'el, Dart<'el>>;
+pub type Tokens<'el> = crate::Tokens<'el, Dart>;
+
+impl_lang_item!(Imported, Dart);
 
 static SEP: &'static str = ".";
 /// dart:core package.
 pub static DART_CORE: &'static str = "dart:core";
 
+/// The type corresponding to void.
+pub const VOID: Imported = Imported::Void;
+
 /// Integer built-in type.
-pub const INT: Dart<'static> = Dart::BuiltIn { name: "int" };
+pub const INT: Imported = Imported::BuiltIn { name: "int" };
 
 /// Double built-in type.
-pub const DOUBLE: Dart<'static> = Dart::BuiltIn { name: "double" };
+pub const DOUBLE: Imported = Imported::BuiltIn { name: "double" };
 
 /// Boolean built-in type.
-pub const BOOL: Dart<'static> = Dart::BuiltIn { name: "bool" };
+pub const BOOL: Imported = Imported::BuiltIn { name: "bool" };
 
 /// All information about a single type.
 #[derive(Default, Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type<'el> {
+pub struct Type {
     /// Path to import.
-    path: Option<Cons<'el>>,
+    path: Option<Cons<'static>>,
     /// Alias of module.
-    alias: Option<Cons<'el>>,
+    alias: Option<Cons<'static>>,
     /// Name imported.
-    name: Option<Cons<'el>>,
+    name: Option<Cons<'static>>,
     /// Generic arguments.
-    arguments: Vec<Dart<'el>>,
+    arguments: Vec<Imported>,
 }
 
 /// Dart token specialization.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Dart<'el> {
+pub enum Imported {
     /// built-in type.
     BuiltIn {
         /// The built-in type.
@@ -51,7 +56,7 @@ pub enum Dart<'el> {
     /// the dynamic type.
     Dynamic,
     /// referenced types.
-    Type(Type<'el>),
+    Type(Type),
 }
 
 /// Config data for Dart formatting.
@@ -60,123 +65,81 @@ pub struct Config {}
 
 impl crate::Config for Config {}
 
-impl<'el> Dart<'el> {
-    /// Resolve all imports.
-    fn imports(input: &Tokens<'el>, _: &mut Config) -> Tokens<'el> {
-        use crate::quoted::Quoted;
-        use std::collections::BTreeSet;
-
-        let mut modules = BTreeSet::new();
-
-        for custom in input.walk_custom() {
-            if let Dart::Type(ref ty) = *custom {
-                if let Some(path) = ty.path.as_ref() {
-                    if path.as_ref() == DART_CORE {
-                        continue;
-                    }
-
-                    modules.insert((path.clone(), ty.alias.clone()));
-                }
-            }
-        }
-
-        if modules.is_empty() {
-            return toks!();
-        }
-
-        let mut o = toks!();
-
-        for (name, alias) in modules {
-            if let Some(alias) = alias {
-                o.push(toks!("import ", name.quoted(), " as ", alias, ";"));
-            } else {
-                o.push(toks!("import ", name.quoted(), ";"));
-            }
-        }
-
-        return o;
-    }
-
+impl Imported {
     /// Change the imported alias for this type.
-    pub fn alias(&self, alias: impl Into<Cons<'el>>) -> Dart<'el> {
-        match *self {
-            Dart::Type(ref ty) => Dart::Type(Type {
+    pub fn alias(&self, alias: impl Into<Cons<'static>>) -> Imported {
+        match self {
+            Self::Type(ty) => Self::Type(Type {
                 alias: Some(alias.into()),
                 ..ty.clone()
             }),
-            ref dart => dart.clone(),
+            imported => imported.clone(),
         }
     }
 
     /// Change the imported name for this type.
-    pub fn name(&self, name: impl Into<Cons<'el>>) -> Dart<'el> {
-        match *self {
-            Dart::Type(ref ty) => Dart::Type(Type {
+    pub fn name(&self, name: impl Into<Cons<'static>>) -> Imported {
+        match self {
+            Self::Type(ty) => Self::Type(Type {
                 name: Some(name.into()),
                 ..ty.clone()
             }),
-            ref dart => dart.clone(),
+            imported => imported.clone(),
         }
     }
 
     /// Add arguments to the given variable.
     ///
     /// Only applies to classes, any other will return the same value.
-    pub fn with_arguments(&self, arguments: Vec<Dart<'el>>) -> Dart<'el> {
-        match *self {
-            Dart::Type(ref ty) => Dart::Type(Type {
+    pub fn with_arguments(&self, arguments: Vec<Imported>) -> Imported {
+        match self {
+            Self::Type(ty) => Self::Type(Type {
                 arguments: arguments,
                 ..ty.clone()
             }),
-            ref dart => dart.clone(),
+            imported => imported.clone(),
         }
     }
 
     /// Get the arguments.
-    pub fn arguments(&self) -> Option<&[Dart<'el>]> {
-        use self::Dart::*;
-
-        match *self {
-            Type(ref ty) => Some(&ty.arguments),
+    pub fn arguments(&self) -> Option<&[Imported]> {
+        match self {
+            Self::Type(ty) => Some(&ty.arguments),
             _ => None,
         }
     }
 
     /// Check if variable is built-in.
     pub fn is_built_in(&self) -> bool {
-        use self::Dart::*;
-
-        match *self {
-            BuiltIn { .. } => true,
+        match self {
+            Self::BuiltIn { .. } => true,
             _ => false,
         }
     }
 
     /// Convert into raw type.
     /// Raw types have no alias, nor generic arguments.
-    pub fn raw(&self) -> Dart<'el> {
-        match *self {
-            Dart::Type(ref ty) => Dart::Type(Type {
+    pub fn raw(&self) -> Imported {
+        match self {
+            Self::Type(ty) => Self::Type(Type {
                 arguments: vec![],
                 alias: None,
                 ..ty.clone()
             }),
-            ref other => other.clone(),
+            other => other.clone(),
         }
     }
 
     /// Check if this type belongs to a core package.
     pub fn is_core(&self) -> bool {
-        use self::Dart::*;
-
-        let ty = match *self {
-            Type(ref ty) => ty,
-            BuiltIn { .. } => return true,
-            Void => return true,
-            Dynamic => return true,
+        let ty = match self {
+            Self::Type(ty) => ty,
+            Self::BuiltIn { .. } => return true,
+            Self::Void => return true,
+            Self::Dynamic => return true,
         };
 
-        match ty.path.as_ref() {
+        match &ty.path {
             Some(path) => path.as_ref() == DART_CORE,
             None => false,
         }
@@ -188,21 +151,17 @@ impl<'el> Dart<'el> {
     }
 }
 
-impl<'el> Lang<'el> for Dart<'el> {
-    type Config = Config;
-
-    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
-        use self::Dart::*;
-
-        match *self {
-            BuiltIn { ref name, .. } => {
+impl LangItem<Dart> for Imported {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        match self {
+            Self::BuiltIn { name, .. } => {
                 out.write_str(name.as_ref())?;
             }
-            Void => out.write_str("void")?,
-            Dynamic => out.write_str("dynamic")?,
-            Type(ref ty) => {
-                if let Some(ref name) = ty.name {
-                    if let Some(ref alias) = ty.alias {
+            Self::Void => out.write_str("void")?,
+            Self::Dynamic => out.write_str("dynamic")?,
+            Self::Type(ty) => {
+                if let Some(name) = &ty.name {
+                    if let Some(alias) = &ty.alias {
                         out.write_str(alias.as_ref())?;
                         out.write_str(SEP)?;
                     }
@@ -231,6 +190,56 @@ impl<'el> Lang<'el> for Dart<'el> {
         Ok(())
     }
 
+    fn as_import(&self) -> Option<&Self> {
+        Some(self)
+    }
+}
+
+/// Language specialization for Dart.
+pub struct Dart(());
+
+impl Dart {
+    /// Resolve all imports.
+    fn imports<'el>(input: &Tokens<'el>, _: &mut Config) -> Tokens<'el> {
+        use crate::quoted::Quoted;
+        use std::collections::BTreeSet;
+
+        let mut modules = BTreeSet::new();
+
+        for custom in input.walk_custom() {
+            if let Some(Imported::Type(ty)) = custom.as_import() {
+                if let Some(path) = ty.path.as_ref() {
+                    if path.as_ref() == DART_CORE {
+                        continue;
+                    }
+
+                    modules.insert((path.clone(), ty.alias.clone()));
+                }
+            }
+        }
+
+        if modules.is_empty() {
+            return toks!();
+        }
+
+        let mut o = toks!();
+
+        for (name, alias) in modules {
+            if let Some(alias) = alias {
+                o.push(toks!("import ", name.quoted(), " as ", alias, ";"));
+            } else {
+                o.push(toks!("import ", name.quoted(), ";"));
+            }
+        }
+
+        return o;
+    }
+}
+
+impl Lang for Dart {
+    type Config = Config;
+    type Import = Imported;
+
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
 
@@ -254,7 +263,7 @@ impl<'el> Lang<'el> for Dart<'el> {
     }
 
     fn write_file(
-        tokens: Tokens<'el>,
+        tokens: Tokens<'_>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -274,16 +283,16 @@ impl<'el> Lang<'el> for Dart<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a, P: Into<Cons<'a>>>(path: P) -> Dart<'a> {
-    Dart::Type(Type {
+pub fn imported<P: Into<Cons<'static>>>(path: P) -> Imported {
+    Imported::Type(Type {
         path: Some(path.into()),
         ..Type::default()
     })
 }
 
 /// Setup a local element.
-pub fn local<'el, N: Into<Cons<'el>>>(name: N) -> Dart<'el> {
-    Dart::Type(Type {
+pub fn local<N: Into<Cons<'static>>>(name: N) -> Imported {
+    Imported::Type(Type {
         name: Some(name.into()),
         ..Type::default()
     })
@@ -300,7 +309,7 @@ mod tests {
         assert!(INT.is_built_in());
         assert!(DOUBLE.is_built_in());
         assert!(BOOL.is_built_in());
-        assert!(!Dart::Void.is_built_in());
+        assert!(!VOID.is_built_in());
     }
 
     #[test]

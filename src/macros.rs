@@ -169,11 +169,38 @@ macro_rules! nested {
     ($dest:expr, $($x:expr,)*) => {nested!($dest, $($x),*)};
 }
 
+macro_rules! impl_lang_item {
+    ($ty:ident, $lang:ty) => {
+        impl<'el> crate::FormatTokens<'el, $lang> for $ty {
+            fn format_tokens(self, tokens: &mut crate::Tokens<'el, $lang>) {
+                tokens.elements.push(crate::Element::LangBox(self.into()));
+            }
+        }
+
+        impl<'el> crate::FormatTokens<'el, $lang> for &'el $ty {
+            fn format_tokens(self, tokens: &mut crate::Tokens<'el, $lang>) {
+                tokens.elements.push(crate::Element::LangBox(self.into()));
+            }
+        }
+
+        impl<'el> From<$ty> for crate::LangBox<'el, $lang> {
+            fn from(value: $ty) -> Self {
+                use std::rc::Rc;
+                crate::LangBox::Rc(Rc::new(value) as Rc<dyn LangItem<$lang>>)
+            }
+        }
+
+        impl<'el> From<&'el $ty> for crate::LangBox<'el, $lang> {
+            fn from(value: &'el $ty) -> Self {
+                crate::LangBox::Ref(value)
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::js::JavaScript;
-    use crate::quoted::Quoted;
-    use crate::tokens::Tokens;
+    use crate::{JavaScript, Quoted, Tokens};
 
     #[test]
     fn test_quoted() {

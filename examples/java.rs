@@ -1,7 +1,7 @@
 #![feature(proc_macro_hygiene)]
 
 use genco::java::{imported, Config};
-use genco::{quote, Java, Tokens};
+use genco::quote;
 
 use anyhow::Result;
 
@@ -10,7 +10,7 @@ fn main() -> Result<()> {
     let list = imported("java.util", "List");
     let array_list = imported("java.util", "ArrayList");
 
-    let tokens: Tokens<Java> = quote! {
+    let tokens = quote! {
         public class HelloWorld {
             public static void main(String[] args) {
                 #list<#car> cars = new #array_list<#car>();

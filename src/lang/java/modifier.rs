@@ -43,23 +43,23 @@ impl Modifier {
     }
 }
 
-impl<'el> FormatTokens<'el, Java<'el>> for Modifier {
-    fn into_tokens(self, tokens: &mut Tokens<'el>) {
+impl<'el> FormatTokens<'el, Java> for Modifier {
+    fn format_tokens(self, tokens: &mut Tokens<'el>) {
         tokens.append(self.name());
     }
 }
 
-impl<'el> FormatTokens<'el, Java<'el>> for Vec<Modifier> {
-    fn into_tokens(self, tokens: &mut Tokens<'el>) {
+impl<'el> FormatTokens<'el, Java> for Vec<Modifier> {
+    fn format_tokens(self, tokens: &mut Tokens<'el>) {
         let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
 
         if let Some(modifier) = it.next() {
-            modifier.into_tokens(tokens);
+            modifier.format_tokens(tokens);
         }
 
         for modifier in it {
             tokens.spacing();
-            modifier.into_tokens(tokens);
+            modifier.format_tokens(tokens);
         }
     }
 }

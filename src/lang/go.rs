@@ -1,93 +1,104 @@
 //! Specialization for Go code generation.
 
-use crate::{Cons, Formatter, Lang, Quoted};
+use crate::{Cons, Formatter, Lang, LangItem, Quoted};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Go.
-pub type Tokens<'el> = crate::Tokens<'el, Go<'el>>;
+pub type Tokens<'el> = crate::Tokens<'el, Go>;
+
+impl_lang_item!(Imported, Go);
 
 const SEP: &str = ".";
 
 /// Name of an imported type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Name<'el> {
+pub struct Name {
     /// Module of the imported name.
-    module: Option<Cons<'el>>,
+    module: Option<Cons<'static>>,
     /// Name imported.
-    name: Cons<'el>,
+    name: Cons<'static>,
 }
 
 /// Go token specialization.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Go<'el> {
+pub enum Imported {
     /// A regular type.
     Type {
         /// The name being referenced.
-        name: Name<'el>,
+        name: Name,
     },
     /// A map, map[<key>]<value>.
     Map {
         /// Key of the map.
-        key: Box<Go<'el>>,
+        key: Box<Imported>,
         /// Value of the map.
-        value: Box<Go<'el>>,
+        value: Box<Imported>,
     },
     /// An array, []<inner>.
     Array {
         /// Inner value of the array.
-        inner: Box<Go<'el>>,
+        inner: Box<Imported>,
     },
     /// An interface type, interface{}.
     Interface,
 }
 
-impl<'el> Go<'el> {
-    fn type_imports(go: &Go<'el>, modules: &mut BTreeSet<Cons<'el>>) {
-        use self::Go::*;
-
-        match *go {
-            Type { ref name, .. } => {
+impl Imported {
+    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+        match self {
+            Self::Type { name, .. } => {
                 if let Some(module) = name.module.clone() {
                     modules.insert(module);
                 }
             }
-            Map {
-                ref key, ref value, ..
-            } => {
-                Self::type_imports(key, modules);
-                Self::type_imports(value, modules);
+            Self::Map { key, value, .. } => {
+                key.type_imports(modules);
+                value.type_imports(modules);
             }
-            Array { ref inner, .. } => {
-                Self::type_imports(inner, modules);
+            Self::Array { inner, .. } => {
+                inner.type_imports(modules);
             }
-            Interface => {}
+            Self::Interface => {}
         };
     }
+}
 
-    fn imports(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
-        let mut modules = BTreeSet::new();
+impl LangItem<Go> for Imported {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        match self {
+            Self::Type {
+                name: Name { module, name, .. },
+                ..
+            } => {
+                if let Some(module) = module.as_ref().and_then(|m| m.as_ref().split("/").last()) {
+                    out.write_str(module)?;
+                    out.write_str(SEP)?;
+                }
 
-        for custom in tokens.walk_custom() {
-            Self::type_imports(custom, &mut modules);
+                out.write_str(name)?;
+            }
+            Self::Map { key, value, .. } => {
+                out.write_str("map[")?;
+                key.format(out, config, level + 1)?;
+                out.write_str("]")?;
+                value.format(out, config, level + 1)?;
+            }
+            Self::Array { inner, .. } => {
+                out.write_str("[")?;
+                out.write_str("]")?;
+                inner.format(out, config, level + 1)?;
+            }
+            Self::Interface => {
+                out.write_str("interface{}")?;
+            }
         }
 
-        if modules.is_empty() {
-            return None;
-        }
+        Ok(())
+    }
 
-        let mut out = Tokens::new();
-
-        for module in modules {
-            let mut s = Tokens::new();
-
-            s.append("import ");
-            s.append(module.quoted());
-
-            out.push(s);
-        }
-
-        Some(out)
+    fn as_import(&self) -> Option<&Self> {
+        Some(self)
     }
 }
 
@@ -112,49 +123,41 @@ impl Config {
     }
 }
 
-impl<'el> Lang<'el> for Go<'el> {
-    type Config = Config;
+/// Language specialization for Go.
+pub struct Go(());
 
-    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
-        use self::Go::*;
+impl Go {
+    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
+        let mut modules = BTreeSet::new();
 
-        match *self {
-            Type {
-                name:
-                    Name {
-                        ref module,
-                        ref name,
-                        ..
-                    },
-                ..
-            } => {
-                if let Some(module) = module.as_ref().and_then(|m| m.as_ref().split("/").last()) {
-                    out.write_str(module)?;
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(name)?;
-            }
-            Map {
-                ref key, ref value, ..
-            } => {
-                out.write_str("map[")?;
-                key.format(out, config, level + 1)?;
-                out.write_str("]")?;
-                value.format(out, config, level + 1)?;
-            }
-            Array { ref inner, .. } => {
-                out.write_str("[")?;
-                out.write_str("]")?;
-                inner.format(out, config, level + 1)?;
-            }
-            Interface => {
-                out.write_str("interface{}")?;
+        for custom in tokens.walk_custom() {
+            if let Some(import) = custom.as_import() {
+                import.type_imports(&mut modules);
             }
         }
 
-        Ok(())
+        if modules.is_empty() {
+            return None;
+        }
+
+        let mut out = Tokens::new();
+
+        for module in modules {
+            let mut s = Tokens::new();
+
+            s.append("import ");
+            s.append(module.quoted());
+
+            out.push(s);
+        }
+
+        Some(out)
     }
+}
+
+impl Lang for Go {
+    type Config = Config;
+    type Import = Imported;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -176,7 +179,7 @@ impl<'el> Lang<'el> for Go<'el> {
     }
 
     fn write_file(
-        tokens: Tokens<'el>,
+        tokens: Tokens<'_>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -199,12 +202,12 @@ impl<'el> Lang<'el> for Go<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a, M, N>(module: M, name: N) -> Go<'a>
+pub fn imported<M, N>(module: M, name: N) -> Imported
 where
-    M: Into<Cons<'a>>,
-    N: Into<Cons<'a>>,
+    M: Into<Cons<'static>>,
+    N: Into<Cons<'static>>,
 {
-    Go::Type {
+    Imported::Type {
         name: Name {
             module: Some(module.into()),
             name: name.into(),
@@ -213,11 +216,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<'a, N>(name: N) -> Go<'a>
+pub fn local<N>(name: N) -> Imported
 where
-    N: Into<Cons<'a>>,
+    N: Into<Cons<'static>>,
 {
-    Go::Type {
+    Imported::Type {
         name: Name {
             module: None,
             name: name.into(),
@@ -226,40 +229,41 @@ where
 }
 
 /// Setup a map.
-pub fn map<'a, K, V>(key: K, value: V) -> Go<'a>
+pub fn map<K, V>(key: K, value: V) -> Imported
 where
-    K: Into<Go<'a>>,
-    V: Into<Go<'a>>,
+    K: Into<Imported>,
+    V: Into<Imported>,
 {
-    Go::Map {
+    Imported::Map {
         key: Box::new(key.into()),
         value: Box::new(value.into()),
     }
 }
 
 /// Setup an array.
-pub fn array<'a, I>(inner: I) -> Go<'a>
+pub fn array<I>(inner: I) -> Imported
 where
-    I: Into<Go<'a>>,
+    I: Into<Imported>,
 {
-    Go::Array {
+    Imported::Array {
         inner: Box::new(inner.into()),
     }
 }
 
 /// Setup an interface.
-pub fn interface<'a>() -> Go<'a> {
-    Go::Interface
+pub fn interface<'a>() -> Imported {
+    Imported::Interface
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{array, imported, interface, map, Config, Go};
-    use crate::{Quoted, Tokens};
+    use super::{array, imported, interface, map, Config, Tokens};
+    use crate as genco;
+    use crate::{quote, Quoted};
 
     #[test]
     fn test_string() {
-        let mut toks: Tokens<Go> = Tokens::new();
+        let mut toks = Tokens::new();
         toks.append("hello \n world".quoted());
         let res = toks.to_string_with(Config::from_package("foo"));
 
@@ -269,8 +273,8 @@ mod tests {
     #[test]
     fn test_imported() {
         let dbg = imported("foo", "Debug");
-        let mut toks: Tokens<Go> = Tokens::new();
-        toks.push(toks!(&dbg));
+        let mut toks = Tokens::new();
+        toks.push(quote!(#dbg));
 
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\nfoo.Debug\n"),
@@ -284,8 +288,8 @@ mod tests {
     fn test_map() {
         let keyed = map(imported("foo", "Debug"), interface());
 
-        let mut toks: Tokens<Go> = Tokens::new();
-        toks.push(toks!(&keyed));
+        let mut toks = Tokens::new();
+        toks.push(quote!(#keyed));
 
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\nmap[foo.Debug]interface{}\n"),
@@ -299,8 +303,8 @@ mod tests {
     fn test_array() {
         let keyed = array(imported("foo", "Debug"));
 
-        let mut toks: Tokens<Go> = Tokens::new();
-        toks.push(toks!(&keyed));
+        let mut toks = Tokens::new();
+        toks.push(quote!(#keyed));
 
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\n[]foo.Debug\n"),

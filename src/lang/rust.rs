@@ -1,12 +1,14 @@
 //! Specialization for Rust code generation.
 
-use crate::{Cons, Formatter, Lang};
+use crate::{Cons, Formatter, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 use std::rc::Rc;
 
 /// Tokens container specialization for Rust.
-pub type Tokens<'el> = crate::Tokens<'el, Rust<'el>>;
+pub type Tokens<'el> = crate::Tokens<'el, Rust>;
+
+impl_lang_item!(Imported, Rust);
 
 static SEP: &'static str = "::";
 
@@ -20,50 +22,50 @@ pub struct StaticRef;
 
 /// Reference information about a name.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Reference<'el> {
+pub enum Reference {
     /// An anonymous reference.
     Ref,
     /// A static reference.
     StaticRef,
     /// A named reference.
-    Named(Cons<'el>),
+    Named(Cons<'static>),
 }
 
-impl From<Ref> for Reference<'static> {
+impl From<Ref> for Reference {
     fn from(_: Ref) -> Self {
         Reference::Ref
     }
 }
 
-impl From<StaticRef> for Reference<'static> {
+impl From<StaticRef> for Reference {
     fn from(_: StaticRef) -> Self {
         Reference::StaticRef
     }
 }
 
-impl From<Rc<String>> for Reference<'static> {
+impl From<Rc<String>> for Reference {
     fn from(value: Rc<String>) -> Self {
         Reference::Named(Cons::from(value))
     }
 }
 
-impl<'el> From<&'el str> for Reference<'el> {
-    fn from(value: &'el str) -> Self {
+impl<'el> From<&'static str> for Reference {
+    fn from(value: &'static str) -> Self {
         Reference::Named(Cons::from(value))
     }
 }
 
 /// A name.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Name<'el> {
-    reference: Option<Reference<'el>>,
+pub struct Name {
+    reference: Option<Reference>,
     /// Name  of class.
-    name: Cons<'el>,
+    name: Cons<'static>,
     /// Arguments of the class.
-    arguments: Vec<Rust<'el>>,
+    arguments: Vec<Imported>,
 }
 
-impl<'el> Name<'el> {
+impl Name {
     /// Format the name.
     fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
         if let Some(reference) = self.reference.as_ref() {
@@ -104,7 +106,7 @@ impl<'el> Name<'el> {
     }
 
     /// Add generic arguments to the given type.
-    pub fn with_arguments(self, arguments: Vec<Rust<'el>>) -> Name<'el> {
+    pub fn with_arguments(self, arguments: Vec<Imported>) -> Name {
         Name {
             arguments: arguments,
             ..self
@@ -112,7 +114,7 @@ impl<'el> Name<'el> {
     }
 
     /// Create a name with the given reference.
-    pub fn reference<R: Into<Reference<'el>>>(self, reference: R) -> Name<'el> {
+    pub fn reference<R: Into<Reference>>(self, reference: R) -> Name {
         Name {
             reference: Some(reference.into()),
             ..self
@@ -120,8 +122,8 @@ impl<'el> Name<'el> {
     }
 }
 
-impl<'el> From<Cons<'el>> for Name<'el> {
-    fn from(value: Cons<'el>) -> Self {
+impl<'el> From<Cons<'static>> for Name {
+    fn from(value: Cons<'static>) -> Self {
         Name {
             reference: None,
             name: value,
@@ -155,40 +157,101 @@ impl crate::Config for Config {
     }
 }
 
-/// Rust token specialization.
+/// Language specialization for Rust.
+pub struct Rust(());
+
+/// An imported name in Rust.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Rust<'el> {
+pub struct Imported {
     /// Module of the imported name.
-    module: Option<Cons<'el>>,
+    module: Option<Cons<'static>>,
     /// Alias of module.
-    alias: Option<Cons<'el>>,
+    alias: Option<Cons<'static>>,
     /// Name imported.
-    name: Name<'el>,
+    name: Name,
     /// Qualified import.
     qualified: bool,
 }
 
-impl<'el> Rust<'el> {
-    fn walk_custom(custom: &Rust<'el>, modules: &mut BTreeSet<(Cons<'el>, Option<Cons<'el>>)>) {
-        if let Some(module) = custom.module.as_ref() {
-            if custom.qualified || custom.alias.is_some() {
-                let module = Cons::from(format!("{}::{}", module, custom.name.name.as_ref()));
-                modules.insert((module, custom.alias.clone()));
+impl Imported {
+    fn walk_custom(&self, modules: &mut BTreeSet<(Cons<'static>, Option<Cons<'static>>)>) {
+        if let Some(module) = self.module.as_ref() {
+            if self.qualified || self.alias.is_some() {
+                let module = Cons::from(format!("{}::{}", module, self.name.name.as_ref()));
+                modules.insert((module, self.alias.clone()));
             } else {
-                modules.insert((module.clone(), custom.alias.clone()));
+                modules.insert((module.clone(), self.alias.clone()));
             }
         }
 
-        for arg in &custom.name.arguments {
-            Self::walk_custom(arg, modules);
+        for arg in &self.name.arguments {
+            arg.walk_custom(modules);
         }
     }
 
-    fn imports(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
+    /// Alias the given type.
+    pub fn alias<A: Into<Cons<'static>>>(self, alias: A) -> Imported {
+        Imported {
+            alias: Some(alias.into()),
+            ..self
+        }
+    }
+
+    /// Add generic arguments to the given type.
+    pub fn with_arguments(self, arguments: Vec<Imported>) -> Imported {
+        Imported {
+            name: self.name.with_arguments(arguments),
+            ..self
+        }
+    }
+
+    /// Change to be a qualified import.
+    pub fn qualified(self) -> Imported {
+        Imported {
+            qualified: true,
+            ..self
+        }
+    }
+
+    /// Make the type a reference.
+    pub fn reference<R: Into<Reference>>(self, reference: R) -> Imported {
+        Imported {
+            module: self.module,
+            name: self.name.reference(reference),
+            alias: self.alias,
+            qualified: self.qualified,
+        }
+    }
+}
+
+impl LangItem<Rust> for Imported {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        if let Some(alias) = self.alias.as_ref() {
+            out.write_str(alias)?;
+            out.write_str(SEP)?;
+        } else if !self.qualified {
+            if let Some(part) = self.module.as_ref().and_then(|m| m.split(SEP).last()) {
+                out.write_str(part)?;
+                out.write_str(SEP)?;
+            }
+        }
+
+        self.name.format(out, config, level)
+    }
+
+    fn as_import(&self) -> Option<&Self> {
+        Some(self)
+    }
+}
+
+impl Rust {
+    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            Self::walk_custom(&custom, &mut modules);
+            if let Some(import) = custom.as_import() {
+                import.walk_custom(&mut modules);
+            }
         }
 
         if modules.is_empty() {
@@ -219,58 +282,11 @@ impl<'el> Rust<'el> {
 
         Some(out)
     }
-
-    /// Alias the given type.
-    pub fn alias<A: Into<Cons<'el>>>(self, alias: A) -> Rust<'el> {
-        Rust {
-            alias: Some(alias.into()),
-            ..self
-        }
-    }
-
-    /// Add generic arguments to the given type.
-    pub fn with_arguments(self, arguments: Vec<Rust<'el>>) -> Rust<'el> {
-        Rust {
-            name: self.name.with_arguments(arguments),
-            ..self
-        }
-    }
-
-    /// Change to be a qualified import.
-    pub fn qualified(self) -> Rust<'el> {
-        Rust {
-            qualified: true,
-            ..self
-        }
-    }
-
-    /// Make the type a reference.
-    pub fn reference<R: Into<Reference<'el>>>(self, reference: R) -> Rust<'el> {
-        Rust {
-            module: self.module,
-            name: self.name.reference(reference),
-            alias: self.alias,
-            qualified: self.qualified,
-        }
-    }
 }
 
-impl<'el> Lang<'el> for Rust<'el> {
+impl Lang for Rust {
     type Config = Config;
-
-    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
-        if let Some(alias) = self.alias.as_ref() {
-            out.write_str(alias)?;
-            out.write_str(SEP)?;
-        } else if !self.qualified {
-            if let Some(part) = self.module.as_ref().and_then(|m| m.split(SEP).last()) {
-                out.write_str(part)?;
-                out.write_str(SEP)?;
-            }
-        }
-
-        self.name.format(out, config, level)
-    }
+    type Import = Imported;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -292,7 +308,7 @@ impl<'el> Lang<'el> for Rust<'el> {
     }
 
     fn write_file(
-        tokens: Tokens<'el>,
+        tokens: Tokens<'_>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -310,12 +326,12 @@ impl<'el> Lang<'el> for Rust<'el> {
 }
 
 /// Setup an imported element.
-pub fn imported<'a, M, N>(module: M, name: N) -> Rust<'a>
+pub fn imported<M, N>(module: M, name: N) -> Imported
 where
-    M: Into<Cons<'a>>,
-    N: Into<Cons<'a>>,
+    M: Into<Cons<'static>>,
+    N: Into<Cons<'static>>,
 {
-    Rust {
+    Imported {
         module: Some(module.into()),
         alias: None,
         name: Name::from(name.into()),
@@ -324,11 +340,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<'a, N>(name: N) -> Rust<'a>
+pub fn local<N>(name: N) -> Imported
 where
-    N: Into<Cons<'a>>,
+    N: Into<Cons<'static>>,
 {
-    Rust {
+    Imported {
         module: None,
         alias: None,
         name: Name::from(name.into()),
@@ -339,9 +355,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, local};
-    use crate::quoted::Quoted;
-    use crate::rust::Rust;
-    use crate::tokens::Tokens;
+    use crate as genco;
+    use crate::{quote, Quoted, Rust, Tokens};
 
     #[test]
     fn test_string() {
@@ -356,7 +371,7 @@ mod tests {
     fn test_imported() {
         let dbg = imported("std::fmt", "Debug");
         let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push(toks!(&dbg));
+        toks.push(quote!(#dbg));
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug\n"),
@@ -368,7 +383,7 @@ mod tests {
     fn test_imported_alias() {
         let dbg = imported("std::fmt", "Debug");
         let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push(toks!(&dbg));
+        toks.push(quote!(#dbg));
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug\n"),
@@ -380,7 +395,7 @@ mod tests {
     fn test_imported_with_arguments() {
         let dbg = imported("std::fmt", "Debug").with_arguments(vec![local("T"), local("U")]);
         let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push(toks!(&dbg));
+        toks.push(quote!(#dbg));
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug<T, U>\n"),
