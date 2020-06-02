@@ -10,40 +10,15 @@ through specialization.
 
 * Handle imports, if needed.
 * Quote strings according to language convention.
+* Indents and spaces your code according to [simple rules](#indentation-rules).
 
 [reproto]: https://github.com/reproto/reproto
 
 ## Examples
 
-This is an example building some JavaScript:
-
-```rust
-#[macro_use]
-extern crate genco;
-
-use genco::Quoted;
-
-fn main() {
-    let mut file: Tokens<JavaScript> = Tokens::new();
-
-    file.push("function foo(v) {");
-    file.nested(toks!("return v + ", ", World".quoted(), ";"));
-    file.push("}");
-
-    file.push(toks!("foo(", "Hello".quoted(), ");"));
-
-    println!("{}", file.to_string().unwrap());
-}
-```
-
-Running this example would print:
-
-```js
-function foo(v) {
-  return v + ", World";
-}
-foo("Hello");
-```
+* [Rust Example](/examples/rust.rs)
+* [Java Example](/examples/rust.rs)
+* [C# Example](/examples/csharp.rs)
 
 ## Language Support
 
@@ -73,5 +48,76 @@ fn main() {
         body
     });
     t.push("}");
+}
+```
+
+## Indentation Rules
+
+The `quote!` macro has the following rules for dealing with indentation and
+spacing.
+
+**Two tokens** that are separated, are spaced. Regardless of how many spaces
+there are between them.
+
+So:
+
+```rust
+quote!(fn   test());
+```
+
+Becomes:
+
+```rust
+fn test()
+```
+
+**More that two line breaks** are collapsed.
+
+So:
+
+```rust
+quote! {
+    fn test() {
+        println!("Hello...");
+
+
+        println!("... World!");
+    }
+}
+```
+
+Becomes:
+
+```rust
+fn test() {
+    println!("Hello...");
+
+    println!("... World!");
+}
+```
+
+**Indentation** is determined on a row-by-row basis. If a column is further in
+than the one on the preceeding row, it is indented **one level** deeper.
+
+Like wise if a column starts before the previous rows column, it is indended one
+level shallower.
+
+So:
+
+```rust
+quote! {
+  fn test() {
+      println!("Hello...");
+      println!("... World!");
+    }
+}
+```
+
+Becomes:
+
+```rust
+fn test() {
+    println!("Hello...");
+    println!("... World!");
 }
 ```

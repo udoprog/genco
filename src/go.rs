@@ -88,14 +88,20 @@ impl<'el> Go<'el> {
     }
 }
 
-/// Extra data for Go.
+/// Config data for Go.
 #[derive(Debug)]
-pub struct Extra {
+pub struct Config {
     package: String,
 }
 
-impl Extra {
-    /// Build the extra structure from a package.
+impl crate::Config for Config {
+    fn indentation(&mut self) -> usize {
+        4
+    }
+}
+
+impl Config {
+    /// Build the config structure from a package.
     pub fn from_package<S: AsRef<str>>(package: S) -> Self {
         Self {
             package: package.as_ref().to_string(),
@@ -104,9 +110,9 @@ impl Extra {
 }
 
 impl<'el> Custom for Go<'el> {
-    type Extra = Extra;
+    type Config = Config;
 
-    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
         use self::Go::*;
 
         match *self {
@@ -130,14 +136,14 @@ impl<'el> Custom for Go<'el> {
                 ref key, ref value, ..
             } => {
                 out.write_str("map[")?;
-                key.format(out, extra, level + 1)?;
+                key.format(out, config, level + 1)?;
                 out.write_str("]")?;
-                value.format(out, extra, level + 1)?;
+                value.format(out, config, level + 1)?;
             }
             Array { ref inner, .. } => {
                 out.write_str("[")?;
                 out.write_str("]")?;
-                inner.format(out, extra, level + 1)?;
+                inner.format(out, config, level + 1)?;
             }
             Interface => {
                 out.write_str("interface{}")?;
@@ -169,14 +175,14 @@ impl<'el> Custom for Go<'el> {
     fn write_file<'a>(
         tokens: Tokens<'a, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
         let mut toks: Tokens<Self> = Tokens::new();
 
         toks.push_into(|t| {
             t.append("package ");
-            t.append(extra.package.to_string());
+            t.append(config.package.to_string());
         });
 
         if let Some(imports) = Self::imports(&tokens) {
@@ -184,7 +190,7 @@ impl<'el> Custom for Go<'el> {
         }
 
         toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, extra, level)
+        toks.join_line_spacing().format(out, config, level)
     }
 }
 
@@ -244,14 +250,14 @@ pub fn interface<'a>() -> Go<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{array, imported, interface, map, Extra, Go};
+    use super::{array, imported, interface, map, Config, Go};
     use crate::{Quoted, Tokens};
 
     #[test]
     fn test_string() {
         let mut toks: Tokens<Go> = Tokens::new();
         toks.append("hello \n world".quoted());
-        let res = toks.to_string_with(Extra::from_package("foo"));
+        let res = toks.to_string_with(Config::from_package("foo"));
 
         assert_eq!(Ok("\"hello \\n world\""), res.as_ref().map(|s| s.as_str()));
     }
@@ -264,7 +270,7 @@ mod tests {
 
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\nfoo.Debug\n"),
-            toks.to_file_with(Extra::from_package("foo"))
+            toks.to_file_with(Config::from_package("foo"))
                 .as_ref()
                 .map(|s| s.as_str())
         );
@@ -279,7 +285,7 @@ mod tests {
 
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\nmap[foo.Debug]interface{}\n"),
-            toks.to_file_with(Extra::from_package("foo"))
+            toks.to_file_with(Config::from_package("foo"))
                 .as_ref()
                 .map(|s| s.as_str())
         );
@@ -294,7 +300,7 @@ mod tests {
 
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\n[]foo.Debug\n"),
-            toks.to_file_with(Extra::from_package("foo"))
+            toks.to_file_with(Config::from_package("foo"))
                 .as_ref()
                 .map(|s| s.as_str())
         );

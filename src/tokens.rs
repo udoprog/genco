@@ -10,7 +10,7 @@
 
 use crate::con_::Con::{self, Borrowed, Owned};
 use crate::element::Element::{Append, Nested, Push};
-use crate::{Custom, Element, Formatter, IntoTokens, WriteTokens};
+use crate::{Config, Custom, Element, Formatter, IntoTokens, WriteTokens};
 use std::collections::LinkedList;
 use std::fmt;
 use std::iter::FromIterator;
@@ -203,38 +203,38 @@ impl<'el, C> IntoIterator for Tokens<'el, C> {
 
 impl<'el, C: Custom> Tokens<'el, C> {
     /// Format the tokens.
-    pub fn format(&self, out: &mut Formatter, extra: &mut C::Extra, level: usize) -> fmt::Result {
+    pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
         for element in &self.elements {
-            element.format(out, extra, level)?;
+            element.format(out, config, level)?;
         }
 
         Ok(())
     }
 
-    /// Format token as file with the given extra.
-    pub fn to_file_with(self, mut extra: C::Extra) -> result::Result<String, fmt::Error> {
+    /// Format token as file with the given configuration.
+    pub fn to_file_with(self, mut config: C::Config) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
-        output.write_file(self, &mut extra)?;
+        output.write_file(self, &mut config)?;
         Ok(output)
     }
 
-    /// Format the tokens with the given extra.
-    pub fn to_string_with(self, mut extra: C::Extra) -> result::Result<String, fmt::Error> {
+    /// Format the tokens with the given configuration.
+    pub fn to_string_with(self, mut config: C::Config) -> result::Result<String, fmt::Error> {
         let mut output = String::new();
-        output.write_tokens(self, &mut extra)?;
+        output.write_tokens(self, &mut config)?;
         Ok(output)
     }
 }
 
-impl<'el, E: Default, C: Custom<Extra = E>> Tokens<'el, C> {
+impl<'el, E: Config + Default, C: Custom<Config = E>> Tokens<'el, C> {
     /// Format token as file.
     pub fn to_file(self) -> result::Result<String, fmt::Error> {
-        self.to_file_with(C::Extra::default())
+        self.to_file_with(C::Config::default())
     }
 
     /// Format the tokens.
     pub fn to_string(self) -> result::Result<String, fmt::Error> {
-        self.to_string_with(C::Extra::default())
+        self.to_string_with(C::Config::default())
     }
 }
 
@@ -414,7 +414,7 @@ mod tests {
     struct Lang(u32);
 
     impl Custom for Lang {
-        type Extra = ();
+        type Config = ();
     }
 
     #[test]

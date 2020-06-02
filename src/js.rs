@@ -100,9 +100,9 @@ impl<'el> JavaScript<'el> {
 }
 
 impl<'el> Custom for JavaScript<'el> {
-    type Extra = ();
+    type Config = ();
 
-    fn format(&self, out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {
         write!(out, "{}", self)
     }
 
@@ -131,7 +131,7 @@ impl<'el> Custom for JavaScript<'el> {
     fn write_file<'a>(
         tokens: Tokens<'a, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
         let mut toks = Tokens::new();
@@ -141,7 +141,7 @@ impl<'el> Custom for JavaScript<'el> {
         }
 
         toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, extra, level)
+        toks.join_line_spacing().format(out, config, level)
     }
 }
 

@@ -84,9 +84,9 @@ impl<'el> Swift<'el> {
 }
 
 impl<'el> Custom for Swift<'el> {
-    type Extra = ();
+    type Config = ();
 
-    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
         use self::Swift::*;
 
         match *self {
@@ -100,14 +100,14 @@ impl<'el> Custom for Swift<'el> {
                 ref key, ref value, ..
             } => {
                 out.write_str("[")?;
-                key.format(out, extra, level + 1)?;
+                key.format(out, config, level + 1)?;
                 out.write_str(": ")?;
-                value.format(out, extra, level + 1)?;
+                value.format(out, config, level + 1)?;
                 out.write_str("]")?;
             }
             Array { ref inner, .. } => {
                 out.write_str("[")?;
-                inner.format(out, extra, level + 1)?;
+                inner.format(out, config, level + 1)?;
                 out.write_str("]")?;
             }
         }
@@ -137,7 +137,7 @@ impl<'el> Custom for Swift<'el> {
     fn write_file<'a>(
         tokens: Tokens<'a, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
         let mut toks: Tokens<Self> = Tokens::new();
@@ -147,7 +147,7 @@ impl<'el> Custom for Swift<'el> {
         }
 
         toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, extra, level)
+        toks.join_line_spacing().format(out, config, level)
     }
 }
 

@@ -62,7 +62,7 @@ pub struct Name<'el> {
 
 impl<'el> Name<'el> {
     /// Format the name.
-    fn format(&self, out: &mut Formatter, extra: &mut (), level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
         if let Some(reference) = self.reference.as_ref() {
             match *reference {
                 Reference::StaticRef => {
@@ -87,7 +87,7 @@ impl<'el> Name<'el> {
             out.write_str("<")?;
 
             while let Some(n) = it.next() {
-                n.format(out, extra, level + 1)?;
+                n.format(out, config, level + 1)?;
 
                 if it.peek().is_some() {
                     out.write_str(", ")?;
@@ -124,6 +124,31 @@ impl<'el> From<Cons<'el>> for Name<'el> {
             name: value,
             arguments: vec![],
         }
+    }
+}
+
+/// Language configuration for Rust.
+#[derive(Debug)]
+pub struct Config {
+    indentation: usize,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config { indentation: 4 }
+    }
+}
+
+impl Config {
+    /// Configure the indentation for Rust.
+    pub fn with_indentation(self, indentation: usize) -> Self {
+        Self { indentation }
+    }
+}
+
+impl crate::Config for Config {
+    fn indentation(&mut self) -> usize {
+        self.indentation
     }
 }
 
@@ -230,9 +255,9 @@ impl<'el> Rust<'el> {
 }
 
 impl<'el> Custom for Rust<'el> {
-    type Extra = ();
+    type Config = Config;
 
-    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
         if let Some(alias) = self.alias.as_ref() {
             out.write_str(alias)?;
             out.write_str(SEP)?;
@@ -241,7 +266,7 @@ impl<'el> Custom for Rust<'el> {
             out.write_str(SEP)?;
         }
 
-        self.name.format(out, extra, level)
+        self.name.format(out, config, level)
     }
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
@@ -266,7 +291,7 @@ impl<'el> Custom for Rust<'el> {
     fn write_file<'a>(
         tokens: Tokens<'a, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
         let mut toks: Tokens<Self> = Tokens::new();
@@ -276,7 +301,7 @@ impl<'el> Custom for Rust<'el> {
         }
 
         toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, extra, level)
+        toks.join_line_spacing().format(out, config, level)
     }
 }
 

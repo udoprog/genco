@@ -131,17 +131,54 @@ pub enum Java<'el> {
 into_tokens_impl_from!(Java<'el>, Java<'el>);
 into_tokens_impl_from!(&'el Java<'el>, Java<'el>);
 
-/// Extra data for Java formatting.
-#[derive(Debug, Default)]
-pub struct Extra<'el> {
+/// Configuration for Java formatting.
+#[derive(Debug)]
+pub struct Config<'el> {
     /// Package to use.
-    pub package: Option<Cons<'el>>,
+    package: Option<Cons<'el>>,
 
     /// Types which has been imported into the local namespace.
     imported: HashMap<String, String>,
+
+    /// Indentation.
+    indentation: usize,
 }
 
-impl<'el> Extra<'el> {
+impl crate::Config for Config<'_> {
+    fn indentation(&mut self) -> usize {
+        self.indentation
+    }
+}
+
+impl<'el> Config<'el> {
+    /// Configure package to use.
+    pub fn with_package(self, package: impl Into<Cons<'el>>) -> Self {
+        Self {
+            package: Some(package.into()),
+            ..self
+        }
+    }
+
+    /// Configure indentation level.
+    pub fn with_indentation(self, indentation: usize) -> Self {
+        Self {
+            indentation,
+            ..self
+        }
+    }
+}
+
+impl<'el> Default for Config<'el> {
+    fn default() -> Self {
+        Self {
+            package: Default::default(),
+            imported: Default::default(),
+            indentation: 4,
+        }
+    }
+}
+
+impl<'el> Config<'el> {
     /// Set the package name to build.
     pub fn package<P>(&mut self, package: P)
     where
@@ -189,10 +226,10 @@ impl<'el> Java<'el> {
         };
     }
 
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>, extra: &mut Extra) -> Option<Tokens<'a, Self>> {
+    fn imports<'a>(tokens: &'a Tokens<'a, Self>, config: &mut Config) -> Option<Tokens<'a, Self>> {
         let mut modules = BTreeSet::new();
 
-        let file_package = extra.package.as_ref().map(|p| p.as_ref());
+        let file_package = config.package.as_ref().map(|p| p.as_ref());
 
         for custom in tokens.walk_custom() {
             Self::type_imports(custom, &mut modules);
@@ -205,7 +242,7 @@ impl<'el> Java<'el> {
         let mut out = Tokens::new();
 
         for (package, name) in modules {
-            if extra.imported.contains_key(name) {
+            if config.imported.contains_key(name) {
                 continue;
             }
 
@@ -218,7 +255,9 @@ impl<'el> Java<'el> {
             }
 
             out.push(toks!("import ", package, SEP, name, ";"));
-            extra.imported.insert(name.to_string(), package.to_string());
+            config
+                .imported
+                .insert(name.to_string(), package.to_string());
         }
 
         Some(out)
@@ -388,9 +427,9 @@ impl<'el> Java<'el> {
 }
 
 impl<'el> Custom for Java<'el> {
-    type Extra = Extra<'el>;
+    type Config = Config<'el>;
 
-    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
         use self::Java::*;
 
         match *self {
@@ -407,8 +446,8 @@ impl<'el> Custom for Java<'el> {
             }
             Class(ref cls) => {
                 {
-                    let file_package = extra.package.as_ref().map(|p| p.as_ref());
-                    let imported = extra.imported.get(cls.name.as_ref()).map(String::as_str);
+                    let file_package = config.package.as_ref().map(|p| p.as_ref());
+                    let imported = config.imported.get(cls.name.as_ref()).map(String::as_str);
                     let pkg = Some(cls.package.as_ref());
 
                     if cls.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
@@ -434,7 +473,7 @@ impl<'el> Custom for Java<'el> {
                     let mut it = cls.arguments.iter().peekable();
 
                     while let Some(argument) = it.next() {
-                        argument.format(out, extra, level + 1usize)?;
+                        argument.format(out, config, level + 1usize)?;
 
                         if it.peek().is_some() {
                             out.write_str(", ")?;
@@ -448,7 +487,7 @@ impl<'el> Custom for Java<'el> {
                 out.write_str(name.as_ref())?;
             }
             Optional(self::Optional { ref field, .. }) => {
-                field.format(out, extra, level)?;
+                field.format(out, config, level)?;
             }
         }
 
@@ -480,21 +519,21 @@ impl<'el> Custom for Java<'el> {
     fn write_file<'a>(
         tokens: Tokens<'a, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
         let mut toks: Tokens<Self> = Tokens::new();
 
-        if let Some(ref package) = extra.package {
+        if let Some(ref package) = config.package {
             toks.push(toks!["package ", package.clone(), ";"]);
         }
 
-        if let Some(imports) = Self::imports(&tokens, extra) {
+        if let Some(imports) = Self::imports(&tokens, config) {
             toks.push(imports);
         }
 
         toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, extra, level)
+        toks.join_line_spacing().format(out, config, level)
     }
 }
 

@@ -58,17 +58,17 @@ pub enum Dart<'el> {
 into_tokens_impl_from!(Dart<'el>, Dart<'el>);
 into_tokens_impl_from!(&'el Dart<'el>, Dart<'el>);
 
-/// Extra data for Dart formatting.
+/// Config data for Dart formatting.
 #[derive(Debug, Default)]
-pub struct Extra {}
+pub struct Config {}
 
-impl Extra {}
+impl crate::Config for Config {}
 
 impl<'el> Dart<'el> {
     /// Resolve all imports.
     fn imports<'a, 'b: 'a>(
         input: &'b Tokens<'a, Dart<'el>>,
-        _: &mut Extra,
+        _: &mut Config,
     ) -> Tokens<'a, Dart<'el>> {
         use crate::quoted::Quoted;
         use std::collections::BTreeSet;
@@ -196,9 +196,9 @@ impl<'el> Dart<'el> {
 }
 
 impl<'el> Custom for Dart<'el> {
-    type Extra = Extra;
+    type Config = Config;
 
-    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
         use self::Dart::*;
 
         match *self {
@@ -222,7 +222,7 @@ impl<'el> Custom for Dart<'el> {
                         let mut it = ty.arguments.iter().peekable();
 
                         while let Some(argument) = it.next() {
-                            argument.format(out, extra, level + 1)?;
+                            argument.format(out, config, level + 1)?;
 
                             if it.peek().is_some() {
                                 out.write_str(", ")?;
@@ -263,14 +263,14 @@ impl<'el> Custom for Dart<'el> {
     fn write_file<'a>(
         tokens: Tokens<'a, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
         let mut toks: Tokens<Self> = Tokens::new();
 
-        toks.push_unless_empty(Self::imports(&tokens, extra));
+        toks.push_unless_empty(Self::imports(&tokens, config));
         toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, extra, level)
+        toks.join_line_spacing().format(out, config, level)
     }
 }
 

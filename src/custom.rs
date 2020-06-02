@@ -1,7 +1,6 @@
 //! Trait used for custom element.
 
-use super::formatter::Formatter;
-use super::tokens::Tokens;
+use crate::{Config, Formatter, Tokens};
 use std::fmt;
 
 /// Trait that must be implemented by custom elements.
@@ -9,11 +8,16 @@ pub trait Custom
 where
     Self: Sized,
 {
-    /// Extra data associated with building a formatting element.
-    type Extra;
+    /// Configuration associated with building a formatting element.
+    type Config: Config;
 
     /// Format the custom element.
-    fn format(&self, _out: &mut Formatter, _extra: &mut Self::Extra, _level: usize) -> fmt::Result {
+    fn format(
+        &self,
+        _out: &mut Formatter,
+        _config: &mut Self::Config,
+        _level: usize,
+    ) -> fmt::Result {
         Ok(())
     }
 
@@ -26,14 +30,14 @@ where
     fn write_file<'el>(
         tokens: Tokens<'el, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
-        tokens.format(out, extra, level)
+        tokens.format(out, config, level)
     }
 }
 
 /// Dummy implementation for unit.
 impl Custom for () {
-    type Extra = ();
+    type Config = ();
 }

@@ -1,7 +1,7 @@
 //! A single element
 
 use super::con_::Con;
-use crate::{Cons, Custom, Formatter, Tokens};
+use crate::{Cons, Custom, ErasedElement, Formatter, Tokens};
 use std::fmt;
 
 use std::rc::Rc;
@@ -37,37 +37,49 @@ pub enum Element<'el, C: 'el> {
     Spacing,
     /// New line if needed.
     LineSpacing,
+    /// Indent.
+    Indent,
+    /// Unindent.
+    Unindent,
+}
+
+impl<'el, C: 'el> From<ErasedElement<'el>> for Element<'el, C> {
+    fn from(erased: ErasedElement<'el>) -> Self {
+        match erased {
+            ErasedElement::Quoted(text) => Self::Quoted(text),
+        }
+    }
 }
 
 impl<'el, C: Custom> Element<'el, C> {
     /// Format the given element.
-    pub fn format(&self, out: &mut Formatter, extra: &mut C::Extra, level: usize) -> fmt::Result {
+    pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
         use self::Element::*;
 
         match *self {
             Registered(_) => {}
             None => {}
             Rc(ref element) => {
-                element.format(out, extra, level)?;
+                element.format(out, config, level)?;
             }
             Borrowed(element) => {
-                element.format(out, extra, level)?;
+                element.format(out, config, level)?;
             }
             Append(ref tokens) => {
-                tokens.as_ref().format(out, extra, level)?;
+                tokens.as_ref().format(out, config, level)?;
             }
             Nested(ref tokens) => {
                 out.indent();
                 out.new_line_unless_empty()?;
 
-                tokens.as_ref().format(out, extra, level)?;
+                tokens.as_ref().format(out, config, level)?;
 
                 out.unindent();
                 out.new_line_unless_empty()?;
             }
             Push(ref tokens) => {
                 out.new_line_unless_empty()?;
-                tokens.as_ref().format(out, extra, level)?;
+                tokens.as_ref().format(out, config, level)?;
             }
             Literal(ref literal) => {
                 out.write_str(literal.as_ref())?;
@@ -76,7 +88,7 @@ impl<'el, C: Custom> Element<'el, C> {
                 C::quote_string(out, literal.as_ref())?;
             }
             Custom(ref custom) => {
-                custom.as_ref().format(out, extra, level)?;
+                custom.as_ref().format(out, config, level)?;
             }
             // whitespace below
             PushSpacing => {
@@ -91,6 +103,14 @@ impl<'el, C: Custom> Element<'el, C> {
             }
             Spacing => {
                 out.write_str(" ")?;
+            }
+            Indent => {
+                out.indent();
+                out.new_line_unless_empty()?;
+            }
+            Unindent => {
+                out.unindent();
+                out.new_line_unless_empty()?;
             }
         }
 

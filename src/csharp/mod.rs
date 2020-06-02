@@ -145,9 +145,9 @@ pub enum Csharp<'el> {
 into_tokens_impl_from!(Csharp<'el>, Csharp<'el>);
 into_tokens_impl_from!(&'el Csharp<'el>, Csharp<'el>);
 
-/// Extra data for Csharp formatting.
+/// Config data for Csharp formatting.
 #[derive(Debug, Default)]
-pub struct Extra<'el> {
+pub struct Config<'el> {
     /// namespace to use.
     pub namespace: Option<Cons<'el>>,
 
@@ -155,7 +155,9 @@ pub struct Extra<'el> {
     imported_names: HashMap<String, String>,
 }
 
-impl<'el> Extra<'el> {
+impl crate::Config for Config<'_> {}
+
+impl<'el> Config<'el> {
     /// Set the namespace name to build.
     pub fn namespace<P>(&mut self, namespace: P)
     where
@@ -223,10 +225,10 @@ impl<'el> Csharp<'el> {
         };
     }
 
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>, extra: &mut Extra) -> Option<Tokens<'a, Self>> {
+    fn imports<'a>(tokens: &'a Tokens<'a, Self>, config: &mut Config) -> Option<Tokens<'a, Self>> {
         let mut modules = BTreeSet::new();
 
-        let file_namespace = extra.namespace.as_ref().map(|p| p.as_ref());
+        let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
 
         for custom in tokens.walk_custom() {
             Self::type_imports(custom, &mut modules);
@@ -244,7 +246,7 @@ impl<'el> Csharp<'el> {
                 continue;
             }
 
-            match extra.imported_names.get(name) {
+            match config.imported_names.get(name) {
                 // already imported...
                 Some(existing) if existing == namespace => continue,
                 // already imported, as something else...
@@ -257,7 +259,7 @@ impl<'el> Csharp<'el> {
                 imported.insert(namespace.to_string());
             }
 
-            extra
+            config
                 .imported_names
                 .insert(name.to_string(), namespace.to_string());
         }
@@ -462,15 +464,15 @@ impl<'el> Csharp<'el> {
         &self,
         inner: &Type<'el>,
         out: &mut Formatter,
-        extra: &mut <Self as Custom>::Extra,
+        config: &mut <Self as Custom>::Config,
         level: usize,
     ) -> fmt::Result {
         {
             let qualified = match inner.qualified {
                 true => true,
                 false => {
-                    let file_namespace = extra.namespace.as_ref().map(|p| p.as_ref());
-                    let imported = extra
+                    let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
+                    let imported = config
                         .imported_names
                         .get(inner.name.as_ref())
                         .map(String::as_str);
@@ -502,7 +504,7 @@ impl<'el> Csharp<'el> {
             let mut it = inner.arguments.iter().peekable();
 
             while let Some(argument) = it.next() {
-                argument.format(out, extra, level + 1usize)?;
+                argument.format(out, config, level + 1usize)?;
 
                 if it.peek().is_some() {
                     out.write_str(", ")?;
@@ -517,9 +519,9 @@ impl<'el> Csharp<'el> {
 }
 
 impl<'el> Custom for Csharp<'el> {
-    type Extra = Extra<'el>;
+    type Config = Config<'el>;
 
-    fn format(&self, out: &mut Formatter, extra: &mut Self::Extra, level: usize) -> fmt::Result {
+    fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
         use self::Csharp::*;
 
         match *self {
@@ -527,20 +529,20 @@ impl<'el> Custom for Csharp<'el> {
                 out.write_str(alias.as_ref())?;
             }
             Array(ref inner) => {
-                inner.format(out, extra, level)?;
+                inner.format(out, config, level)?;
                 out.write_str("[]")?;
             }
             Void => {
                 out.write_str("void")?;
             }
             Enum(ref inner) | Struct(ref inner) | Class(ref inner) => {
-                self.inner_format(inner, out, extra, level)?;
+                self.inner_format(inner, out, config, level)?;
             }
             Local { ref name } => {
                 out.write_str(name.as_ref())?;
             }
             Optional(ref value) => {
-                value.format(out, extra, level)?;
+                value.format(out, config, level)?;
 
                 if !value.is_nullable() {
                     out.write_str("?")?;
@@ -576,16 +578,16 @@ impl<'el> Custom for Csharp<'el> {
     fn write_file<'a>(
         tokens: Tokens<'a, Self>,
         out: &mut Formatter,
-        extra: &mut Self::Extra,
+        config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
         let mut toks: Tokens<Self> = Tokens::new();
 
-        if let Some(imports) = Self::imports(&tokens, extra) {
+        if let Some(imports) = Self::imports(&tokens, config) {
             toks.push(imports);
         }
 
-        if let Some(ref namespace) = extra.namespace {
+        if let Some(ref namespace) = config.namespace {
             toks.push({
                 let mut t = Tokens::new();
 
@@ -599,7 +601,7 @@ impl<'el> Custom for Csharp<'el> {
             toks.push_ref(&tokens);
         }
 
-        toks.join_line_spacing().format(out, extra, level)
+        toks.join_line_spacing().format(out, config, level)
     }
 }
 

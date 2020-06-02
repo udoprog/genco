@@ -21,6 +21,8 @@ pub struct Formatter<'write> {
     current_line_empty: bool,
     /// Current indentation level.
     indent: usize,
+    /// Number of indentations per level.
+    pub(crate) indentation: usize,
     /// Holds the current indentation level as a string.
     buffer: String,
 }
@@ -32,13 +34,23 @@ impl<'write> Formatter<'write> {
             write: write,
             current_line_empty: true,
             indent: 0usize,
+            indentation: 2usize,
             buffer: String::from("  "),
+        }
+    }
+
+    /// Configure the indentation associated with the formatter.
+    pub fn with_indentation(self, indentation: usize) -> Self {
+        Self {
+            indentation,
+            ..self
         }
     }
 
     fn check_indent(&mut self) -> fmt::Result {
         if self.current_line_empty && self.indent > 0 {
-            self.write.write_str(&self.buffer[0..self.indent * 2])?;
+            self.write
+                .write_str(&self.buffer[0..(self.indent * self.indentation)])?;
             self.current_line_empty = false;
         }
 
@@ -76,12 +88,11 @@ impl<'write> Formatter<'write> {
     pub fn indent(&mut self) {
         self.indent += 1;
 
+        let extra = (self.indent * self.indentation).saturating_sub(self.buffer.len());
+
         // check that buffer contains the current indentation.
-        if self.buffer.len() < self.indent * 2 {
-            // double the buffer
-            for c in iter::repeat(' ').take(self.buffer.len()) {
-                self.buffer.push(c);
-            }
+        for c in iter::repeat(' ').take(extra) {
+            self.buffer.push(c);
         }
     }
 

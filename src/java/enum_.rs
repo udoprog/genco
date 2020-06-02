@@ -171,7 +171,7 @@ mod tests {
         let s = t.to_string();
         let out = s.as_ref().map(|s| s.as_str());
         assert_eq!(
-            Ok("public enum Foo {\n  FOO(1),\n  BAR(2);\n\n  hello\n\n  world\n}",),
+            Ok("public enum Foo {\n    FOO(1),\n    BAR(2);\n\n    hello\n\n    world\n}",),
             out
         );
     }

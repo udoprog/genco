@@ -5,9 +5,11 @@
 /// ## Examples
 ///
 /// ```rust,ignore
+/// # #![allow(deprecated)]
 /// let n1: genco::Tokens<()> = toks!("var v = ", "bar".quoted(), ";");
 /// ```
 #[macro_export]
+#[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! toks {
     ($($x:expr),*) => {
         {
@@ -27,7 +29,8 @@ macro_rules! toks {
 /// ## Examples
 ///
 /// ```rust
-/// # #[macro_use] extern crate genco;
+/// # #![allow(deprecated)]
+/// # use genco::push;
 /// # fn main() {
 /// use genco::{Tokens, Java, Cons};
 ///
@@ -70,6 +73,7 @@ macro_rules! toks {
 /// # }
 /// ```
 #[macro_export]
+#[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! push {
     ($dest:expr, |$t:ident| $code:block) => {
         $dest.push({
@@ -97,7 +101,8 @@ macro_rules! push {
 /// ## Examples
 ///
 /// ```rust
-/// # #[macro_use] extern crate genco;
+/// # #![allow(deprecated)]
+/// # use genco::nested;
 /// # fn main() {
 /// use genco::{Tokens, Java, Cons};
 ///
@@ -109,8 +114,8 @@ macro_rules! push {
 /// nested!(toks, "bar ", id);
 ///
 /// let mut out = Vec::new();
-/// out.push("  foo hello");
-/// out.push("  bar hello");
+/// out.push("    foo hello");
+/// out.push("    bar hello");
 /// out.push("");
 ///
 /// assert_eq!(out.join("\n").as_str(), toks.to_string().unwrap().as_str());
@@ -120,7 +125,8 @@ macro_rules! push {
 /// Pushing as a block:
 ///
 /// ```rust
-/// # #[macro_use] extern crate genco;
+/// # #![allow(deprecated)]
+/// # use genco::{nested, push};
 /// # fn main() {
 /// use genco::{Tokens, Java, Cons};
 ///
@@ -134,14 +140,15 @@ macro_rules! push {
 /// });
 ///
 /// let mut out = Vec::new();
-/// out.push("  foo hello");
-/// out.push("  bar hello");
+/// out.push("    foo hello");
+/// out.push("    bar hello");
 /// out.push("");
 ///
 /// assert_eq!(out.join("\n").as_str(), toks.to_string().unwrap().as_str());
 /// # }
 /// ```
 #[macro_export]
+#[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! nested {
     ($dest:expr, |$t:ident| $code:block) => {
         $dest.nested({
