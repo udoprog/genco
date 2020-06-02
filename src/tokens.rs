@@ -8,9 +8,7 @@
 //! toks.append("foo");
 //! ```
 
-use crate::con_::Con::{self, Borrowed, Owned};
-use crate::element::Element::{Append, Nested, Push};
-use crate::{Config, Custom, Element, Formatter, IntoTokens, WriteTokens};
+use crate::{Con, Config, Custom, Element, Formatter, IntoTokens, WriteTokens};
 use std::collections::LinkedList;
 use std::fmt;
 use std::iter::FromIterator;
@@ -19,16 +17,13 @@ use std::result;
 use std::vec;
 
 /// A set of tokens.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 pub struct Tokens<'el, C: 'el> {
-    elements: Vec<Element<'el, C>>,
+    pub(crate) elements: Vec<Element<'el, C>>,
 }
 
 /// Generic methods.
-impl<'el, C: 'el> Tokens<'el, C>
-where
-    C: PartialEq + Eq,
-{
+impl<'el, C: 'el> Tokens<'el, C> {
     /// Create a new set of tokens.
     pub fn new() -> Tokens<'el, C> {
         Tokens {
@@ -41,7 +36,9 @@ where
     where
         T: IntoTokens<'el, C>,
     {
-        self.elements.push(Nested(Owned(tokens.into_tokens())));
+        self.elements.push(Element::Indent);
+        tokens.into_tokens(self);
+        self.elements.push(Element::Unindent);
     }
 
     /// Push a nested definition.
@@ -69,7 +66,10 @@ where
 
     /// Push a nested reference to a definition.
     pub fn nested_ref(&mut self, tokens: &'el Tokens<'el, C>) {
-        self.elements.push(Nested(Borrowed(tokens)));
+        self.elements.push(Element::Indent);
+        self.elements
+            .extend(tokens.elements.iter().map(Element::Borrowed));
+        self.elements.push(Element::Unindent);
     }
 
     /// Push a definition, guaranteed to be preceded with one newline.
@@ -77,7 +77,8 @@ where
     where
         T: IntoTokens<'el, C>,
     {
-        self.elements.push(Push(Owned(tokens.into_tokens())));
+        self.elements.push(Element::PushSpacing);
+        tokens.into_tokens(self);
     }
 
     /// Push a new created definition, guaranteed to be preceded with one newline.
@@ -110,18 +111,10 @@ where
     where
         T: IntoTokens<'el, C>,
     {
-        let tokens = tokens.into_tokens();
-
-        if tokens.is_empty() {
-            return;
+        if !tokens.is_empty() {
+            self.elements.push(Element::PushSpacing);
+            tokens.into_tokens(self);
         }
-
-        self.elements.push(Push(Owned(tokens)));
-    }
-
-    /// Push a reference to a definition.
-    pub fn push_ref(&mut self, tokens: &'el Tokens<'el, C>) {
-        self.elements.push(Push(Borrowed(tokens.into())));
     }
 
     /// Insert the given element.
@@ -133,15 +126,11 @@ where
     }
 
     /// Append the given element.
-    pub fn append<E>(&mut self, element: E)
+    pub fn append<T>(&mut self, tokens: T)
     where
-        E: Into<Element<'el, C>>,
+        T: IntoTokens<'el, C>,
     {
-        let element = element.into();
-
-        if Element::None != element {
-            self.elements.push(element);
-        }
+        tokens.into_tokens(self)
     }
 
     /// Append a reference to a definition.
@@ -156,13 +145,11 @@ where
     where
         T: IntoTokens<'el, C>,
     {
-        let tokens = tokens.into_tokens();
-
         if tokens.is_empty() {
             return;
         }
 
-        self.elements.push(Append(Owned(tokens)));
+        tokens.into_tokens(self);
     }
 
     /// Extend with another set of tokens.
@@ -190,6 +177,31 @@ where
     pub fn is_empty(&self) -> bool {
         self.elements.is_empty()
     }
+
+    /// Add a single spacing to the token stream.
+    pub fn spacing(&mut self) {
+        self.elements.push(Element::Spacing);
+    }
+
+    /// Add a single line spacing to the token stream.
+    pub fn line_spacing(&mut self) {
+        self.elements.push(Element::LineSpacing);
+    }
+
+    /// Add a single push spacing operation.
+    pub fn push_spacing(&mut self) {
+        self.elements.push(Element::PushSpacing);
+    }
+
+    /// Add a single indentation to the token stream.
+    pub fn indent(&mut self) {
+        self.elements.push(Element::Indent);
+    }
+
+    /// Add a single unindentation to the token stream.
+    pub fn unindent(&mut self) {
+        self.elements.push(Element::Unindent);
+    }
 }
 
 impl<'el, C> IntoIterator for Tokens<'el, C> {
@@ -201,7 +213,7 @@ impl<'el, C> IntoIterator for Tokens<'el, C> {
     }
 }
 
-impl<'el, C: Custom> Tokens<'el, C> {
+impl<'el, C: Custom<'el>> Tokens<'el, C> {
     /// Format the tokens.
     pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
         for element in &self.elements {
@@ -226,7 +238,7 @@ impl<'el, C: Custom> Tokens<'el, C> {
     }
 }
 
-impl<'el, E: Config + Default, C: Custom<Config = E>> Tokens<'el, C> {
+impl<'el, E: Config + Default, C: Custom<'el, Config = E>> Tokens<'el, C> {
     /// Format token as file.
     pub fn to_file(self) -> result::Result<String, fmt::Error> {
         self.to_file_with(C::Config::default())
@@ -237,125 +249,6 @@ impl<'el, E: Config + Default, C: Custom<Config = E>> Tokens<'el, C> {
         self.to_string_with(C::Config::default())
     }
 }
-
-/// Methods only available for clonable elements.
-impl<'el, C> Tokens<'el, C>
-where
-    C: Clone + PartialEq + Eq,
-{
-    /// Join the set of tokens on the given element.
-    pub fn join<E>(self, element: E) -> Tokens<'el, C>
-    where
-        E: Into<Element<'el, C>>,
-    {
-        let element = element.into();
-
-        let len = self.elements.len();
-        let mut it = self.elements.into_iter().filter(|e| *e != Element::None);
-
-        let mut out: Vec<Element<'el, C>> = Vec::with_capacity(match len {
-            v if v < 1 => v,
-            v => v + v - 1,
-        });
-
-        if let Some(first) = it.next() {
-            out.push(first);
-        } else {
-            return Tokens { elements: out };
-        }
-
-        while let Some(next) = it.next() {
-            out.push(element.clone());
-            out.push(next);
-        }
-
-        Tokens { elements: out }
-    }
-
-    /// Join with spacing.
-    pub fn join_spacing(self) -> Tokens<'el, C> {
-        self.join(Element::Spacing)
-    }
-
-    /// Join with line spacing.
-    pub fn join_line_spacing(self) -> Tokens<'el, C> {
-        self.join(Element::LineSpacing)
-    }
-}
-
-impl<'el, C> IntoTokens<'el, C> for Tokens<'el, C> {
-    fn into_tokens(self) -> Tokens<'el, C> {
-        self
-    }
-}
-
-/// Convert collection to tokens.
-impl<'el, C> IntoTokens<'el, C> for Vec<Tokens<'el, C>> {
-    fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens {
-            elements: self.into_iter().map(Into::into).collect(),
-        }
-    }
-}
-
-into_tokens_impl_from_generic!(Vec<Tokens<'el, C>>);
-
-/// Convert element to tokens.
-impl<'el, C> IntoTokens<'el, C> for Element<'el, C> {
-    fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens {
-            elements: vec![self],
-        }
-    }
-}
-
-into_tokens_impl_from_generic!(Element<'el, C>);
-
-/// Convert custom elements.
-impl<'el, C> IntoTokens<'el, C> for C
-where
-    C: Custom,
-{
-    fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens {
-            elements: vec![self.into()],
-        }
-    }
-}
-
-/// Convert custom elements.
-impl<'el, C> IntoTokens<'el, C> for &'el C
-where
-    C: Custom,
-{
-    fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens {
-            elements: vec![self.into()],
-        }
-    }
-}
-
-/// Convert borrowed strings.
-impl<'el, C> IntoTokens<'el, C> for &'el str {
-    fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens {
-            elements: vec![self.into()],
-        }
-    }
-}
-
-into_tokens_impl_from_generic!(&'el str);
-
-/// Convert strings.
-impl<'el, C> IntoTokens<'el, C> for String {
-    fn into_tokens(self) -> Tokens<'el, C> {
-        Tokens {
-            elements: vec![self.into()],
-        }
-    }
-}
-
-into_tokens_impl_from_generic!(String);
 
 impl<'el, C> FromIterator<&'el Element<'el, C>> for Tokens<'el, C> {
     fn from_iter<I: IntoIterator<Item = &'el Element<'el, C>>>(iter: I) -> Tokens<'el, C> {
@@ -392,9 +285,6 @@ impl<'el, C: 'el> Iterator for WalkCustom<'el, C> {
                 Borrowed(ref element) => {
                     self.queue.push_back(element);
                 }
-                Push(ref tokens) | Nested(ref tokens) | Append(ref tokens) => {
-                    self.queue.extend(tokens.as_ref().elements.iter());
-                }
                 Custom(ref custom) => return Some(custom.as_ref()),
                 Registered(ref custom) => return Some(custom.as_ref()),
                 _ => {}
@@ -413,25 +303,8 @@ mod tests {
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct Lang(u32);
 
-    impl Custom for Lang {
+    impl<'el> Custom<'el> for Lang {
         type Config = ();
-    }
-
-    #[test]
-    fn test_join() {
-        let s = String::from("foo");
-        let mut toks: Tokens<()> = Tokens::new();
-
-        // locally borrowed string
-        toks.append(s.as_str());
-        // static string
-        toks.append("bar");
-        // owned literal
-        toks.append(String::from("nope"));
-
-        let toks = toks.join_spacing();
-
-        assert_eq!("foo bar nope", toks.to_string().unwrap().as_str());
     }
 
     #[test]

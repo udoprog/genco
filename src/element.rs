@@ -1,24 +1,18 @@
 //! A single element
 
 use super::con_::Con;
-use crate::{Cons, Custom, ErasedElement, Formatter, Tokens};
+use crate::{Cons, Custom, ErasedElement, Formatter};
 use std::fmt;
 
 use std::rc::Rc;
 
 /// A single element in a set of tokens.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Element<'el, C: 'el> {
+#[derive(Debug, Clone)]
+pub enum Element<'el, C> {
     /// A refcounted member.
     Rc(Rc<Element<'el, C>>),
     /// A borrowed element.
     Borrowed(&'el Element<'el, C>),
-    /// Append the given set of tokens.
-    Append(Con<'el, Tokens<'el, C>>),
-    /// Append the given set of tokens in a PushSpacing way.
-    Push(Con<'el, Tokens<'el, C>>),
-    /// Append the given set of tokens in a nested way.
-    Nested(Con<'el, Tokens<'el, C>>),
     /// A borrowed string.
     Literal(Cons<'el>),
     /// A borrowed quoted string.
@@ -27,8 +21,6 @@ pub enum Element<'el, C: 'el> {
     Custom(Con<'el, C>),
     /// A custom element that is not rendered.
     Registered(Con<'el, C>),
-    /// Empty element which renders nothing.
-    None,
     /// Push an empty line.
     PushSpacing,
     /// Unconditionally push a line.
@@ -41,6 +33,18 @@ pub enum Element<'el, C: 'el> {
     Indent,
     /// Unindent.
     Unindent,
+    /// Empty element which renders nothing.
+    None,
+}
+
+impl<'el, C> Element<'el, C> {
+    /// Test if the element is none.
+    pub fn is_none(&self) -> bool {
+        match self {
+            Self::None => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'el, C: 'el> From<ErasedElement<'el>> for Element<'el, C> {
@@ -51,7 +55,7 @@ impl<'el, C: 'el> From<ErasedElement<'el>> for Element<'el, C> {
     }
 }
 
-impl<'el, C: Custom> Element<'el, C> {
+impl<'el, C: Custom<'el>> Element<'el, C> {
     /// Format the given element.
     pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
         use self::Element::*;
@@ -64,22 +68,6 @@ impl<'el, C: Custom> Element<'el, C> {
             }
             Borrowed(element) => {
                 element.format(out, config, level)?;
-            }
-            Append(ref tokens) => {
-                tokens.as_ref().format(out, config, level)?;
-            }
-            Nested(ref tokens) => {
-                out.indent();
-                out.new_line_unless_empty()?;
-
-                tokens.as_ref().format(out, config, level)?;
-
-                out.unindent();
-                out.new_line_unless_empty()?;
-            }
-            Push(ref tokens) => {
-                out.new_line_unless_empty()?;
-                tokens.as_ref().format(out, config, level)?;
             }
             Literal(ref literal) => {
                 out.write_str(literal.as_ref())?;
@@ -118,13 +106,13 @@ impl<'el, C: Custom> Element<'el, C> {
     }
 }
 
-impl<'el, C: Custom> From<C> for Element<'el, C> {
+impl<'el, C: Custom<'el>> From<C> for Element<'el, C> {
     fn from(value: C) -> Self {
         Element::Custom(Con::Owned(value))
     }
 }
 
-impl<'el, C: Custom> From<&'el C> for Element<'el, C> {
+impl<'el, C: Custom<'el>> From<&'el C> for Element<'el, C> {
     fn from(value: &'el C) -> Self {
         Element::Custom(Con::Borrowed(value))
     }
@@ -163,23 +151,5 @@ impl<'el, C> From<&'el Element<'el, C>> for Element<'el, C> {
 impl<'el, C> From<Rc<Element<'el, C>>> for Element<'el, C> {
     fn from(value: Rc<Element<'el, C>>) -> Self {
         Element::Rc(value)
-    }
-}
-
-impl<'el, C> From<Tokens<'el, C>> for Element<'el, C> {
-    fn from(value: Tokens<'el, C>) -> Self {
-        Element::Append(Con::Owned(value))
-    }
-}
-
-impl<'el, C> From<&'el Tokens<'el, C>> for Element<'el, C> {
-    fn from(value: &'el Tokens<'el, C>) -> Self {
-        Element::Append(Con::Borrowed(value))
-    }
-}
-
-impl<'el, C> From<Rc<Tokens<'el, C>>> for Element<'el, C> {
-    fn from(value: Rc<Tokens<'el, C>>) -> Self {
-        Element::Append(Con::Rc(value))
     }
 }

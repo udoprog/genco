@@ -6,12 +6,11 @@ mod utils;
 pub use self::modifier::Modifier;
 pub use self::utils::DocComment;
 
-use super::cons::Cons;
-use super::custom::Custom;
-use super::formatter::Formatter;
-use super::into_tokens::IntoTokens;
-use super::tokens::Tokens;
+use crate::{Cons, Custom, Formatter};
 use std::fmt::{self, Write};
+
+/// Tokens container specialization for Dart.
+pub type Tokens<'el> = crate::Tokens<'el, Dart<'el>>;
 
 static SEP: &'static str = ".";
 /// dart:core package.
@@ -55,9 +54,6 @@ pub enum Dart<'el> {
     Type(Type<'el>),
 }
 
-into_tokens_impl_from!(Dart<'el>, Dart<'el>);
-into_tokens_impl_from!(&'el Dart<'el>, Dart<'el>);
-
 /// Config data for Dart formatting.
 #[derive(Debug, Default)]
 pub struct Config {}
@@ -66,10 +62,7 @@ impl crate::Config for Config {}
 
 impl<'el> Dart<'el> {
     /// Resolve all imports.
-    fn imports<'a, 'b: 'a>(
-        input: &'b Tokens<'a, Dart<'el>>,
-        _: &mut Config,
-    ) -> Tokens<'a, Dart<'el>> {
+    fn imports(input: &Tokens<'el>, _: &mut Config) -> Tokens<'el> {
         use crate::quoted::Quoted;
         use std::collections::BTreeSet;
 
@@ -82,7 +75,7 @@ impl<'el> Dart<'el> {
                         continue;
                     }
 
-                    modules.insert((path.as_ref(), ty.alias.as_ref().map(AsRef::as_ref)));
+                    modules.insert((path.clone(), ty.alias.clone()));
                 }
             }
         }
@@ -195,7 +188,7 @@ impl<'el> Dart<'el> {
     }
 }
 
-impl<'el> Custom for Dart<'el> {
+impl<'el> Custom<'el> for Dart<'el> {
     type Config = Config;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
@@ -260,17 +253,23 @@ impl<'el> Custom for Dart<'el> {
         Ok(())
     }
 
-    fn write_file<'a>(
-        tokens: Tokens<'a, Self>,
+    fn write_file(
+        tokens: Tokens<'el>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
-        let mut toks: Tokens<Self> = Tokens::new();
+        let mut toks: Tokens = Tokens::new();
 
-        toks.push_unless_empty(Self::imports(&tokens, config));
-        toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, config, level)
+        let imports = Self::imports(&tokens, config);
+
+        if !imports.is_empty() {
+            toks.push(imports);
+            toks.line_spacing();
+        }
+
+        toks.append(tokens);
+        toks.format(out, config, level)
     }
 }
 
@@ -293,9 +292,8 @@ pub fn local<'el, N: Into<Cons<'el>>>(name: N) -> Dart<'el> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dart::Dart;
-    use crate::quoted::Quoted;
-    use crate::tokens::Tokens;
+    use crate as genco;
+    use crate::{quote, Dart, Quoted, Tokens};
 
     #[test]
     fn test_builtin() {
@@ -319,13 +317,7 @@ mod tests {
         let import_alias = imported("package:http/http.dart").alias("h2");
         let import_relative = imported("../http.dart");
 
-        let toks = toks![
-            import.name("a"),
-            import2.name("b"),
-            import_alias.name("c"),
-            import_relative.name("d"),
-        ]
-        .join_spacing();
+        let toks = quote!(#(import.name("a")) #(import2.name("b")) #(import_alias.name("c")) #(import_relative.name("d")));
 
         let expected = vec![
             "import \"../http.dart\";",

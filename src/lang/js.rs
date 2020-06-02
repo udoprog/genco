@@ -1,6 +1,6 @@
 //! Specialization for JavaScript code generation.
 
-use crate::{Cons, Custom, Formatter, IntoTokens, Quoted, Tokens};
+use crate::{Cons, Custom, Formatter, Quoted, Tokens};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
@@ -30,9 +30,6 @@ impl<'el> fmt::Display for JavaScript<'el> {
     }
 }
 
-into_tokens_impl_from!(JavaScript<'el>, JavaScript<'el>);
-into_tokens_impl_from!(&'el JavaScript<'el>, JavaScript<'el>);
-
 impl<'el> JavaScript<'el> {
     /// Alias the given type.
     pub fn alias<N: Into<Cons<'el>>>(self, alias: N) -> JavaScript<'el> {
@@ -47,19 +44,19 @@ impl<'el> JavaScript<'el> {
         format!("{}.js", parts.join(PATH_SEP))
     }
 
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
+    fn imports(tokens: &Tokens<'el, Self>) -> Option<Tokens<'el, Self>> {
         let mut sets = BTreeMap::new();
         let mut wildcard = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
             match (&custom.module, &custom.alias) {
                 (&Some(ref module), &None) => {
-                    sets.entry(module.as_ref())
+                    sets.entry(module.clone())
                         .or_insert_with(Tokens::new)
-                        .append(custom.name.as_ref());
+                        .append(custom.name.clone());
                 }
                 (&Some(ref module), &Some(ref alias)) => {
-                    wildcard.insert((module.as_ref(), alias.as_ref()));
+                    wildcard.insert((module.clone(), alias.clone()));
                 }
                 _ => {}
             }
@@ -75,9 +72,20 @@ impl<'el> JavaScript<'el> {
             let mut s = Tokens::new();
 
             s.append("import {");
-            s.append(names.join(", "));
+
+            let mut it = names.into_iter();
+
+            if let Some(name) = it.next() {
+                s.append(name);
+            }
+
+            for name in it {
+                s.append(", ");
+                s.append(name);
+            }
+
             s.append("} from ");
-            s.append(Self::module_to_path(module).quoted());
+            s.append(Self::module_to_path(&*module).quoted());
             s.append(";");
 
             out.push(s);
@@ -89,7 +97,7 @@ impl<'el> JavaScript<'el> {
             s.append("import * as ");
             s.append(alias);
             s.append(" from ");
-            s.append(Self::module_to_path(module).quoted());
+            s.append(Self::module_to_path(&*module).quoted());
             s.append(";");
 
             out.push(s);
@@ -99,7 +107,7 @@ impl<'el> JavaScript<'el> {
     }
 }
 
-impl<'el> Custom for JavaScript<'el> {
+impl<'el> Custom<'el> for JavaScript<'el> {
     type Config = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {
@@ -128,8 +136,8 @@ impl<'el> Custom for JavaScript<'el> {
         Ok(())
     }
 
-    fn write_file<'a>(
-        tokens: Tokens<'a, Self>,
+    fn write_file(
+        tokens: Tokens<'el, Self>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -138,10 +146,11 @@ impl<'el> Custom for JavaScript<'el> {
 
         if let Some(imports) = Self::imports(&tokens) {
             toks.push(imports);
+            toks.line_spacing();
         }
 
-        toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, config, level)
+        toks.append(tokens);
+        toks.format(out, config, level)
     }
 }
 

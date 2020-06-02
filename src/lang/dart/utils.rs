@@ -1,22 +1,19 @@
-use crate::{Cons, Dart, Element, Tokens};
+use crate::dart::Tokens;
+use crate::{Cons, Dart, IntoTokens};
 
 /// Format a doc comment where each line is preceeded by `///`.
 pub struct DocComment<'el>(pub Vec<Cons<'el>>);
 
-impl<'el> From<DocComment<'el>> for Element<'el, Dart<'el>> {
-    fn from(value: DocComment<'el>) -> Element<'el, Dart<'el>> {
-        let mut t = Tokens::new();
-
-        if value.0.is_empty() {
-            return Element::None;
+impl<'el> IntoTokens<'el, Dart<'el>> for DocComment<'el> {
+    fn into_tokens(self, tokens: &mut Tokens<'el>) {
+        if self.0.is_empty() {
+            return;
         }
 
-        for line in value.0 {
-            t.push("/// ");
-            t.append(line);
+        for line in self.0 {
+            tokens.push("/// ");
+            tokens.append(line);
         }
-
-        Element::from(t)
     }
 }
 

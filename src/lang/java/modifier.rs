@@ -1,6 +1,7 @@
 //! Individual java modifier
 
-use crate::{Custom, Element, IntoTokens, Tokens};
+use crate::java::Tokens;
+use crate::{IntoTokens, Java};
 use std::collections::BTreeSet;
 
 /// A Java modifier.
@@ -42,34 +43,40 @@ impl Modifier {
     }
 }
 
-impl<'el, C: Custom> From<Modifier> for Element<'el, C> {
-    fn from(value: Modifier) -> Self {
-        value.name().into()
+impl<'el> IntoTokens<'el, Java<'el>> for Modifier {
+    fn into_tokens(self, tokens: &mut Tokens<'el>) {
+        tokens.append(self.name());
     }
 }
 
-impl<'el, C: Custom> IntoTokens<'el, C> for Vec<Modifier> {
-    fn into_tokens(self) -> Tokens<'el, C> {
-        self.into_iter()
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .map(Element::from)
-            .collect()
+impl<'el> IntoTokens<'el, Java<'el>> for Vec<Modifier> {
+    fn into_tokens(self, tokens: &mut Tokens<'el>) {
+        let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
+
+        if let Some(modifier) = it.next() {
+            modifier.into_tokens(tokens);
+        }
+
+        for modifier in it {
+            tokens.spacing();
+            modifier.into_tokens(tokens);
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Modifier;
-    use crate::java::Java;
-    use crate::tokens::Tokens;
+    use crate as genco;
+    use crate::{quote, Java, Tokens};
 
     #[test]
     fn test_vec() {
         use self::Modifier::*;
-        let el: Tokens<Java> = toks![Public, Static, Final].join_spacing();
-        let s = el.to_string();
-        let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("public static final"), out);
+        let el: Tokens<Java> = quote!(#(vec![Public, Final, Static]));
+        assert_eq!(
+            Ok("public static final"),
+            el.to_string().as_ref().map(|s| s.as_str())
+        );
     }
 }

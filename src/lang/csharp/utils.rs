@@ -1,23 +1,20 @@
-use crate::{Cons, Csharp, Element, IntoTokens, Tokens};
+use crate::csharp::Tokens;
+use crate::{Cons, Csharp, Element, IntoTokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 pub struct BlockComment<'el>(pub Vec<Cons<'el>>);
 
 impl<'el> IntoTokens<'el, Csharp<'el>> for BlockComment<'el> {
-    fn into_tokens(self) -> Tokens<'el, Csharp<'el>> {
-        let mut t = Tokens::new();
-
+    fn into_tokens(self, tokens: &mut Tokens<'el>) {
         if self.0.is_empty() {
-            return t;
+            return;
         }
 
         for line in self.0 {
-            t.push("/// ");
-            t.append(line);
+            tokens.push("/// ");
+            tokens.append(line);
         }
 
-        t.push(Element::PushSpacing);
-
-        t
+        tokens.push(Element::PushSpacing);
     }
 }

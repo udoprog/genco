@@ -45,3 +45,13 @@ fn test_quote() {
         tokens.to_string().unwrap()
     );
 }
+
+#[test]
+fn test_tight_quote() {
+    let foo = "foo";
+    let bar = "bar";
+    let baz = "baz";
+    let tokens: Tokens<Rust> = quote!(#(foo)#(bar)#(baz));
+
+    assert_eq!("foobarbaz", tokens.to_string().unwrap());
+}

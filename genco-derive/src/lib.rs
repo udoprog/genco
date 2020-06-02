@@ -109,7 +109,7 @@ impl Parse for Tokens {
         let mut queued = Vec::new();
         let mut queue = VecDeque::new();
 
-        let mut line_buffer = String::new();
+        let mut item_buffer = ItemBuffer::new();
 
         process_expressions(|item| queue.push_back(item), from_fn(move || {
             if !input.is_empty() {
@@ -123,35 +123,34 @@ impl Parse for Tokens {
             let next = item.cursor();
 
             if cursor.start.line != next.start.line {
-                if !line_buffer.is_empty() {
-                    let s = LitStr::new(&line_buffer, Span::call_site());
-                    let group = Group::new(Delimiter::None, quote::quote!(__toks.append(#s);));
-                    tokens.push(TokenTree::Group(group));
-                    line_buffer.clear();
-                }
+                item_buffer.flush(&mut tokens);
 
                 debug_assert!(next.start.line > cursor.start.line);
 
                 let stream = if next.start.line - cursor.start.line > 1 {
-                    quote::quote!(__toks.append(genco::Element::LineSpacing);)
+                    quote::quote!(__toks.line_spacing();)
                 } else {
-                    quote::quote!(__toks.append(genco::Element::PushSpacing);)
+                    quote::quote!(__toks.push_spacing();)
                 };
 
                 tokens.push(TokenTree::Group(Group::new(Delimiter::None, stream)));
 
                 if last_column < next.start.column {
-                    let stream = quote::quote!(__toks.append(genco::Element::Indent););
+                    let stream = quote::quote!(__toks.indent(););
                     tokens.push(TokenTree::Group(Group::new(Delimiter::None, stream)));
                 } else if last_column > next.start.column {
-                    let stream = quote::quote!(__toks.append(genco::Element::Unindent););
+                    let stream = quote::quote!(__toks.unindent(););
                     tokens.push(TokenTree::Group(Group::new(Delimiter::None, stream)));
                 }
 
                 last_column = next.start.column;
             } else {
+                // Same line, but next item doesn't match.
                 if cursor.end.column < next.start.column && last_column != next.start.column {
-                    line_buffer.push(' ');
+                    item_buffer.flush(&mut tokens);
+
+                    let stream = quote::quote!(__toks.spacing(););
+                    tokens.push(TokenTree::Group(Group::new(Delimiter::None, stream)));
                 }
             }
 
@@ -164,9 +163,9 @@ impl Parse for Tokens {
                             process_expressions(|item| queued.push(item), group.stream().into_iter().map(Ok))?;
 
                             match group.delimiter() {
-                                Delimiter::Parenthesis => line_buffer.push('('),
-                                Delimiter::Brace => line_buffer.push('{'),
-                                Delimiter::Bracket => line_buffer.push('['),
+                                Delimiter::Parenthesis => item_buffer.push('('),
+                                Delimiter::Brace => item_buffer.push('{'),
+                                Delimiter::Bracket => item_buffer.push('['),
                                 _ => (),
                             }
 
@@ -179,17 +178,12 @@ impl Parse for Tokens {
                             }
                         }
                         other => {
-                            line_buffer.push_str(&other.to_string());
+                            item_buffer.push_str(&other.to_string());
                         }
                     }
                 }
                 Item::Expression(_, expr) => {
-                    if !line_buffer.is_empty() {
-                        let s = LitStr::new(&line_buffer, Span::call_site());
-                        let group = Group::new(Delimiter::None, quote::quote!(__toks.append(#s);));
-                        tokens.push(TokenTree::Group(group));
-                        line_buffer.clear();
-                    }
+                    item_buffer.flush(&mut tokens);
 
                     let group = Group::new(Delimiter::None, quote::quote!(__toks.append(Clone::clone(&#expr));));
                     tokens.push(TokenTree::Group(group));
@@ -199,23 +193,50 @@ impl Parse for Tokens {
                 }
                 Item::DelimiterClose(_, delimiter) => {
                     match delimiter {
-                        Delimiter::Parenthesis => line_buffer.push(')'),
-                        Delimiter::Brace => line_buffer.push('}'), 
-                        Delimiter::Bracket => line_buffer.push(']'),
+                        Delimiter::Parenthesis => item_buffer.push(')'),
+                        Delimiter::Brace => item_buffer.push('}'), 
+                        Delimiter::Bracket => item_buffer.push(']'),
                         _ => (),
                     }
                 }
             }
         }
 
-        if !line_buffer.is_empty() {
-            let s = LitStr::new(&line_buffer, Span::call_site());
+        item_buffer.flush(&mut tokens);
+        Ok(Self(registers, tokens))
+    }
+}
+
+struct ItemBuffer {
+    buffer: String,
+}
+
+impl ItemBuffer {
+    /// Construct a new line buffer.
+    fn new() -> Self {
+        Self {
+            buffer: String::new(),
+        }
+    }
+
+    /// Push the given character to the line buffer.
+    fn push(&mut self, c: char) {
+        self.buffer.push(c);
+    }
+
+    /// Push the given string to the line buffer.
+    fn push_str(&mut self, s: &str) {
+        self.buffer.push_str(s);
+    }
+
+    /// Flush the line buffer if necessary.
+    fn flush(&mut self, tokens: &mut Vec<TokenTree>) {
+        if !self.buffer.is_empty() {
+            let s = LitStr::new(&self.buffer, Span::call_site());
             let group = Group::new(Delimiter::None, quote::quote!(__toks.append(#s);));
             tokens.push(TokenTree::Group(group));
-            line_buffer.clear();
+            self.buffer.clear();
         }
-
-        Ok(Self(registers, tokens))
     }
 }
 

@@ -1,10 +1,8 @@
-//! Specialization for Go code generation.
+//! Specialization for Swift code generation.
 
-use crate::{Cons, Custom, Formatter, Quoted, Tokens};
+use crate::{Cons, Custom, Formatter, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
-
-const SEP: &str = ".";
 
 /// Name of an imported type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -15,38 +13,36 @@ pub struct Name<'el> {
     name: Cons<'el>,
 }
 
-/// Go token specialization.
+/// Swift token specialization.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Go<'el> {
+pub enum Swift<'el> {
     /// A regular type.
     Type {
         /// The name being referenced.
         name: Name<'el>,
     },
-    /// A map, map[<key>]<value>.
+    /// A map, [<key>: <value>].
     Map {
         /// Key of the map.
-        key: Box<Go<'el>>,
+        key: Box<Swift<'el>>,
         /// Value of the map.
-        value: Box<Go<'el>>,
+        value: Box<Swift<'el>>,
     },
-    /// An array, []<inner>.
+    /// An array, [<inner>].
     Array {
         /// Inner value of the array.
-        inner: Box<Go<'el>>,
+        inner: Box<Swift<'el>>,
     },
-    /// An interface type, interface{}.
-    Interface,
 }
 
-impl<'el> Go<'el> {
-    fn type_imports<'a, 'b: 'a>(go: &'b Go<'b>, modules: &'a mut BTreeSet<&'b str>) {
-        use self::Go::*;
+impl<'el> Swift<'el> {
+    fn type_imports(swift: &Swift<'el>, modules: &mut BTreeSet<Cons<'el>>) {
+        use self::Swift::*;
 
-        match *go {
+        match *swift {
             Type { ref name, .. } => {
                 if let Some(module) = name.module.as_ref() {
-                    modules.insert(module);
+                    modules.insert(module.clone());
                 }
             }
             Map {
@@ -58,11 +54,10 @@ impl<'el> Go<'el> {
             Array { ref inner, .. } => {
                 Self::type_imports(inner, modules);
             }
-            Interface => {}
         };
     }
 
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
+    fn imports(tokens: &Tokens<'el, Self>) -> Option<Tokens<'el, Self>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -79,7 +74,7 @@ impl<'el> Go<'el> {
             let mut s = Tokens::new();
 
             s.append("import ");
-            s.append(module.quoted());
+            s.append(module);
 
             out.push(s);
         }
@@ -88,65 +83,32 @@ impl<'el> Go<'el> {
     }
 }
 
-/// Config data for Go.
-#[derive(Debug)]
-pub struct Config {
-    package: String,
-}
-
-impl crate::Config for Config {
-    fn indentation(&mut self) -> usize {
-        4
-    }
-}
-
-impl Config {
-    /// Build the config structure from a package.
-    pub fn from_package<S: AsRef<str>>(package: S) -> Self {
-        Self {
-            package: package.as_ref().to_string(),
-        }
-    }
-}
-
-impl<'el> Custom for Go<'el> {
-    type Config = Config;
+impl<'el> Custom<'el> for Swift<'el> {
+    type Config = ();
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
-        use self::Go::*;
+        use self::Swift::*;
 
         match *self {
             Type {
-                name:
-                    Name {
-                        ref module,
-                        ref name,
-                        ..
-                    },
+                name: Name { ref name, .. },
                 ..
             } => {
-                if let Some(module) = module.as_ref().and_then(|m| m.as_ref().split("/").last()) {
-                    out.write_str(module)?;
-                    out.write_str(SEP)?;
-                }
-
                 out.write_str(name)?;
             }
             Map {
                 ref key, ref value, ..
             } => {
-                out.write_str("map[")?;
+                out.write_str("[")?;
                 key.format(out, config, level + 1)?;
-                out.write_str("]")?;
+                out.write_str(": ")?;
                 value.format(out, config, level + 1)?;
+                out.write_str("]")?;
             }
             Array { ref inner, .. } => {
                 out.write_str("[")?;
-                out.write_str("]")?;
                 inner.format(out, config, level + 1)?;
-            }
-            Interface => {
-                out.write_str("interface{}")?;
+                out.write_str("]")?;
             }
         }
 
@@ -172,35 +134,31 @@ impl<'el> Custom for Go<'el> {
         Ok(())
     }
 
-    fn write_file<'a>(
-        tokens: Tokens<'a, Self>,
+    fn write_file(
+        tokens: Tokens<'el, Self>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
-        let mut toks: Tokens<Self> = Tokens::new();
-
-        toks.push_into(|t| {
-            t.append("package ");
-            t.append(config.package.to_string());
-        });
+        let mut toks = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens) {
             toks.push(imports);
+            toks.line_spacing();
         }
 
-        toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, config, level)
+        toks.extend(tokens);
+        toks.format(out, config, level)
     }
 }
 
 /// Setup an imported element.
-pub fn imported<'a, M, N>(module: M, name: N) -> Go<'a>
+pub fn imported<'a, M, N>(module: M, name: N) -> Swift<'a>
 where
     M: Into<Cons<'a>>,
     N: Into<Cons<'a>>,
 {
-    Go::Type {
+    Swift::Type {
         name: Name {
             module: Some(module.into()),
             name: name.into(),
@@ -209,11 +167,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<'a, N>(name: N) -> Go<'a>
+pub fn local<'a, N>(name: N) -> Swift<'a>
 where
     N: Into<Cons<'a>>,
 {
-    Go::Type {
+    Swift::Type {
         name: Name {
             module: None,
             name: name.into(),
@@ -222,87 +180,74 @@ where
 }
 
 /// Setup a map.
-pub fn map<'a, K, V>(key: K, value: V) -> Go<'a>
+pub fn map<'a, K, V>(key: K, value: V) -> Swift<'a>
 where
-    K: Into<Go<'a>>,
-    V: Into<Go<'a>>,
+    K: Into<Swift<'a>>,
+    V: Into<Swift<'a>>,
 {
-    Go::Map {
+    Swift::Map {
         key: Box::new(key.into()),
         value: Box::new(value.into()),
     }
 }
 
 /// Setup an array.
-pub fn array<'a, I>(inner: I) -> Go<'a>
+pub fn array<'a, I>(inner: I) -> Swift<'a>
 where
-    I: Into<Go<'a>>,
+    I: Into<Swift<'a>>,
 {
-    Go::Array {
+    Swift::Array {
         inner: Box::new(inner.into()),
     }
 }
 
-/// Setup an interface.
-pub fn interface<'a>() -> Go<'a> {
-    Go::Interface
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{array, imported, interface, map, Config, Go};
+    use super::{array, imported, local, map, Swift};
     use crate::{Quoted, Tokens};
 
     #[test]
     fn test_string() {
-        let mut toks: Tokens<Go> = Tokens::new();
+        let mut toks: Tokens<Swift> = Tokens::new();
         toks.append("hello \n world".quoted());
-        let res = toks.to_string_with(Config::from_package("foo"));
+        let res = toks.to_string();
 
         assert_eq!(Ok("\"hello \\n world\""), res.as_ref().map(|s| s.as_str()));
     }
 
     #[test]
     fn test_imported() {
-        let dbg = imported("foo", "Debug");
-        let mut toks: Tokens<Go> = Tokens::new();
+        let dbg = imported("Foo", "Debug");
+        let mut toks: Tokens<Swift> = Tokens::new();
         toks.push(toks!(&dbg));
 
         assert_eq!(
-            Ok("package foo\n\nimport \"foo\"\n\nfoo.Debug\n"),
-            toks.to_file_with(Config::from_package("foo"))
-                .as_ref()
-                .map(|s| s.as_str())
-        );
-    }
-
-    #[test]
-    fn test_map() {
-        let keyed = map(imported("foo", "Debug"), interface());
-
-        let mut toks: Tokens<Go> = Tokens::new();
-        toks.push(toks!(&keyed));
-
-        assert_eq!(
-            Ok("package foo\n\nimport \"foo\"\n\nmap[foo.Debug]interface{}\n"),
-            toks.to_file_with(Config::from_package("foo"))
-                .as_ref()
-                .map(|s| s.as_str())
+            Ok("import Foo\n\nDebug\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
 
     #[test]
     fn test_array() {
-        let keyed = array(imported("foo", "Debug"));
-
-        let mut toks: Tokens<Go> = Tokens::new();
-        toks.push(toks!(&keyed));
+        let dbg = array(imported("Foo", "Debug"));
+        let mut toks: Tokens<Swift> = Tokens::new();
+        toks.push(toks!(&dbg));
 
         assert_eq!(
-            Ok("package foo\n\nimport \"foo\"\n\n[]foo.Debug\n"),
-            toks.to_file_with(Config::from_package("foo"))
-                .as_ref()
-                .map(|s| s.as_str())
+            Ok("import Foo\n\n[Debug]\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
+        );
+    }
+
+    #[test]
+    fn test_map() {
+        let dbg = map(local("String"), imported("Foo", "Debug"));
+        let mut toks: Tokens<Swift> = Tokens::new();
+        toks.push(toks!(&dbg));
+
+        assert_eq!(
+            Ok("import Foo\n\n[String: Debug]\n"),
+            toks.to_file().as_ref().map(|s| s.as_str())
         );
     }
 }

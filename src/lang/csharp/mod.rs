@@ -1,27 +1,16 @@
 //! Specialization for Csharp code generation.
 
-mod argument;
-mod class;
-mod constructor;
-mod enum_;
-mod field;
-mod interface;
-mod method;
 mod modifier;
 mod utils;
 
-pub use self::argument::Argument;
-pub use self::class::Class;
-pub use self::constructor::Constructor;
-pub use self::enum_::Enum;
-pub use self::field::Field;
-pub use self::interface::Interface;
-pub use self::method::Method;
 pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
-use crate::{Cons, Custom, Formatter, IntoTokens, Tokens};
+use crate::{Cons, Custom, Formatter};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Write};
+
+/// Tokens container specialization for C#.
+pub type Tokens<'el> = crate::Tokens<'el, Csharp<'el>>;
 
 static SYSTEM: &'static str = "System";
 static SEP: &'static str = ".";
@@ -142,9 +131,6 @@ pub enum Csharp<'el> {
     Optional(Box<Csharp<'el>>),
 }
 
-into_tokens_impl_from!(Csharp<'el>, Csharp<'el>);
-into_tokens_impl_from!(&'el Csharp<'el>, Csharp<'el>);
-
 /// Config data for Csharp formatting.
 #[derive(Debug, Default)]
 pub struct Config<'el> {
@@ -191,20 +177,20 @@ impl<'el> Csharp<'el> {
         }
     }
 
-    fn inner_imports<'a>(ty: &'a Type<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
+    fn inner_imports(ty: &Type<'el>, modules: &mut BTreeSet<(Cons<'el>, Cons<'el>)>) {
         for argument in &ty.arguments {
             Self::type_imports(argument, modules);
         }
 
-        modules.insert((ty.namespace.as_ref(), ty.name.as_ref()));
+        modules.insert((ty.namespace.clone(), ty.name.clone()));
     }
 
-    fn type_imports<'a>(csharp: &'a Csharp<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
+    fn type_imports(csharp: &Csharp<'el>, modules: &mut BTreeSet<(Cons<'el>, Cons<'el>)>) {
         use self::Csharp::*;
 
         match *csharp {
             Simple { alias, .. } => {
-                modules.insert((SYSTEM, alias));
+                modules.insert((SYSTEM.into(), alias.into()));
             }
             Class(ref inner) => {
                 Self::inner_imports(inner, modules);
@@ -225,7 +211,7 @@ impl<'el> Csharp<'el> {
         };
     }
 
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>, config: &mut Config) -> Option<Tokens<'a, Self>> {
+    fn imports(tokens: &Tokens<'el>, config: &mut Config) -> Option<Tokens<'el>> {
         let mut modules = BTreeSet::new();
 
         let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
@@ -242,20 +228,20 @@ impl<'el> Csharp<'el> {
         let mut imported = HashSet::new();
 
         for (namespace, name) in modules {
-            if Some(namespace) == file_namespace {
+            if Some(&*namespace) == file_namespace.as_deref() {
                 continue;
             }
 
-            match config.imported_names.get(name) {
+            match config.imported_names.get(&*name) {
                 // already imported...
-                Some(existing) if existing == namespace => continue,
+                Some(existing) if existing == &*namespace => continue,
                 // already imported, as something else...
                 Some(_) => continue,
                 _ => {}
             }
 
-            if !imported.contains(namespace) {
-                out.push(toks!("using ", namespace, ";"));
+            if !imported.contains(&*namespace) {
+                out.push(toks!("using ", namespace.clone(), ";"));
                 imported.insert(namespace.to_string());
             }
 
@@ -464,7 +450,7 @@ impl<'el> Csharp<'el> {
         &self,
         inner: &Type<'el>,
         out: &mut Formatter,
-        config: &mut <Self as Custom>::Config,
+        config: &mut <Self as Custom<'el>>::Config,
         level: usize,
     ) -> fmt::Result {
         {
@@ -518,7 +504,7 @@ impl<'el> Csharp<'el> {
     }
 }
 
-impl<'el> Custom for Csharp<'el> {
+impl<'el> Custom<'el> for Csharp<'el> {
     type Config = Config<'el>;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
@@ -575,33 +561,30 @@ impl<'el> Custom for Csharp<'el> {
         Ok(())
     }
 
-    fn write_file<'a>(
-        tokens: Tokens<'a, Self>,
+    fn write_file(
+        tokens: Tokens<'el>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
-        let mut toks: Tokens<Self> = Tokens::new();
+        let mut toks: Tokens = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens, config) {
             toks.push(imports);
+            toks.line_spacing();
         }
 
         if let Some(ref namespace) = config.namespace {
-            toks.push({
-                let mut t = Tokens::new();
-
-                t.push(toks!["namespace ", namespace.clone(), " {"]);
-                t.nested_ref(&tokens);
-                t.push("}");
-
-                t
-            });
+            toks.push(toks!["namespace ", namespace.clone(), " {"]);
+            toks.indent();
+            toks.append(tokens);
+            toks.unindent();
+            toks.push("}");
         } else {
-            toks.push_ref(&tokens);
+            toks.append(tokens);
         }
 
-        toks.join_line_spacing().format(out, config, level)
+        toks.format(out, config, level)
     }
 }
 
@@ -639,9 +622,8 @@ pub fn optional<'el, I: Into<Csharp<'el>>>(value: I) -> Csharp<'el> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::csharp::Csharp;
-    use crate::quoted::Quoted;
-    use crate::tokens::Tokens;
+    use crate as genco;
+    use crate::{quote, Csharp, Quoted, Tokens};
 
     #[test]
     fn test_simple() {
@@ -674,7 +656,7 @@ mod tests {
         let ob = using("Foo.Baz", "B");
         let ob_a = ob.with_arguments(vec![a.clone()]);
 
-        let toks = toks![a, b, ob, ob_a].join_spacing();
+        let toks: Tokens<Csharp> = quote!(#a #b #ob #ob_a);
 
         assert_eq!(
             Ok("using Foo.Bar;\n\nA B Foo.Baz.B Foo.Baz.B<A>\n"),

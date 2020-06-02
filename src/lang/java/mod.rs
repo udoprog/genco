@@ -1,32 +1,18 @@
 //! Specialization for Java code generation.
 
-mod argument;
-mod class;
-mod constructor;
-mod enum_;
-mod field;
-mod interface;
-mod method;
 mod modifier;
 mod utils;
 
-pub use self::argument::Argument;
-pub use self::class::Class;
-pub use self::constructor::Constructor;
-pub use self::enum_::Enum;
-pub use self::field::Field;
-pub use self::interface::Interface;
-pub use self::method::Method;
 pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
 
-use super::cons::Cons;
-use super::custom::Custom;
-use super::formatter::Formatter;
-use super::into_tokens::IntoTokens;
-use super::tokens::Tokens;
+use crate as genco;
+use crate::{quote, Cons, Custom, Formatter};
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::{self, Write};
+
+/// Tokens container specialized for Java.
+pub type Tokens<'el> = crate::Tokens<'el, Java<'el>>;
 
 static JAVA_LANG: &'static str = "java.lang";
 static SEP: &'static str = ".";
@@ -128,9 +114,6 @@ pub enum Java<'el> {
     Optional(Optional<'el>),
 }
 
-into_tokens_impl_from!(Java<'el>, Java<'el>);
-into_tokens_impl_from!(&'el Java<'el>, Java<'el>);
-
 /// Configuration for Java formatting.
 #[derive(Debug)]
 pub struct Config<'el> {
@@ -211,7 +194,7 @@ impl<'el> Java<'el> {
         }
     }
 
-    fn type_imports<'a>(java: &'a Java<'a>, modules: &mut BTreeSet<(&'a str, &'a str)>) {
+    fn type_imports(java: &Java<'el>, modules: &mut BTreeSet<(Cons<'el>, Cons<'el>)>) {
         use self::Java::*;
 
         match *java {
@@ -220,13 +203,13 @@ impl<'el> Java<'el> {
                     Self::type_imports(argument, modules);
                 }
 
-                modules.insert((class.package.as_ref(), class.name.as_ref()));
+                modules.insert((class.package.clone(), class.name.clone()));
             }
             _ => {}
         };
     }
 
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>, config: &mut Config) -> Option<Tokens<'a, Self>> {
+    fn imports(tokens: &Tokens<'el>, config: &mut Config) -> Option<Tokens<'el>> {
         let mut modules = BTreeSet::new();
 
         let file_package = config.package.as_ref().map(|p| p.as_ref());
@@ -242,19 +225,19 @@ impl<'el> Java<'el> {
         let mut out = Tokens::new();
 
         for (package, name) in modules {
-            if config.imported.contains_key(name) {
+            if config.imported.contains_key(&*name) {
                 continue;
             }
 
-            if package == JAVA_LANG {
+            if &*package == JAVA_LANG {
                 continue;
             }
 
-            if Some(package) == file_package {
+            if Some(&*package) == file_package.as_deref() {
                 continue;
             }
 
-            out.push(toks!("import ", package, SEP, name, ";"));
+            out.push(quote!(import #(package)#(SEP)#(name);));
             config
                 .imported
                 .insert(name.to_string(), package.to_string());
@@ -426,7 +409,7 @@ impl<'el> Java<'el> {
     }
 }
 
-impl<'el> Custom for Java<'el> {
+impl<'el> Custom<'el> for Java<'el> {
     type Config = Config<'el>;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
@@ -516,24 +499,26 @@ impl<'el> Custom for Java<'el> {
         Ok(())
     }
 
-    fn write_file<'a>(
-        tokens: Tokens<'a, Self>,
+    fn write_file(
+        tokens: Tokens<'el>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
-        let mut toks: Tokens<Self> = Tokens::new();
+        let mut toks: Tokens = Tokens::new();
 
         if let Some(ref package) = config.package {
             toks.push(toks!["package ", package.clone(), ";"]);
+            toks.line_spacing();
         }
 
         if let Some(imports) = Self::imports(&tokens, config) {
             toks.push(imports);
+            toks.line_spacing();
         }
 
-        toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, config, level)
+        toks.extend(tokens);
+        toks.format(out, config, level)
     }
 }
 
@@ -563,9 +548,8 @@ pub fn optional<'el, I: Into<Java<'el>>, F: Into<Java<'el>>>(value: I, field: F)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::java::Java;
-    use crate::quoted::Quoted;
-    use crate::tokens::Tokens;
+    use crate as genco;
+    use crate::{quote, Java, Quoted, Tokens};
 
     #[test]
     fn test_primitive() {
@@ -595,7 +579,7 @@ mod tests {
         let ob = imported("java.util", "B");
         let ob_a = ob.with_arguments(vec![a.clone()]);
 
-        let toks = toks!(integer, a, b, ob, ob_a).join_spacing();
+        let toks = quote!(#integer #a #b #ob #ob_a);
 
         assert_eq!(
             Ok("import java.io.A;\nimport java.io.B;\n\nInteger A B java.util.B java.util.B<A>\n",),

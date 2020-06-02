@@ -1,9 +1,12 @@
 //! Specialization for Rust code generation.
 
-use crate::{Cons, Custom, Formatter, IntoTokens, Tokens};
+use crate::{Cons, Custom, Formatter};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 use std::rc::Rc;
+
+/// Tokens container specialization for Rust.
+pub type Tokens<'el> = crate::Tokens<'el, Rust<'el>>;
 
 static SEP: &'static str = "::";
 
@@ -165,20 +168,14 @@ pub struct Rust<'el> {
     qualified: bool,
 }
 
-into_tokens_impl_from!(Rust<'el>, Rust<'el>);
-into_tokens_impl_from!(&'el Rust<'el>, Rust<'el>);
-
 impl<'el> Rust<'el> {
-    fn walk_custom<'a, 'b: 'a>(
-        custom: &'a Rust<'b>,
-        modules: &mut BTreeSet<(Cons<'a>, Option<&'a Cons<'b>>)>,
-    ) {
+    fn walk_custom(custom: &Rust<'el>, modules: &mut BTreeSet<(Cons<'el>, Option<Cons<'el>>)>) {
         if let Some(module) = custom.module.as_ref() {
             if custom.qualified || custom.alias.is_some() {
                 let module = Cons::from(format!("{}::{}", module, custom.name.name.as_ref()));
-                modules.insert((module, custom.alias.as_ref()));
+                modules.insert((module, custom.alias.clone()));
             } else {
-                modules.insert((Cons::from(module.as_ref()), custom.alias.as_ref()));
+                modules.insert((module.clone(), custom.alias.clone()));
             }
         }
 
@@ -187,7 +184,7 @@ impl<'el> Rust<'el> {
         }
     }
 
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
+    fn imports(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -212,7 +209,7 @@ impl<'el> Rust<'el> {
 
             if let Some(alias) = alias {
                 s.append(" as ");
-                s.append(alias.as_ref());
+                s.append(alias);
             }
 
             s.append(";");
@@ -258,7 +255,7 @@ impl<'el> Rust<'el> {
     }
 }
 
-impl<'el> Custom for Rust<'el> {
+impl<'el> Custom<'el> for Rust<'el> {
     type Config = Config;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {
@@ -294,20 +291,21 @@ impl<'el> Custom for Rust<'el> {
         Ok(())
     }
 
-    fn write_file<'a>(
-        tokens: Tokens<'a, Self>,
+    fn write_file(
+        tokens: Tokens<'el>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
     ) -> fmt::Result {
-        let mut toks: Tokens<Self> = Tokens::new();
+        let mut toks: Tokens = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens) {
             toks.push(imports);
+            toks.line_spacing();
         }
 
-        toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, config, level)
+        toks.extend(tokens);
+        toks.format(out, config, level)
     }
 }
 

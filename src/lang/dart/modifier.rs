@@ -1,6 +1,7 @@
 //! Individual java modifier
 
-use crate::{Custom, Element, IntoTokens, Tokens};
+use crate::dart::Tokens;
+use crate::{Dart, IntoTokens};
 use std::collections::BTreeSet;
 
 /// A Java modifier.
@@ -24,32 +25,32 @@ impl Modifier {
     }
 }
 
-impl<'el, C: Custom> From<Modifier> for Element<'el, C> {
-    fn from(value: Modifier) -> Self {
-        value.name().into()
-    }
-}
+impl<'el> IntoTokens<'el, Dart<'el>> for Vec<Modifier> {
+    fn into_tokens(self, tokens: &mut Tokens<'el>) {
+        let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
 
-impl<'el, C: Custom> IntoTokens<'el, C> for Vec<Modifier> {
-    fn into_tokens(self) -> Tokens<'el, C> {
-        self.into_iter()
-            .collect::<BTreeSet<_>>()
-            .into_iter()
-            .map(Element::from)
-            .collect()
+        if let Some(modifier) = it.next() {
+            tokens.append(modifier.name());
+        }
+
+        for modifier in it {
+            tokens.spacing();
+            tokens.append(modifier.name());
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Modifier;
-    use crate::dart::Dart;
-    use crate::tokens::Tokens;
+    use crate as genco;
+    use crate::dart::Tokens;
+    use crate::quote;
 
     #[test]
     fn test_vec() {
         use self::Modifier::*;
-        let el: Tokens<Dart> = toks![Async, Final].join_spacing();
+        let el: Tokens = quote!(#(vec![Async, Final]));
         let s = el.to_string();
         let out = s.as_ref().map(|s| s.as_str());
         assert_eq!(Ok("async final"), out);

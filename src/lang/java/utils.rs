@@ -4,23 +4,19 @@ use crate::{Cons, Element, IntoTokens, Java, Tokens};
 pub struct BlockComment<'el>(pub Vec<Cons<'el>>);
 
 impl<'el> IntoTokens<'el, Java<'el>> for BlockComment<'el> {
-    fn into_tokens(self) -> Tokens<'el, Java<'el>> {
-        let mut t = Tokens::new();
-
+    fn into_tokens(self, tokens: &mut Tokens<'el, Java<'el>>) {
         if self.0.is_empty() {
-            return t;
+            return;
         }
 
-        t.push("/**");
+        tokens.push("/**");
 
         for line in self.0 {
-            t.push(" * ");
-            t.append(line);
+            tokens.push(" * ");
+            tokens.append(line);
         }
 
-        t.push(" */");
-        t.push(Element::PushSpacing);
-
-        t
+        tokens.push(" */");
+        tokens.push(Element::PushSpacing);
     }
 }

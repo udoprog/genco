@@ -4,7 +4,7 @@ use crate::{Config, Formatter, Tokens};
 use std::fmt;
 
 /// Trait that must be implemented by custom elements.
-pub trait Custom
+pub trait Custom<'el>
 where
     Self: Sized,
 {
@@ -27,7 +27,7 @@ where
     }
 
     /// Write a file according to convention by custom element.
-    fn write_file<'el>(
+    fn write_file(
         tokens: Tokens<'el, Self>,
         out: &mut Formatter,
         config: &mut Self::Config,
@@ -38,6 +38,6 @@ where
 }
 
 /// Dummy implementation for unit.
-impl Custom for () {
+impl<'el> Custom<'el> for () {
     type Config = ();
 }

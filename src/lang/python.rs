@@ -1,6 +1,6 @@
 //! Specialization for Python code generation.
 
-use crate::{Cons, Custom, Formatter, IntoTokens, Tokens};
+use crate::{Cons, Custom, Formatter, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -51,11 +51,8 @@ impl<'el> fmt::Display for Python<'el> {
     }
 }
 
-into_tokens_impl_from!(Python<'el>, Python<'el>);
-into_tokens_impl_from!(&'el Python<'el>, Python<'el>);
-
 impl<'el> Python<'el> {
-    fn imports<'a>(tokens: &'a Tokens<'a, Self>) -> Option<Tokens<'a, Self>> {
+    fn imports(tokens: &Tokens<'el, Self>) -> Option<Tokens<'el, Self>> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -66,7 +63,7 @@ impl<'el> Python<'el> {
             } = *custom;
 
             if let Some(ref module) = *module {
-                modules.insert((module.as_ref(), alias.as_ref().map(AsRef::as_ref)));
+                modules.insert((module.clone(), alias.clone()));
             }
         }
 
@@ -110,7 +107,7 @@ impl<'el> Python<'el> {
     }
 }
 
-impl<'el> Custom for Python<'el> {
+impl<'el> Custom<'el> for Python<'el> {
     type Config = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {
@@ -139,8 +136,8 @@ impl<'el> Custom for Python<'el> {
         Ok(())
     }
 
-    fn write_file<'a>(
-        tokens: Tokens<'a, Self>,
+    fn write_file(
+        tokens: Tokens<'el, Self>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -149,10 +146,11 @@ impl<'el> Custom for Python<'el> {
 
         if let Some(imports) = Self::imports(&tokens) {
             toks.push(imports);
+            toks.line_spacing();
         }
 
-        toks.push_ref(&tokens);
-        toks.join_line_spacing().format(out, config, level)
+        toks.extend(tokens);
+        toks.format(out, config, level)
     }
 }
 
