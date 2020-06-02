@@ -8,7 +8,7 @@
 //! toks.append("foo");
 //! ```
 
-use crate::{Con, Config, Custom, Element, Formatter, IntoTokens, WriteTokens};
+use crate::{Con, Config, Element, FormatTokens, Formatter, Lang, WriteTokens};
 use std::collections::LinkedList;
 use std::fmt;
 use std::iter::FromIterator;
@@ -34,7 +34,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a nested definition.
     pub fn nested<T>(&mut self, tokens: T)
     where
-        T: IntoTokens<'el, C>,
+        T: FormatTokens<'el, C>,
     {
         self.elements.push(Element::Indent);
         tokens.into_tokens(self);
@@ -75,7 +75,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Push a definition, guaranteed to be preceded with one newline.
     pub fn push<T>(&mut self, tokens: T)
     where
-        T: IntoTokens<'el, C>,
+        T: FormatTokens<'el, C>,
     {
         self.elements.push(Element::PushSpacing);
         tokens.into_tokens(self);
@@ -109,7 +109,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is useful when you wish to preserve the structure of nested and joined tokens.
     pub fn push_unless_empty<T>(&mut self, tokens: T)
     where
-        T: IntoTokens<'el, C>,
+        T: FormatTokens<'el, C>,
     {
         if !tokens.is_empty() {
             self.elements.push(Element::PushSpacing);
@@ -128,7 +128,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// Append the given element.
     pub fn append<T>(&mut self, tokens: T)
     where
-        T: IntoTokens<'el, C>,
+        T: FormatTokens<'el, C>,
     {
         tokens.into_tokens(self)
     }
@@ -143,7 +143,7 @@ impl<'el, C: 'el> Tokens<'el, C> {
     /// This is useful when you wish to preserve the structure of nested and joined tokens.
     pub fn append_unless_empty<T>(&mut self, tokens: T)
     where
-        T: IntoTokens<'el, C>,
+        T: FormatTokens<'el, C>,
     {
         if tokens.is_empty() {
             return;
@@ -213,7 +213,7 @@ impl<'el, C> IntoIterator for Tokens<'el, C> {
     }
 }
 
-impl<'el, C: Custom<'el>> Tokens<'el, C> {
+impl<'el, C: Lang<'el>> Tokens<'el, C> {
     /// Format the tokens.
     pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
         for element in &self.elements {
@@ -238,7 +238,7 @@ impl<'el, C: Custom<'el>> Tokens<'el, C> {
     }
 }
 
-impl<'el, E: Config + Default, C: Custom<'el, Config = E>> Tokens<'el, C> {
+impl<'el, E: Config + Default, C: Lang<'el, Config = E>> Tokens<'el, C> {
     /// Format token as file.
     pub fn to_file(self) -> result::Result<String, fmt::Error> {
         self.to_file_with(C::Config::default())
@@ -285,7 +285,7 @@ impl<'el, C: 'el> Iterator for WalkCustom<'el, C> {
                 Borrowed(ref element) => {
                     self.queue.push_back(element);
                 }
-                Custom(ref custom) => return Some(custom.as_ref()),
+                Lang(ref custom) => return Some(custom.as_ref()),
                 Registered(ref custom) => return Some(custom.as_ref()),
                 _ => {}
             }
@@ -297,13 +297,13 @@ impl<'el, C: 'el> Iterator for WalkCustom<'el, C> {
 
 #[cfg(test)]
 mod tests {
-    use super::Tokens;
-    use crate::custom::Custom;
+    use crate::Tokens;
 
+    /// Own little custom language for this test.
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct Lang(u32);
 
-    impl<'el> Custom<'el> for Lang {
+    impl<'el> crate::Lang<'el> for Lang {
         type Config = ();
     }
 

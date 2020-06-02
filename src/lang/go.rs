@@ -1,6 +1,6 @@
 //! Specialization for Go code generation.
 
-use crate::{Cons, Custom, Formatter, Quoted};
+use crate::{Cons, Formatter, Lang, Quoted};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -112,7 +112,7 @@ impl Config {
     }
 }
 
-impl<'el> Custom<'el> for Go<'el> {
+impl<'el> Lang<'el> for Go<'el> {
     type Config = Config;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

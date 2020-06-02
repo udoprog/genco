@@ -5,7 +5,7 @@ mod utils;
 
 pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
-use crate::{Cons, Custom, Formatter};
+use crate::{Cons, Formatter, Lang};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Write};
 
@@ -450,7 +450,7 @@ impl<'el> Csharp<'el> {
         &self,
         inner: &Type<'el>,
         out: &mut Formatter,
-        config: &mut <Self as Custom<'el>>::Config,
+        config: &mut <Self as Lang<'el>>::Config,
         level: usize,
     ) -> fmt::Result {
         {
@@ -504,7 +504,7 @@ impl<'el> Csharp<'el> {
     }
 }
 
-impl<'el> Custom<'el> for Csharp<'el> {
+impl<'el> Lang<'el> for Csharp<'el> {
     type Config = Config<'el>;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

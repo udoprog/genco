@@ -16,5 +16,8 @@ fn test_option() {
         }
     };
 
-    assert_eq!("fn test() -> u32 {\n    println!(\"{}\", \"one\")\n\n    42\n}\n", tokens.to_file().unwrap());
+    assert_eq!(
+        "fn test() -> u32 {\n    println!(\"{}\", \"one\")\n\n    42\n}\n",
+        tokens.to_file().unwrap()
+    );
 }

@@ -1,7 +1,7 @@
 //! Individual java modifier
 
 use crate::java::Tokens;
-use crate::{IntoTokens, Java};
+use crate::{FormatTokens, Java};
 use std::collections::BTreeSet;
 
 /// A Java modifier.
@@ -43,13 +43,13 @@ impl Modifier {
     }
 }
 
-impl<'el> IntoTokens<'el, Java<'el>> for Modifier {
+impl<'el> FormatTokens<'el, Java<'el>> for Modifier {
     fn into_tokens(self, tokens: &mut Tokens<'el>) {
         tokens.append(self.name());
     }
 }
 
-impl<'el> IntoTokens<'el, Java<'el>> for Vec<Modifier> {
+impl<'el> FormatTokens<'el, Java<'el>> for Vec<Modifier> {
     fn into_tokens(self, tokens: &mut Tokens<'el>) {
         let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
 

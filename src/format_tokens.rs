@@ -1,9 +1,9 @@
 //! Converter traits for things that can be converted into tokens.
 
-use super::{Cons, Custom, Element, ErasedElement, Tokens};
+use super::{Cons, Element, ErasedElement, Lang, Tokens};
 
 /// Helper trait to convert something into tokens.
-pub trait IntoTokens<'el, C> {
+pub trait FormatTokens<'el, C> {
     /// Convert the type into tokens.
     fn into_tokens(self, tokens: &mut Tokens<'el, C>);
 
@@ -13,7 +13,7 @@ pub trait IntoTokens<'el, C> {
     }
 }
 
-impl<'el, C> IntoTokens<'el, C> for Tokens<'el, C> {
+impl<'el, C> FormatTokens<'el, C> for Tokens<'el, C> {
     fn into_tokens(self, tokens: &mut Self) {
         tokens.elements.extend(self.elements);
     }
@@ -24,7 +24,7 @@ impl<'el, C> IntoTokens<'el, C> for Tokens<'el, C> {
 }
 
 /// Convert collection to tokens.
-impl<'el, C> IntoTokens<'el, C> for Vec<Tokens<'el, C>> {
+impl<'el, C> FormatTokens<'el, C> for Vec<Tokens<'el, C>> {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         for t in self {
             tokens.elements.extend(t.elements);
@@ -37,23 +37,23 @@ impl<'el, C> IntoTokens<'el, C> for Vec<Tokens<'el, C>> {
 }
 
 /// Convert element to tokens.
-impl<'el, C> IntoTokens<'el, C> for Element<'el, C> {
+impl<'el, C> FormatTokens<'el, C> for Element<'el, C> {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self);
     }
 }
 
 /// Convert an erased element to tokens.
-impl<'el, C> IntoTokens<'el, C> for ErasedElement<'el> {
+impl<'el, C> FormatTokens<'el, C> for ErasedElement<'el> {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert custom elements.
-impl<'el, C> IntoTokens<'el, C> for C
+impl<'el, C> FormatTokens<'el, C> for C
 where
-    C: Custom<'el>,
+    C: Lang<'el>,
 {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self.into())
@@ -61,9 +61,9 @@ where
 }
 
 /// Convert custom elements.
-impl<'el, C> IntoTokens<'el, C> for &'el C
+impl<'el, C> FormatTokens<'el, C> for &'el C
 where
-    C: Custom<'el>,
+    C: Lang<'el>,
 {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self.into())
@@ -71,37 +71,37 @@ where
 }
 
 /// Convert borrowed strings.
-impl<'el, C> IntoTokens<'el, C> for &'el str {
+impl<'el, C> FormatTokens<'el, C> for &'el str {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert borrowed strings.
-impl<'el, C> IntoTokens<'el, C> for &'el String {
+impl<'el, C> FormatTokens<'el, C> for &'el String {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self.as_str().into());
     }
 }
 
 /// Convert strings.
-impl<'el, C> IntoTokens<'el, C> for String {
+impl<'el, C> FormatTokens<'el, C> for String {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert stringy things.
-impl<'el, C> IntoTokens<'el, C> for Cons<'el> {
+impl<'el, C> FormatTokens<'el, C> for Cons<'el> {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert stringy things.
-impl<'el, C, T> IntoTokens<'el, C> for Option<T>
+impl<'el, C, T> FormatTokens<'el, C> for Option<T>
 where
-    T: IntoTokens<'el, C>,
+    T: FormatTokens<'el, C>,
 {
     fn into_tokens(self, tokens: &mut Tokens<'el, C>) {
         if let Some(inner) = self {

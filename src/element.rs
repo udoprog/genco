@@ -1,7 +1,7 @@
 //! A single element
 
 use super::con_::Con;
-use crate::{Cons, Custom, ErasedElement, Formatter};
+use crate::{Cons, ErasedElement, Formatter, Lang};
 use std::fmt;
 
 use std::rc::Rc;
@@ -18,7 +18,7 @@ pub enum Element<'el, C> {
     /// A borrowed quoted string.
     Quoted(Cons<'el>),
     /// Language-specific items.
-    Custom(Con<'el, C>),
+    Lang(Con<'el, C>),
     /// A custom element that is not rendered.
     Registered(Con<'el, C>),
     /// Push an empty line.
@@ -55,7 +55,7 @@ impl<'el, C: 'el> From<ErasedElement<'el>> for Element<'el, C> {
     }
 }
 
-impl<'el, C: Custom<'el>> Element<'el, C> {
+impl<'el, C: Lang<'el>> Element<'el, C> {
     /// Format the given element.
     pub fn format(&self, out: &mut Formatter, config: &mut C::Config, level: usize) -> fmt::Result {
         use self::Element::*;
@@ -75,7 +75,7 @@ impl<'el, C: Custom<'el>> Element<'el, C> {
             Quoted(ref literal) => {
                 C::quote_string(out, literal.as_ref())?;
             }
-            Custom(ref custom) => {
+            Lang(ref custom) => {
                 custom.as_ref().format(out, config, level)?;
             }
             // whitespace below
@@ -106,15 +106,15 @@ impl<'el, C: Custom<'el>> Element<'el, C> {
     }
 }
 
-impl<'el, C: Custom<'el>> From<C> for Element<'el, C> {
+impl<'el, C: Lang<'el>> From<C> for Element<'el, C> {
     fn from(value: C) -> Self {
-        Element::Custom(Con::Owned(value))
+        Element::Lang(Con::Owned(value))
     }
 }
 
-impl<'el, C: Custom<'el>> From<&'el C> for Element<'el, C> {
+impl<'el, C: Lang<'el>> From<&'el C> for Element<'el, C> {
     fn from(value: &'el C) -> Self {
-        Element::Custom(Con::Borrowed(value))
+        Element::Lang(Con::Borrowed(value))
     }
 }
 

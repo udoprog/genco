@@ -1,6 +1,6 @@
 //! Specialization for JavaScript code generation.
 
-use crate::{Cons, Custom, Formatter, Quoted, Tokens};
+use crate::{Cons, Formatter, Lang, Quoted, Tokens};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
@@ -107,7 +107,7 @@ impl<'el> JavaScript<'el> {
     }
 }
 
-impl<'el> Custom<'el> for JavaScript<'el> {
+impl<'el> Lang<'el> for JavaScript<'el> {
     type Config = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {

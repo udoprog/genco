@@ -1,6 +1,6 @@
 //! Specialization for Python code generation.
 
-use crate::{Cons, Custom, Formatter, Tokens};
+use crate::{Cons, Formatter, Lang, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -107,7 +107,7 @@ impl<'el> Python<'el> {
     }
 }
 
-impl<'el> Custom<'el> for Python<'el> {
+impl<'el> Lang<'el> for Python<'el> {
     type Config = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {

@@ -1,6 +1,6 @@
 //! Specialization for Swift code generation.
 
-use crate::{Cons, Custom, Formatter, Tokens};
+use crate::{Cons, Formatter, Lang, Tokens};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -83,7 +83,7 @@ impl<'el> Swift<'el> {
     }
 }
 
-impl<'el> Custom<'el> for Swift<'el> {
+impl<'el> Lang<'el> for Swift<'el> {
     type Config = ();
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

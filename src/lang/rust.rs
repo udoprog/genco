@@ -1,6 +1,6 @@
 //! Specialization for Rust code generation.
 
-use crate::{Cons, Custom, Formatter};
+use crate::{Cons, Formatter, Lang};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 use std::rc::Rc;
@@ -255,7 +255,7 @@ impl<'el> Rust<'el> {
     }
 }
 
-impl<'el> Custom<'el> for Rust<'el> {
+impl<'el> Lang<'el> for Rust<'el> {
     type Config = Config;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

@@ -6,7 +6,7 @@ mod utils;
 pub use self::modifier::Modifier;
 pub use self::utils::DocComment;
 
-use crate::{Cons, Custom, Formatter};
+use crate::{Cons, Formatter, Lang};
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Dart.
@@ -188,7 +188,7 @@ impl<'el> Dart<'el> {
     }
 }
 
-impl<'el> Custom<'el> for Dart<'el> {
+impl<'el> Lang<'el> for Dart<'el> {
     type Config = Config;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

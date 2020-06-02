@@ -7,7 +7,7 @@ pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
 
 use crate as genco;
-use crate::{quote, Cons, Custom, Formatter};
+use crate::{quote, Cons, Formatter, Lang};
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::{self, Write};
 
@@ -409,7 +409,7 @@ impl<'el> Java<'el> {
     }
 }
 
-impl<'el> Custom<'el> for Java<'el> {
+impl<'el> Lang<'el> for Java<'el> {
     type Config = Config<'el>;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

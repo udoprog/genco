@@ -1,9 +1,9 @@
-use crate::{Cons, Element, IntoTokens, Java, Tokens};
+use crate::{Cons, Element, FormatTokens, Java, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 pub struct BlockComment<'el>(pub Vec<Cons<'el>>);
 
-impl<'el> IntoTokens<'el, Java<'el>> for BlockComment<'el> {
+impl<'el> FormatTokens<'el, Java<'el>> for BlockComment<'el> {
     fn into_tokens(self, tokens: &mut Tokens<'el, Java<'el>>) {
         if self.0.is_empty() {
             return;
