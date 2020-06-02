@@ -188,7 +188,7 @@ impl<'el> Dart<'el> {
     }
 }
 
-impl<'el> Lang<'el> for Dart<'el> {
+impl<'el> Lang for Dart<'el> {
     type Config = Config;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

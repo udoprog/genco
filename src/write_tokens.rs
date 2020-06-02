@@ -6,14 +6,14 @@ use std::fmt;
 /// Helper trait to write tokens immediately to containers.
 pub trait WriteTokens {
     /// Write the given tokens to the container.
-    fn write_tokens<'el, L: Lang<'el>>(
+    fn write_tokens<'el, L: Lang>(
         &mut self,
         tokens: Tokens<'el, L>,
         config: &mut L::Config,
     ) -> fmt::Result;
 
     /// Write the given tokens to the container as a file.
-    fn write_file<'el, L: Lang<'el>>(
+    fn write_file<'el, L: Lang>(
         &mut self,
         tokens: Tokens<'el, L>,
         config: &mut L::Config,
@@ -22,7 +22,7 @@ pub trait WriteTokens {
 
 impl<W: fmt::Write> WriteTokens for W {
     /// Write token with the given configuration.
-    fn write_tokens<'el, L: Lang<'el>>(
+    fn write_tokens<'el, L: Lang>(
         &mut self,
         tokens: Tokens<'el, L>,
         config: &mut L::Config,
@@ -33,7 +33,7 @@ impl<W: fmt::Write> WriteTokens for W {
     }
 
     /// Write a a file with the given configuration.
-    fn write_file<'el, L: Lang<'el>>(
+    fn write_file<'el, L: Lang>(
         &mut self,
         tokens: Tokens<'el, L>,
         config: &mut L::Config,

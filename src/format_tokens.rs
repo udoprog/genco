@@ -3,7 +3,10 @@
 use super::{Cons, Element, ErasedElement, Lang, Tokens};
 
 /// Helper trait to convert something into tokens.
-pub trait FormatTokens<'el, L> {
+pub trait FormatTokens<'el, L>
+where
+    L: Lang,
+{
     /// Convert the type into tokens.
     fn into_tokens(self, tokens: &mut Tokens<'el, L>);
 
@@ -13,7 +16,10 @@ pub trait FormatTokens<'el, L> {
     }
 }
 
-impl<'el, L> FormatTokens<'el, L> for Tokens<'el, L> {
+impl<'el, L> FormatTokens<'el, L> for Tokens<'el, L>
+where
+    L: Lang,
+{
     fn into_tokens(self, tokens: &mut Self) {
         tokens.elements.extend(self.elements);
     }
@@ -24,7 +30,10 @@ impl<'el, L> FormatTokens<'el, L> for Tokens<'el, L> {
 }
 
 /// Convert collection to tokens.
-impl<'el, L> FormatTokens<'el, L> for Vec<Tokens<'el, L>> {
+impl<'el, L> FormatTokens<'el, L> for Vec<Tokens<'el, L>>
+where
+    L: Lang,
+{
     fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         for t in self {
             tokens.elements.extend(t.elements);
@@ -37,62 +46,60 @@ impl<'el, L> FormatTokens<'el, L> for Vec<Tokens<'el, L>> {
 }
 
 /// Convert element to tokens.
-impl<'el, L> FormatTokens<'el, L> for Element<'el, L> {
+impl<'el, L> FormatTokens<'el, L> for Element<'el, L>
+where
+    L: Lang,
+{
     fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self);
     }
 }
 
 /// Convert an erased element to tokens.
-impl<'el, L> FormatTokens<'el, L> for ErasedElement<'el> {
-    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
-        tokens.elements.push(self.into());
-    }
-}
-
-/// Convert custom elements.
-impl<'el, L> FormatTokens<'el, L> for L
+impl<'el, L> FormatTokens<'el, L> for ErasedElement<'el>
 where
-    L: Lang<'el>,
+    L: Lang,
 {
-    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
-        tokens.elements.push(self.into())
-    }
-}
-
-/// Convert custom elements.
-impl<'el, L> FormatTokens<'el, L> for &'el L
-where
-    L: Lang<'el>,
-{
-    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
-        tokens.elements.push(self.into())
-    }
-}
-
-/// Convert borrowed strings.
-impl<'el, L> FormatTokens<'el, L> for &'el str {
     fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert borrowed strings.
-impl<'el, L> FormatTokens<'el, L> for &'el String {
+impl<'el, L> FormatTokens<'el, L> for &'el str
+where
+    L: Lang,
+{
+    fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
+        tokens.elements.push(self.into());
+    }
+}
+
+/// Convert borrowed strings.
+impl<'el, L> FormatTokens<'el, L> for &'el String
+where
+    L: Lang,
+{
     fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.as_str().into());
     }
 }
 
 /// Convert strings.
-impl<'el, L> FormatTokens<'el, L> for String {
+impl<'el, L> FormatTokens<'el, L> for String
+where
+    L: Lang,
+{
     fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert stringy things.
-impl<'el, L> FormatTokens<'el, L> for Cons<'el> {
+impl<'el, L> FormatTokens<'el, L> for Cons<'el>
+where
+    L: Lang,
+{
     fn into_tokens(self, tokens: &mut Tokens<'el, L>) {
         tokens.elements.push(self.into());
     }
@@ -101,6 +108,7 @@ impl<'el, L> FormatTokens<'el, L> for Cons<'el> {
 /// Convert stringy things.
 impl<'el, L, T> FormatTokens<'el, L> for Option<T>
 where
+    L: Lang,
     T: FormatTokens<'el, L>,
 {
     fn into_tokens(self, tokens: &mut Tokens<'el, L>) {

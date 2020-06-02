@@ -409,7 +409,7 @@ impl<'el> Java<'el> {
     }
 }
 
-impl<'el> Lang<'el> for Java<'el> {
+impl<'el> Lang for Java<'el> {
     type Config = Config<'el>;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

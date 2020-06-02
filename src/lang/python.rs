@@ -107,7 +107,7 @@ impl<'el> Python<'el> {
     }
 }
 
-impl<'el> Lang<'el> for Python<'el> {
+impl<'el> Lang for Python<'el> {
     type Config = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {

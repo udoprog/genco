@@ -145,7 +145,6 @@ pub use genco_derive::quote;
 
 #[macro_use]
 mod macros;
-mod con_;
 mod config;
 mod cons;
 mod element;
@@ -157,7 +156,6 @@ mod quoted;
 mod tokens;
 mod write_tokens;
 
-pub(crate) use self::con_::Con;
 pub use self::config::Config;
 pub use self::cons::Cons;
 pub use self::element::Element;
@@ -171,8 +169,7 @@ pub use self::write_tokens::WriteTokens;
 
 #[cfg(test)]
 mod tests {
-    use crate::rust::Rust;
-    use crate::tokens::Tokens;
+    use crate::{Rust, Tokens};
 
     #[test]
     fn test_nested() {

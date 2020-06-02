@@ -450,7 +450,7 @@ impl<'el> Csharp<'el> {
         &self,
         inner: &Type<'el>,
         out: &mut Formatter,
-        config: &mut <Self as Lang<'el>>::Config,
+        config: &mut <Self as Lang>::Config,
         level: usize,
     ) -> fmt::Result {
         {
@@ -504,7 +504,7 @@ impl<'el> Csharp<'el> {
     }
 }
 
-impl<'el> Lang<'el> for Csharp<'el> {
+impl<'el> Lang for Csharp<'el> {
     type Config = Config<'el>;
 
     fn format(&self, out: &mut Formatter, config: &mut Self::Config, level: usize) -> fmt::Result {

@@ -107,7 +107,7 @@ impl<'el> JavaScript<'el> {
     }
 }
 
-impl<'el> Lang<'el> for JavaScript<'el> {
+impl<'el> Lang for JavaScript<'el> {
     type Config = ();
 
     fn format(&self, out: &mut Formatter, _extra: &mut Self::Config, _level: usize) -> fmt::Result {
