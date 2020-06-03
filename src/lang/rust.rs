@@ -134,31 +134,13 @@ impl<'el> From<Cons<'static>> for Name {
 
 /// Language configuration for Rust.
 #[derive(Debug)]
-pub struct Config {
-    indentation: usize,
-}
+pub struct Config {}
 
 impl Default for Config {
     fn default() -> Self {
-        Config { indentation: 4 }
+        Config {}
     }
 }
-
-impl Config {
-    /// Configure the indentation for Rust.
-    pub fn with_indentation(self, indentation: usize) -> Self {
-        Self { indentation }
-    }
-}
-
-impl crate::Config for Config {
-    fn indentation(&mut self) -> usize {
-        self.indentation
-    }
-}
-
-/// Language specialization for Rust.
-pub struct Rust(());
 
 /// An imported name in Rust.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -284,6 +266,9 @@ impl Rust {
     }
 }
 
+/// Language specialization for Rust.
+pub struct Rust(());
+
 impl Lang for Rust {
     type Config = Config;
     type Import = Imported;
@@ -375,7 +360,7 @@ mod tests {
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 
@@ -387,7 +372,7 @@ mod tests {
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 
@@ -399,7 +384,7 @@ mod tests {
 
         assert_eq!(
             Ok("use std::fmt;\n\nfmt::Debug<T, U>\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 }

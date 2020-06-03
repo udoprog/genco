@@ -239,7 +239,7 @@ mod tests {
 
         assert_eq!(
             Ok("import Foo\n\nDebug\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 
@@ -251,7 +251,7 @@ mod tests {
 
         assert_eq!(
             Ok("import Foo\n\n[Debug]\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 
@@ -263,7 +263,7 @@ mod tests {
 
         assert_eq!(
             Ok("import Foo\n\n[String: Debug]\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 }

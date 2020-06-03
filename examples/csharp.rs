@@ -54,6 +54,6 @@ fn main() -> Result<()> {
          }
     };
 
-    println!("{}", test.to_file()?);
+    println!("{}", test.to_file_string()?);
     Ok(())
 }

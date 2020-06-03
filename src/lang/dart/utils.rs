@@ -34,7 +34,7 @@ mod tests {
 
         assert_eq!(
             Ok(expected.join("\n").as_str()),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 }

@@ -152,8 +152,6 @@ pub struct Config {
     imported_names: HashMap<String, String>,
 }
 
-impl crate::Config for Config {}
-
 impl Config {
     /// Set the namespace name to build.
     pub fn namespace<P>(&mut self, namespace: P)
@@ -669,8 +667,8 @@ mod tests {
         let toks: Tokens<Csharp> = quote!(#a #b #ob #ob_a);
 
         assert_eq!(
-            Ok("using Foo.Bar;\n\nA B Foo.Baz.B Foo.Baz.B<A>\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            vec!["using Foo.Bar;", "", "A B Foo.Baz.B Foo.Baz.B<A>", ""],
+            toks.to_file_vec().unwrap()
         );
     }
 }

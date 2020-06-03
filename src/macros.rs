@@ -222,13 +222,15 @@ mod tests {
         });
         push!(t, "var foo = bar();");
 
-        let mut out = Vec::new();
-        out.push("function bar(a, b) {");
-        out.push("  var v = a + b;");
-        out.push("  return v;");
-        out.push("}");
-        out.push("var foo = bar();");
+        let mut expected = vec![
+            "function bar(a, b) {",
+            "    var v = a + b;",
+            "    return v;",
+            "}",
+            "var foo = bar();",
+            "",
+        ];
 
-        assert_eq!(out.join("\n").as_str(), t.to_string().unwrap().as_str());
+        assert_eq!(expected, t.to_file_vec().unwrap());
     }
 }

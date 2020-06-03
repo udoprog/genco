@@ -145,27 +145,25 @@ pub use genco_derive::quote;
 
 #[macro_use]
 mod macros;
-mod config;
 mod cons;
 mod element;
 mod erased_element;
 mod format_tokens;
 mod formatter;
 mod lang;
+/// Prelude to import.
+pub mod prelude;
 mod quoted;
 mod tokens;
-mod write_tokens;
 
-pub use self::config::Config;
 pub use self::cons::Cons;
 pub use self::element::Element;
 pub use self::erased_element::ErasedElement;
 pub use self::format_tokens::FormatTokens;
-pub use self::formatter::{Formatter, IoFmt};
+pub use self::formatter::{Formatter, FormatterConfig, VecWriter};
 pub use self::lang::*;
 pub use self::quoted::Quoted;
 pub use self::tokens::Tokens;
-pub use self::write_tokens::WriteTokens;
 
 #[cfg(test)]
 mod tests {

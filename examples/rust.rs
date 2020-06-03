@@ -15,12 +15,11 @@ fn main() {
 
     let tokens: Tokens<Rust> = quote! {
         @write_bytes_ext
-
         let mut wtr = vec![];
         wtr.write_u16::<#little_endian>(517).unwrap();
         wtr.write_u16::<#big_endian>(768).unwrap();
         assert_eq!(wtr, vec![5, 2, 3, 0]);
     };
 
-    println!("{}", tokens.to_file().unwrap());
+    println!("{}", tokens.to_file_string().unwrap());
 }

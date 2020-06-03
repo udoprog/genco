@@ -108,12 +108,6 @@ pub struct Config {
     package: String,
 }
 
-impl crate::Config for Config {
-    fn indentation(&mut self) -> usize {
-        4
-    }
-}
-
 impl Config {
     /// Build the config structure from a package.
     pub fn from_package<S: AsRef<str>>(package: S) -> Self {
@@ -257,15 +251,18 @@ pub fn interface<'a>() -> Imported {
 
 #[cfg(test)]
 mod tests {
-    use super::{array, imported, interface, map, Config, Tokens};
+    use super::{array, imported, interface, map, Config, Go, Tokens};
     use crate as genco;
-    use crate::{quote, Quoted};
+    use crate::{quote, FormatterConfig, Quoted};
 
     #[test]
     fn test_string() {
         let mut toks = Tokens::new();
         toks.append("hello \n world".quoted());
-        let res = toks.to_string_with(Config::from_package("foo"));
+        let res = toks.to_string_with(
+            Config::from_package("foo"),
+            FormatterConfig::from_lang::<Go>(),
+        );
 
         assert_eq!(Ok("\"hello \\n world\""), res.as_ref().map(|s| s.as_str()));
     }
@@ -277,10 +274,12 @@ mod tests {
         toks.push(quote!(#dbg));
 
         assert_eq!(
-            Ok("package foo\n\nimport \"foo\"\n\nfoo.Debug\n"),
-            toks.to_file_with(Config::from_package("foo"))
-                .as_ref()
-                .map(|s| s.as_str())
+            vec!["package foo", "", "import \"foo\"", "", "foo.Debug", ""],
+            toks.to_file_vec_with(
+                Config::from_package("foo"),
+                FormatterConfig::from_lang::<Go>()
+            )
+            .unwrap()
         );
     }
 
@@ -292,10 +291,19 @@ mod tests {
         toks.push(quote!(#keyed));
 
         assert_eq!(
-            Ok("package foo\n\nimport \"foo\"\n\nmap[foo.Debug]interface{}\n"),
-            toks.to_file_with(Config::from_package("foo"))
-                .as_ref()
-                .map(|s| s.as_str())
+            vec![
+                "package foo",
+                "",
+                "import \"foo\"",
+                "",
+                "map[foo.Debug]interface{}",
+                ""
+            ],
+            toks.to_file_vec_with(
+                Config::from_package("foo"),
+                FormatterConfig::from_lang::<Go>()
+            )
+            .unwrap()
         );
     }
 
@@ -308,9 +316,12 @@ mod tests {
 
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\n[]foo.Debug\n"),
-            toks.to_file_with(Config::from_package("foo"))
-                .as_ref()
-                .map(|s| s.as_str())
+            toks.to_file_string_with(
+                Config::from_package("foo"),
+                FormatterConfig::from_lang::<Go>()
+            )
+            .as_ref()
+            .map(|s| s.as_str())
         );
     }
 }

@@ -216,10 +216,8 @@ mod tests {
         file.push(toks!("foo(", "Hello".quoted(), ");"));
 
         assert_eq!(
-            Ok(String::from(
-                "function foo(v) {\n  return v + \", World\";\n}\nfoo(\"Hello\");",
-            )),
-            file.to_string()
+            "function foo(v) {\n    return v + \", World\";\n}\nfoo(\"Hello\");",
+            file.to_string().unwrap()
         );
     }
 
@@ -238,7 +236,7 @@ mod tests {
 
         assert_eq!(
             Ok("import {vec} from \"collections.js\";\nimport * as list from \"collections.js\";\n\nlist.vec\nvec\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 
@@ -248,6 +246,9 @@ mod tests {
         let mut toks = Tokens::new();
         toks.push(toks!(&dbg));
 
-        assert_eq!(Ok("vec\n"), toks.to_file().as_ref().map(|s| s.as_str()));
+        assert_eq!(
+            Ok("vec\n"),
+            toks.to_file_string().as_ref().map(|s| s.as_str())
+        );
     }
 }

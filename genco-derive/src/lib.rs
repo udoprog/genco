@@ -36,7 +36,7 @@ use std::collections::VecDeque;
 ///     assert_eq!(wtr, vec![5, 2, 3, 0]);
 /// };
 ///
-/// println!("{}", tokens.to_file().unwrap());
+/// println!("{}", tokens.to_file_string().unwrap());
 /// ```
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

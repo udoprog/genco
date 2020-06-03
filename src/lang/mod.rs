@@ -16,7 +16,7 @@ pub use self::python::Python;
 pub use self::rust::Rust;
 pub use self::swift::Swift;
 
-use crate::{Config, Formatter, Tokens};
+use crate::{Formatter, Tokens};
 use std::fmt;
 use std::rc::Rc;
 
@@ -26,9 +26,14 @@ where
     Self: Sized,
 {
     /// Configuration associated with building a formatting element.
-    type Config: Config;
+    type Config;
     /// The type used when resolving imports.
     type Import;
+
+    /// The default indentation for the current language.
+    fn default_indentation() -> usize {
+        4
+    }
 
     /// Performing quoting according to convention set by custom element.
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
@@ -67,7 +72,9 @@ where
     /// Coerce into an imported type.
     ///
     /// This is used for import resolution for custom language items.
-    fn as_import(&self) -> Option<&L::Import>;
+    fn as_import(&self) -> Option<&L::Import> {
+        None
+    }
 }
 
 /// A box containing a lang item.

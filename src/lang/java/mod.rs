@@ -124,15 +124,6 @@ pub struct Config {
 
     /// Types which has been imported into the local namespace.
     imported: HashMap<String, String>,
-
-    /// Indentation.
-    indentation: usize,
-}
-
-impl crate::Config for Config {
-    fn indentation(&mut self) -> usize {
-        self.indentation
-    }
 }
 
 impl Config {
@@ -143,14 +134,6 @@ impl Config {
             ..self
         }
     }
-
-    /// Configure indentation level.
-    pub fn with_indentation(self, indentation: usize) -> Self {
-        Self {
-            indentation,
-            ..self
-        }
-    }
 }
 
 impl Default for Config {
@@ -158,7 +141,6 @@ impl Default for Config {
         Self {
             package: Default::default(),
             imported: Default::default(),
-            indentation: 4,
         }
     }
 }
@@ -407,7 +389,6 @@ impl LangItem<Java> for Imported {
     }
 
     fn as_import(&self) -> Option<&Self> {
-        println!("called as_import");
         Some(self)
     }
 }
@@ -422,8 +403,6 @@ impl Java {
         let file_package = config.package.as_ref().map(|p| p.as_ref());
 
         for custom in tokens.walk_custom() {
-            println!("custom: {:?}", custom.as_import());
-
             if let Some(import) = custom.as_import() {
                 import.type_imports(&mut modules);
             }
@@ -570,7 +549,7 @@ mod tests {
 
         assert_eq!(
             Ok("import java.io.A;\nimport java.io.B;\n\nInteger A B java.util.B java.util.B<A>\n",),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 }

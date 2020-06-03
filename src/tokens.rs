@@ -8,9 +8,13 @@
 //! toks.append("foo");
 //! ```
 
-use crate::{Config, Element, FormatTokens, Formatter, Lang, LangBox, LangItem, WriteTokens};
+use crate::formatter::{FmtWriter, IoWriter};
+use crate::{
+    Element, FormatTokens, Formatter, FormatterConfig, Lang, LangBox, LangItem, VecWriter,
+};
 use std::collections::LinkedList;
 use std::fmt;
+use std::io;
 use std::iter::FromIterator;
 use std::result;
 use std::vec;
@@ -241,30 +245,147 @@ impl<'el, L: Lang> Tokens<'el, L> {
         Ok(())
     }
 
-    /// Format token as file with the given configuration.
-    pub fn to_file_with(self, mut config: L::Config) -> result::Result<String, fmt::Error> {
-        let mut output = String::new();
-        output.write_file(self, &mut config)?;
-        Ok(output)
+    /// Format the token stream as a file for the given target language to a
+    /// string. Using the specified `config`.
+    pub fn to_file_string_with(
+        self,
+        mut config: L::Config,
+        format_config: FormatterConfig,
+    ) -> result::Result<String, fmt::Error> {
+        let mut w = FmtWriter::new(String::new());
+
+        {
+            let mut formatter = Formatter::new(&mut w, format_config);
+            L::write_file(self, &mut formatter, &mut config, 0usize)?;
+            formatter.new_line_unless_empty()?;
+        }
+
+        Ok(w.into_writer())
     }
 
-    /// Format the tokens with the given configuration.
-    pub fn to_string_with(self, mut config: L::Config) -> result::Result<String, fmt::Error> {
-        let mut output = String::new();
-        output.write_tokens(self, &mut config)?;
-        Ok(output)
+    /// Format only the current token stream as a string. Using the specified
+    /// `config`.
+    pub fn to_string_with(
+        self,
+        mut config: L::Config,
+        format_config: FormatterConfig,
+    ) -> result::Result<String, fmt::Error> {
+        let mut w = FmtWriter::new(String::new());
+
+        {
+            let mut formatter = Formatter::new(&mut w, format_config);
+            self.format(&mut formatter, &mut config, 0usize)?;
+        }
+
+        Ok(w.into_writer())
+    }
+
+    /// Format tokens into a vector, where each entry equals a line in the
+    /// resulting file. Using the specified `config`.
+    pub fn to_file_vec_with(
+        self,
+        mut config: L::Config,
+        format_config: FormatterConfig,
+    ) -> result::Result<Vec<String>, fmt::Error> {
+        let mut w = VecWriter::new();
+
+        {
+            let mut formatter = Formatter::new(&mut w, format_config);
+            L::write_file(self, &mut formatter, &mut config, 0usize)?;
+            formatter.new_line_unless_empty()?;
+        }
+
+        Ok(w.into_vec())
+    }
+
+    /// Format the token stream as a file for the given target language to the
+    /// given `writer`. Using the specified `config`.
+    pub fn to_fmt_writer_with<W>(
+        self,
+        writer: W,
+        mut config: L::Config,
+        format_config: FormatterConfig,
+    ) -> result::Result<(), fmt::Error>
+    where
+        W: fmt::Write,
+    {
+        let mut w = FmtWriter::new(writer);
+
+        {
+            let mut formatter = Formatter::new(&mut w, format_config);
+            L::write_file(self, &mut formatter, &mut config, 0usize)?;
+            formatter.new_line_unless_empty()?;
+        }
+
+        Ok(())
+    }
+
+    /// Format the token stream as a file for the given target language to the
+    /// given `writer`. Using the specified `config`.
+    pub fn to_io_writer_with<W>(
+        self,
+        writer: W,
+        mut config: L::Config,
+        format_config: FormatterConfig,
+    ) -> result::Result<(), fmt::Error>
+    where
+        W: io::Write,
+    {
+        let mut w = IoWriter::new(writer);
+
+        {
+            let mut formatter = Formatter::new(&mut w, format_config);
+            L::write_file(self, &mut formatter, &mut config, 0usize)?;
+            formatter.new_line_unless_empty()?;
+        }
+
+        Ok(())
     }
 }
 
-impl<'el, E: Config + Default, L: Lang<Config = E>> Tokens<'el, L> {
-    /// Format token as file.
-    pub fn to_file(self) -> result::Result<String, fmt::Error> {
-        self.to_file_with(L::Config::default())
+impl<'el, C: Default, L: Lang<Config = C>> Tokens<'el, L> {
+    /// Format the token stream as a file for the given target language to a
+    /// string. Using the default configuration.
+    pub fn to_file_string(self) -> result::Result<String, fmt::Error> {
+        self.to_file_string_with(L::Config::default(), FormatterConfig::from_lang::<L>())
     }
 
-    /// Format the tokens.
+    /// Format only the current token stream as a string. Using the default
+    /// configuration.
     pub fn to_string(self) -> result::Result<String, fmt::Error> {
-        self.to_string_with(L::Config::default())
+        self.to_string_with(L::Config::default(), FormatterConfig::from_lang::<L>())
+    }
+
+    /// Format tokens into a vector, where each entry equals a line in the
+    /// resulting file. Using the default configuration.
+    pub fn to_file_vec(self) -> result::Result<Vec<String>, fmt::Error> {
+        self.to_file_vec_with(L::Config::default(), FormatterConfig::from_lang::<L>())
+    }
+
+    /// Format the token stream as a file for the given target language to the
+    /// given writer. Using the default configuration.
+    pub fn to_fmt_writer<W>(self, writer: W) -> result::Result<(), fmt::Error>
+    where
+        W: fmt::Write,
+    {
+        self.to_fmt_writer_with(
+            writer,
+            L::Config::default(),
+            FormatterConfig::from_lang::<L>(),
+        )
+    }
+
+    /// Format the token stream as a file for the given target language to the
+    /// given writer. Using the default configuration.
+    pub fn to_io_writer<W>(self, writer: W) -> result::Result<(), fmt::Error>
+    where
+        W: io::Write,
+    {
+        self.to_io_writer_with(
+            writer,
+            L::Config::default(),
+            FormatterConfig::from_lang::<L>(),
+        )
     }
 }
 

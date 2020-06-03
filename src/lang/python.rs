@@ -218,7 +218,7 @@ mod tests {
 
         assert_eq!(
             Ok("import collections\nimport collections as c\n\ncollections.named_tuple\ncollections\nc.named_tuple\nc\n"),
-            toks.to_file().as_ref().map(|s| s.as_str())
+            toks.to_file_string().as_ref().map(|s| s.as_str())
         );
     }
 
@@ -227,6 +227,9 @@ mod tests {
         let mut toks = Tokens::new();
         toks.push(quote![#(local("dict"))]);
 
-        assert_eq!(Ok("dict\n"), toks.to_file().as_ref().map(|s| s.as_str()));
+        assert_eq!(
+            Ok("dict\n"),
+            toks.to_file_string().as_ref().map(|s| s.as_str())
+        );
     }
 }

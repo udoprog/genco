@@ -1,7 +1,7 @@
 #![feature(proc_macro_hygiene)]
 
-use genco::java::{imported, Config};
-use genco::quote;
+use genco::java::{imported, Config, Java};
+use genco::{quote, FormatterConfig};
 
 use anyhow::Result;
 
@@ -25,14 +25,11 @@ fn main() -> Result<()> {
         }
     };
 
-    println!(
-        "{}",
-        tokens.to_file_with(
-            Config::default()
-                .with_package("se.tedro")
-                .with_indentation(8)
-        )?
-    );
+    tokens.to_io_writer_with(
+        std::io::stdout().lock(),
+        Config::default().with_package("se.tedro"),
+        FormatterConfig::from_lang::<Java>().with_newline("\n\r"),
+    )?;
 
     Ok(())
 }
