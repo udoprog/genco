@@ -198,6 +198,122 @@ macro_rules! impl_lang_item {
     };
 }
 
+macro_rules! impl_args {
+    ($args:ty, $ty:ident, $type_box:ident, $($ident:ident => $var:ident),*) => {
+        impl<$($ident,)*> $args for ($($ident,)*) where $($ident: 'static + $ty,)* {
+            fn into_args(self) -> Vec<$type_box> {
+                let ($($var,)*) = self;
+                vec![$($type_box::new($var),)*]
+            }
+        }
+    }
+}
+
+macro_rules! impl_variadic_type_args {
+    ($args:ident, $ty:ident, $type_box:ident) => {
+        /// Helper trait for things that can be turned into generic arguments.
+        pub trait $args {
+            /// Convert the given type into a collection of arguments.
+            fn into_args(self) -> Vec<$type_box>;
+        }
+
+        impl<T> $args for T
+        where
+            T: 'static + $ty,
+        {
+            fn into_args(self) -> Vec<$type_box> {
+                vec![$type_box::new(self)]
+            }
+        }
+
+        impl_args!($args, $ty, $type_box, A => a);
+        impl_args!($args, $ty, $type_box, A => a, B => b);
+        impl_args!($args, $ty, $type_box, A => a, B => b, C => c);
+        impl_args!($args, $ty, $type_box, A => a, B => b, C => c, D => d);
+        impl_args!($args, $ty, $type_box, A => a, B => b, C => c, D => d, E => e);
+    };
+}
+
+macro_rules! impl_type_basics {
+    ($lang:ty, $enum:ident<$lt:lifetime>, $trait:ident, $type_box:ident, $args:ident, {$($ty:ident),*}) => {
+        #[derive(Clone)]
+        #[doc = "Boxed type container"]
+        pub struct $type_box {
+            inner: std::rc::Rc<dyn $trait>,
+        }
+
+        impl std::ops::Deref for $type_box {
+            type Target = dyn $trait;
+
+            fn deref(&self) -> &Self::Target {
+                &*self.inner
+            }
+        }
+
+        impl $type_box {
+            /// Construct a new type in a type box.
+            pub fn new<T>(inner: T) -> Self where T: 'static + $trait {
+                Self {
+                    inner: std::rc::Rc::new(inner),
+                }
+            }
+        }
+
+        impl std::fmt::Debug for $type_box {
+            fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+                self.inner.as_enum().fmt(fmt)
+            }
+        }
+
+        impl std::cmp::PartialEq for $type_box {
+            fn eq(&self, other: &Self) -> bool {
+                self.inner.as_enum() == other.inner.as_enum()
+            }
+        }
+
+        impl std::cmp::Eq for $type_box {}
+
+        impl std::hash::Hash for $type_box {
+            fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                self.as_enum().hash(state);
+            }
+        }
+
+        impl std::cmp::PartialOrd for $type_box {
+            fn partial_cmp(&self, other: &$type_box) -> Option<std::cmp::Ordering> {
+                Some(self.cmp(other))
+            }
+        }
+
+        impl std::cmp::Ord for $type_box {
+            fn cmp(&self, other: &$type_box) -> std::cmp::Ordering {
+                self.inner.as_enum().cmp(&other.inner.as_enum())
+            }
+        }
+
+        #[doc = "Enum that can be used for casting between variants of the same type"]
+        #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+        pub enum $enum<$lt> {
+            $(
+                #[doc = "Type variant"]
+                $ty(&$lt $ty),
+            )*
+        }
+
+        $(
+            impl From<$ty> for $type_box {
+                fn from(value: $ty) -> $type_box {
+                    $type_box::new(value)
+                }
+            }
+
+            impl_lang_item!($ty, $lang);
+        )*
+
+        impl_variadic_type_args!($args, $trait, $type_box);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{JavaScript, Quoted, Tokens};

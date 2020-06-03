@@ -24,12 +24,18 @@ macro.
 * [Rust Example]
 * [Java Example]
 * [C# Example]
+* [Go Example]
 * Dart Example (TODO)
-* Go Example (TODO)
 * JavaScript Example (TODO)
 * Python Example (TODO)
 
-The following is a simple example showcasing code generation for Rust.
+You can run one of the examples above using:
+
+```
+cargo run --example go
+```
+
+The following is the included example Rust program.
 
 ```rust
 #![feature(proc_macro_hygiene)]
@@ -154,5 +160,6 @@ fn test() {
 [Rust Example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
 [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
+[Go Example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
 [`quote!`]: https://github.com/udoprog/genco/blob/master/tests/test_quote.rs
 [`<stmt>.quoted()`]: https://docs.rs/genco/latest/genco/trait.Quoted.html

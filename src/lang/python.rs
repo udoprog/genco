@@ -7,13 +7,13 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Python.
 pub type Tokens<'el> = crate::Tokens<'el, Python>;
 
-impl_lang_item!(Imported, Python);
+impl_lang_item!(Type, Python);
 
 static SEP: &'static str = ".";
 
 /// Python token specialization.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Imported {
+pub struct Type {
     /// Module of the imported name.
     module: Option<Cons<'static>>,
     /// Alias of module.
@@ -24,7 +24,7 @@ pub struct Imported {
     name: Option<Cons<'static>>,
 }
 
-impl fmt::Display for Imported {
+impl fmt::Display for Type {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let has_module = match self.module {
             Some(ref module) => match self.alias {
@@ -56,9 +56,9 @@ impl fmt::Display for Imported {
     }
 }
 
-impl Imported {
+impl Type {
     /// Set alias for python element.
-    pub fn alias<N: Into<Cons<'static>>>(self, new_alias: N) -> Imported {
+    pub fn alias<N: Into<Cons<'static>>>(self, new_alias: N) -> Type {
         Self {
             alias: Some(new_alias.into()),
             ..self
@@ -66,7 +66,7 @@ impl Imported {
     }
 
     /// Set name for python element.
-    pub fn name<N: Into<Cons<'static>>>(self, new_name: N) -> Imported {
+    pub fn name<N: Into<Cons<'static>>>(self, new_name: N) -> Type {
         Self {
             name: Some(new_name.into()),
             ..self
@@ -74,7 +74,7 @@ impl Imported {
     }
 }
 
-impl LangItem<Python> for Imported {
+impl LangItem<Python> for Type {
     fn format(&self, out: &mut Formatter, _extra: &mut (), _level: usize) -> fmt::Result {
         write!(out, "{}", self)
     }
@@ -93,7 +93,7 @@ impl Python {
 
         for custom in tokens.walk_custom() {
             if let Some(import) = custom.as_import() {
-                let Imported { module, alias, .. } = import;
+                let Type { module, alias, .. } = import;
 
                 if let Some(ref module) = *module {
                     modules.insert((module.clone(), alias.clone()));
@@ -127,7 +127,7 @@ impl Python {
 
 impl Lang for Python {
     type Config = ();
-    type Import = Imported;
+    type Import = Type;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -170,11 +170,11 @@ impl Lang for Python {
 }
 
 /// Setup an imported element.
-pub fn imported<M>(module: M) -> Imported
+pub fn imported<M>(module: M) -> Type
 where
     M: Into<Cons<'static>>,
 {
-    Imported {
+    Type {
         module: Some(module.into()),
         alias: None,
         name: None,
@@ -182,11 +182,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<N>(name: N) -> Imported
+pub fn local<N>(name: N) -> Type
 where
     N: Into<Cons<'static>>,
 {
-    Imported {
+    Type {
         module: None,
         alias: None,
         name: Some(name.into()),

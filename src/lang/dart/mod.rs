@@ -8,25 +8,17 @@ pub use self::utils::DocComment;
 
 use crate::{Cons, Formatter, Lang, LangItem};
 use std::fmt::{self, Write};
-use std::rc::Rc;
 
 /// Tokens container specialization for Dart.
 pub type Tokens<'el> = crate::Tokens<'el, Dart>;
 
-/// Trait implemented by dart types.
-pub trait DartType: LangItem<Dart> {}
+impl_type_basics!(Dart, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, BuiltIn, Local, Void, Dynamic});
 
-impl_lang_item!(Type, Dart);
-impl_lang_item!(BuiltIn, Dart);
-impl_lang_item!(Local, Dart);
-impl_lang_item!(Void, Dart);
-impl_lang_item!(Dynamic, Dart);
-
-impl DartType for Type {}
-impl DartType for BuiltIn {}
-impl DartType for Local {}
-impl DartType for Void {}
-impl DartType for Dynamic {}
+/// Trait implemented by all types
+pub trait TypeTrait: 'static + fmt::Debug + LangItem<Dart> {
+    /// Coerce trait into an enum that can be used for type-specific operations
+    fn as_enum(&self) -> TypeEnum<'_>;
+}
 
 static SEP: &'static str = ".";
 
@@ -59,6 +51,12 @@ pub struct BuiltIn {
     name: &'static str,
 }
 
+impl TypeTrait for BuiltIn {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::BuiltIn(self)
+    }
+}
+
 impl LangItem<Dart> for BuiltIn {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str(self.name)
@@ -66,9 +64,15 @@ impl LangItem<Dart> for BuiltIn {
 }
 
 /// a locally defined type.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Local {
     name: Cons<'static>,
+}
+
+impl TypeTrait for Local {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Local(self)
+    }
 }
 
 impl LangItem<Dart> for Local {
@@ -78,8 +82,14 @@ impl LangItem<Dart> for Local {
 }
 
 /// the void type.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Void(());
+
+impl TypeTrait for Void {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Void(self)
+    }
+}
 
 impl LangItem<Dart> for Void {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
@@ -88,8 +98,14 @@ impl LangItem<Dart> for Void {
 }
 
 /// The dynamic type.
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Dynamic(());
+
+impl TypeTrait for Dynamic {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Dynamic(self)
+    }
+}
 
 impl LangItem<Dart> for Dynamic {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
@@ -98,7 +114,7 @@ impl LangItem<Dart> for Dynamic {
 }
 
 /// A custom dart type.
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Type {
     /// Path to import.
     path: Cons<'static>,
@@ -107,7 +123,7 @@ pub struct Type {
     /// Alias of module.
     alias: Option<Cons<'static>>,
     /// Generic arguments.
-    arguments: Vec<Rc<dyn DartType>>,
+    arguments: Vec<TypeBox>,
 }
 
 impl Type {
@@ -135,7 +151,7 @@ impl Type {
     ///
     /// assert_eq!("import \"dart:collection\";\n\nMap<int, void>\n", quote!(#ty).to_file_string().unwrap());
     /// ```
-    pub fn with_arguments(self, args: impl Args) -> Type {
+    pub fn with_arguments(self, args: impl TypeArgs) -> Type {
         Self {
             arguments: args.into_args(),
             ..self
@@ -158,6 +174,12 @@ impl Type {
     /// Check if type is generic.
     pub fn is_generic(&self) -> bool {
         !self.arguments.is_empty()
+    }
+}
+
+impl TypeTrait for Type {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Type(self)
     }
 }
 
@@ -293,38 +315,6 @@ pub fn imported<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(path: P, name: N
 pub fn local<N: Into<Cons<'static>>>(name: N) -> Local {
     Local { name: name.into() }
 }
-
-/// Helper trait for things that can be turned into generic arguments.
-pub trait Args {
-    /// Convert the given type into a collection of arguments.
-    fn into_args(self) -> Vec<Rc<dyn DartType>>;
-}
-
-impl<T> Args for T
-where
-    T: 'static + DartType,
-{
-    fn into_args(self) -> Vec<Rc<dyn DartType>> {
-        vec![Rc::new(self)]
-    }
-}
-
-macro_rules! impl_args {
-    ($($ident:ident => $var:ident),*) => {
-        impl<$($ident,)*> Args for ($($ident,)*) where $($ident: 'static + DartType,)* {
-            fn into_args(self) -> Vec<Rc<dyn DartType>> {
-                let ($($var,)*) = self;
-                vec![$(Rc::new($var),)*]
-            }
-        }
-    }
-}
-
-impl_args!(A => a);
-impl_args!(A => a, B => b);
-impl_args!(A => a, B => b, C => c);
-impl_args!(A => a, B => b, C => c, D => d);
-impl_args!(A => a, B => b, C => c, D => d, E => e);
 
 #[cfg(test)]
 mod tests {

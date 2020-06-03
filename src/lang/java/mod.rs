@@ -14,107 +14,83 @@ use std::fmt;
 /// Tokens container specialized for Java.
 pub type Tokens<'el> = crate::Tokens<'el, Java>;
 
-impl_lang_item!(Imported, Java);
+impl_type_basics!(Java, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Primitive, Void, Type, Optional, Local});
+
+/// Trait implemented by all types
+pub trait TypeTrait: 'static + fmt::Debug + LangItem<Java> {
+    /// Coerce trait into an enum that can be used for type-specific operations
+    fn as_enum(&self) -> TypeEnum<'_>;
+
+    /// Get package type belongs to.
+    fn name(&self) -> &str;
+
+    /// Get package type belongs to.
+    fn package(&self) -> Option<&str> {
+        None
+    }
+
+    /// Get generic arguments associated with type.
+    fn arguments(&self) -> Option<&[TypeBox]> {
+        None
+    }
+
+    /// Process which kinds of imports to deal with.
+    fn type_imports(&self, _: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {}
+}
 
 static JAVA_LANG: &'static str = "java.lang";
 static SEP: &'static str = ".";
 
 /// Short primitive type.
-pub const SHORT: Imported = Imported::Primitive {
+pub const SHORT: Primitive = Primitive {
     primitive: "short",
     boxed: "Short",
 };
 
 /// Integer primitive type.
-pub const INTEGER: Imported = Imported::Primitive {
+pub const INTEGER: Primitive = Primitive {
     primitive: "int",
     boxed: "Integer",
 };
 
 /// Long primitive type.
-pub const LONG: Imported = Imported::Primitive {
+pub const LONG: Primitive = Primitive {
     primitive: "long",
     boxed: "Long",
 };
 
 /// Float primitive type.
-pub const FLOAT: Imported = Imported::Primitive {
+pub const FLOAT: Primitive = Primitive {
     primitive: "float",
     boxed: "Float",
 };
 
 /// Double primitive type.
-pub const DOUBLE: Imported = Imported::Primitive {
+pub const DOUBLE: Primitive = Primitive {
     primitive: "double",
     boxed: "Double",
 };
 
 /// Char primitive type.
-pub const CHAR: Imported = Imported::Primitive {
+pub const CHAR: Primitive = Primitive {
     primitive: "char",
     boxed: "Character",
 };
 
 /// Boolean primitive type.
-pub const BOOLEAN: Imported = Imported::Primitive {
+pub const BOOLEAN: Primitive = Primitive {
     primitive: "boolean",
     boxed: "Boolean",
 };
 
 /// Byte primitive type.
-pub const BYTE: Imported = Imported::Primitive {
+pub const BYTE: Primitive = Primitive {
     primitive: "byte",
     boxed: "Byte",
 };
 
-/// Void (not-really) primitive type.
-pub const VOID: Imported = Imported::Primitive {
-    primitive: "void",
-    boxed: "Void",
-};
-
-/// A class.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type {
-    /// Package of the class.
-    package: Cons<'static>,
-    /// Name  of class.
-    name: Cons<'static>,
-    /// Path of class when nested.
-    path: Vec<Cons<'static>>,
-    /// Arguments of the class.
-    arguments: Vec<Imported>,
-}
-
-/// An optional type.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Optional {
-    /// The type that is optional.
-    pub value: Box<Imported>,
-    /// The complete optional field type, including wrapper.
-    pub field: Box<Imported>,
-}
-
-/// Java token specialization.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Imported {
-    /// Primitive type.
-    Primitive {
-        /// The boxed variant of the primitive type.
-        boxed: &'static str,
-        /// The primitive-primitive type.
-        primitive: &'static str,
-    },
-    /// A class, with or without arguments, imported from somewhere.
-    Class(Type),
-    /// A local name with no specific qualification.
-    Local {
-        /// Name of class.
-        name: Cons<'static>,
-    },
-    /// Optional type.
-    Optional(Optional),
-}
+/// Void type.
+pub const VOID: Void = Void(());
 
 /// Configuration for Java formatting.
 #[derive(Debug)]
@@ -145,250 +121,286 @@ impl Default for Config {
     }
 }
 
-impl Imported {
+/// A class.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Type {
+    /// Package of the class.
+    package: Cons<'static>,
+    /// Name  of class.
+    name: Cons<'static>,
+    /// Path of class when nested.
+    path: Vec<Cons<'static>>,
+    /// Arguments of the class.
+    arguments: Vec<TypeBox>,
+}
+
+impl Type {
     /// Extend the type with a nested path.
     ///
     /// This discards any arguments associated with it.
-    pub fn path<P: Into<Cons<'static>>>(&self, part: P) -> Imported {
-        match self {
-            Self::Class(class) => {
-                let mut path = class.path.clone();
-                path.push(part.into());
+    pub fn path<P: Into<Cons<'static>>>(self, part: P) -> Self {
+        let mut path = self.path;
+        path.push(part.into());
 
-                Self::Class(Type {
-                    package: class.package.clone(),
-                    name: class.name.clone(),
-                    path: path,
-                    arguments: vec![],
-                })
-            }
-            java => java.clone(),
+        Self {
+            package: self.package,
+            name: self.name,
+            path: path,
+            arguments: vec![],
         }
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
-        match self {
-            Self::Class(class) => {
-                for argument in &class.arguments {
-                    argument.type_imports(modules);
-                }
-
-                modules.insert((class.package.clone(), class.name.clone()));
-            }
-            _ => {}
-        };
     }
 
     /// Add arguments to the given variable.
     ///
     /// Only applies to classes, any other will return the same value.
-    pub fn with_arguments(&self, arguments: Vec<Imported>) -> Imported {
-        match *self {
-            Self::Class(ref cls) => Self::Class(Type {
-                package: cls.package.clone(),
-                name: cls.name.clone(),
-                path: cls.path.clone(),
-                arguments: arguments,
-            }),
-            ref java => java.clone(),
+    pub fn with_arguments(self, args: impl TypeArgs) -> Self {
+        Self {
+            package: self.package,
+            name: self.name,
+            path: self.path,
+            arguments: args.into_args(),
         }
     }
 
     /// Get the raw type.
     ///
     /// A raw type is one without generic arguments.
-    pub fn as_raw(&self) -> Imported {
-        match *self {
-            Self::Class(ref cls) => Self::Class(Type {
-                package: cls.package.clone(),
-                name: cls.name.clone(),
-                path: cls.path.clone(),
-                arguments: vec![],
-            }),
-            ref java => java.clone(),
+    pub fn as_raw(self) -> Self {
+        Self {
+            package: self.package,
+            name: self.name,
+            path: self.path,
+            arguments: vec![],
         }
-    }
-
-    /// Get a guaranteed boxed version of a type.
-    pub fn as_boxed(&self) -> Imported {
-        match *self {
-            Self::Primitive { ref boxed, .. } => Self::Class(Type {
-                package: Cons::Borrowed(JAVA_LANG),
-                name: Cons::Borrowed(boxed),
-                path: vec![],
-                arguments: vec![],
-            }),
-            ref other => other.clone(),
-        }
-    }
-
-    /// Compare if two types are equal.
-    pub fn equals(&self, other: &Imported) -> bool {
-        match (self, other) {
-            (
-                Self::Primitive {
-                    primitive: l_primitive,
-                    ..
-                },
-                Self::Primitive {
-                    primitive: r_primitive,
-                    ..
-                },
-            ) => l_primitive == r_primitive,
-            (Self::Class(l), Self::Class(r)) => {
-                l.package == r.package
-                    && l.name == r.name
-                    && l.arguments.len() == r.arguments.len()
-                    && l.arguments
-                        .iter()
-                        .zip(r.arguments.iter())
-                        .all(|(l, r)| l.equals(r))
-            }
-            _ => false,
-        }
-    }
-
-    /// Get the name of the type.
-    pub fn name(&self) -> Cons<'_> {
-        match self {
-            Self::Primitive { primitive, .. } => Cons::Borrowed(primitive),
-            Self::Class(cls) => cls.name.clone(),
-            Self::Local { name, .. } => name.clone(),
-            Self::Optional(Optional { value, .. }) => value.name(),
-        }
-    }
-
-    /// Get the name of the type.
-    pub fn package(&self) -> Option<Cons<'static>> {
-        match self {
-            Self::Primitive { .. } => Some(Cons::Borrowed(JAVA_LANG)),
-            Self::Class(cls) => Some(cls.package.clone()),
-            Self::Local { .. } => None,
-            Self::Optional(Optional { value, .. }) => value.package(),
-        }
-    }
-
-    /// Get the arguments
-    pub fn arguments(&self) -> Option<&[Imported]> {
-        match self {
-            Self::Class(cls) => Some(&cls.arguments),
-            Self::Optional(Optional { value, .. }) => value.arguments(),
-            _ => None,
-        }
-    }
-
-    /// Check if type is optional.
-    pub fn is_optional(&self) -> bool {
-        match *self {
-            Self::Optional(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Check if variable is primitive.
-    pub fn is_primitive(&self) -> bool {
-        match self {
-            p if *p == VOID => false,
-            Self::Primitive { .. } => true,
-            _ => false,
-        }
-    }
-
-    /// Get type as optional.
-    pub fn as_optional(&self) -> Option<&Optional> {
-        match self {
-            Self::Optional(optional) => Some(optional),
-            _ => None,
-        }
-    }
-
-    /// Get the field type (includes optionality).
-    pub fn as_field(&self) -> Imported {
-        self.as_optional()
-            .map(|opt| (*opt.field).clone())
-            .unwrap_or_else(|| self.clone())
-    }
-
-    /// Get the value type (strips optionality).
-    pub fn as_value(&self) -> Imported {
-        self.as_optional()
-            .map(|opt| (*opt.value).clone())
-            .unwrap_or_else(|| self.clone())
     }
 
     /// Check if type is generic.
     pub fn is_generic(&self) -> bool {
-        self.arguments().map(|a| !a.is_empty()).unwrap_or(false)
+        !self.arguments.is_empty()
     }
 }
 
-impl LangItem<Java> for Imported {
+impl LangItem<Java> for Type {
     fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        use self::Imported::*;
+        {
+            let file_package = config.package.as_ref().map(|p| p.as_ref());
+            let imported = config.imported.get(self.name.as_ref()).map(String::as_str);
+            let pkg = Some(self.package.as_ref());
 
-        match *self {
-            Primitive {
-                ref boxed,
-                ref primitive,
-                ..
-            } => {
-                if level > 0 {
-                    out.write_str(boxed.as_ref())?;
-                } else {
-                    out.write_str(primitive.as_ref())?;
+            if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
+                out.write_str(self.package.as_ref())?;
+                out.write_str(SEP)?;
+            }
+        }
+
+        {
+            out.write_str(self.name.as_ref())?;
+
+            let mut it = self.path.iter();
+
+            while let Some(n) = it.next() {
+                out.write_str(".")?;
+                out.write_str(n.as_ref())?;
+            }
+        }
+
+        if !self.arguments.is_empty() {
+            out.write_str("<")?;
+
+            let mut it = self.arguments.iter().peekable();
+
+            while let Some(argument) = it.next() {
+                argument.format(out, config, level + 1usize)?;
+
+                if it.peek().is_some() {
+                    out.write_str(", ")?;
                 }
             }
-            Class(ref cls) => {
-                {
-                    let file_package = config.package.as_ref().map(|p| p.as_ref());
-                    let imported = config.imported.get(cls.name.as_ref()).map(String::as_str);
-                    let pkg = Some(cls.package.as_ref());
 
-                    if cls.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
-                        out.write_str(cls.package.as_ref())?;
-                        out.write_str(SEP)?;
-                    }
-                }
-
-                {
-                    out.write_str(cls.name.as_ref())?;
-
-                    let mut it = cls.path.iter();
-
-                    while let Some(n) = it.next() {
-                        out.write_str(".")?;
-                        out.write_str(n.as_ref())?;
-                    }
-                }
-
-                if !cls.arguments.is_empty() {
-                    out.write_str("<")?;
-
-                    let mut it = cls.arguments.iter().peekable();
-
-                    while let Some(argument) = it.next() {
-                        argument.format(out, config, level + 1usize)?;
-
-                        if it.peek().is_some() {
-                            out.write_str(", ")?;
-                        }
-                    }
-
-                    out.write_str(">")?;
-                }
-            }
-            Local { ref name } => {
-                out.write_str(name.as_ref())?;
-            }
-            Optional(self::Optional { ref field, .. }) => {
-                field.format(out, config, level)?;
-            }
+            out.write_str(">")?;
         }
 
         Ok(())
     }
 
-    fn as_import(&self) -> Option<&Self> {
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+impl TypeTrait for Type {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Type(self)
+    }
+
+    fn name(&self) -> &str {
+        &*self.name
+    }
+
+    fn package(&self) -> Option<&str> {
+        Some(&*self.package)
+    }
+
+    fn arguments(&self) -> Option<&[TypeBox]> {
+        Some(&self.arguments)
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+        for argument in &self.arguments {
+            if let TypeEnum::Type(ty) = argument.as_enum() {
+                ty.type_imports(modules);
+            }
+        }
+
+        modules.insert((self.package.clone(), self.name.clone()));
+    }
+}
+
+/// The void type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Void(());
+
+impl TypeTrait for Void {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Void(self)
+    }
+
+    fn name(&self) -> &str {
+        "void"
+    }
+}
+
+impl LangItem<Java> for Void {
+    fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
+        if level > 0 {
+            out.write_str("Void")
+        } else {
+            out.write_str("void")
+        }
+    }
+}
+
+/// A primitive type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Primitive {
+    /// The boxed variant of the primitive type.
+    boxed: &'static str,
+    /// The primitive-primitive type.
+    primitive: &'static str,
+}
+
+impl Primitive {
+    /// Get a boxed version of a primitive type.
+    pub fn into_boxed(self) -> Type {
+        Type {
+            package: Cons::Borrowed(JAVA_LANG),
+            name: Cons::Borrowed(self.boxed),
+            path: vec![],
+            arguments: vec![],
+        }
+    }
+}
+
+impl LangItem<Java> for Primitive {
+    fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
+        if level > 0 {
+            out.write_str(self.boxed)
+        } else {
+            out.write_str(self.primitive)
+        }
+    }
+}
+
+impl TypeTrait for Primitive {
+    fn name(&self) -> &str {
+        self.primitive
+    }
+
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Primitive(self)
+    }
+
+    fn package(&self) -> Option<&str> {
+        Some(JAVA_LANG)
+    }
+}
+
+/// A local name with no specific qualification.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Local {
+    /// Name of class.
+    name: Cons<'static>,
+}
+
+impl TypeTrait for Local {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Local(self)
+    }
+
+    fn name(&self) -> &str {
+        &*self.name
+    }
+}
+
+impl LangItem<Java> for Local {
+    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        out.write_str(&*self.name)
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// An optional type.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Optional {
+    /// The type that is optional.
+    pub value: TypeBox,
+    /// The complete optional field type, including wrapper.
+    pub field: TypeBox,
+}
+
+impl TypeTrait for Optional {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Optional(self)
+    }
+
+    fn name(&self) -> &str {
+        self.value.name()
+    }
+
+    fn package(&self) -> Option<&str> {
+        self.value.package()
+    }
+
+    fn arguments(&self) -> Option<&[TypeBox]> {
+        self.value.arguments()
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+        self.value.type_imports(modules);
+    }
+}
+
+impl Optional {
+    /// Get the field type (includes optionality).
+    pub fn as_field(self) -> TypeBox {
+        self.field.clone()
+    }
+
+    /// Get the value type (strips optionality).
+    pub fn as_value(self) -> TypeBox {
+        self.value.clone()
+    }
+}
+
+impl LangItem<Java> for Optional {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        self.field.format(out, config, level)
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
 }
@@ -403,8 +415,8 @@ impl Java {
         let file_package = config.package.as_ref().map(|p| p.as_ref());
 
         for custom in tokens.walk_custom() {
-            if let Some(import) = custom.as_import() {
-                import.type_imports(&mut modules);
+            if let Some(ty) = custom.as_import() {
+                ty.type_imports(&mut modules);
             }
         }
 
@@ -439,7 +451,7 @@ impl Java {
 
 impl Lang for Java {
     type Config = Config;
-    type Import = Imported;
+    type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         use std::fmt::Write as _;
@@ -489,26 +501,26 @@ impl Lang for Java {
 }
 
 /// Setup an imported element.
-pub fn imported<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(package: P, name: N) -> Imported {
-    Imported::Class(Type {
+pub fn imported<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(package: P, name: N) -> Type {
+    Type {
         package: package.into(),
         name: name.into(),
         path: vec![],
         arguments: vec![],
-    })
+    }
 }
 
 /// Setup a local element from borrowed components.
-pub fn local<'el, N: Into<Cons<'static>>>(name: N) -> Imported {
-    Imported::Local { name: name.into() }
+pub fn local<'el, N: Into<Cons<'static>>>(name: N) -> Local {
+    Local { name: name.into() }
 }
 
 /// Setup an optional type.
-pub fn optional<'el, I: Into<Imported>, F: Into<Imported>>(value: I, field: F) -> Imported {
-    Imported::Optional(Optional {
-        value: Box::new(value.into()),
-        field: Box::new(field.into()),
-    })
+pub fn optional<'el, I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> Optional {
+    Optional {
+        value: value.into(),
+        field: field.into(),
+    }
 }
 
 #[cfg(test)]
@@ -516,19 +528,6 @@ mod tests {
     use super::*;
     use crate as genco;
     use crate::{quote, Java, Quoted, Tokens};
-
-    #[test]
-    fn test_primitive() {
-        assert!(SHORT.is_primitive());
-        assert!(INTEGER.is_primitive());
-        assert!(LONG.is_primitive());
-        assert!(FLOAT.is_primitive());
-        assert!(DOUBLE.is_primitive());
-        assert!(BOOLEAN.is_primitive());
-        assert!(CHAR.is_primitive());
-        assert!(BYTE.is_primitive());
-        assert!(!VOID.is_primitive());
-    }
 
     #[test]
     fn test_string() {
@@ -543,7 +542,7 @@ mod tests {
         let a = imported("java.io", "A");
         let b = imported("java.io", "B");
         let ob = imported("java.util", "B");
-        let ob_a = ob.with_arguments(vec![a.clone()]);
+        let ob_a = ob.clone().with_arguments(a.clone());
 
         let toks = quote!(#integer #a #b #ob #ob_a);
 

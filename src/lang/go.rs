@@ -7,112 +7,155 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Go.
 pub type Tokens<'el> = crate::Tokens<'el, Go>;
 
-impl_lang_item!(Imported, Go);
+impl_type_basics!(Go, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array, Interface});
+
+/// Trait implemented by all types
+pub trait TypeTrait: 'static + fmt::Debug + LangItem<Go> {
+    /// Coerce trait into an enum that can be used for type-specific operations
+    fn as_enum(&self) -> TypeEnum<'_>;
+
+    /// Handle imports for the given type.
+    fn type_imports(&self, _: &mut BTreeSet<Cons<'static>>) {}
+}
+
+/// The interface type `interface{}`.
+pub const INTERFACE: Interface = Interface(());
 
 const SEP: &str = ".";
 
-/// Name of an imported type.
+/// A Go type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Name {
+pub struct Type {
     /// Module of the imported name.
     module: Option<Cons<'static>>,
     /// Name imported.
     name: Cons<'static>,
 }
 
-/// Go token specialization.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Imported {
-    /// A regular type.
-    Type {
-        /// The name being referenced.
-        name: Name,
-    },
-    /// A map, map[<key>]<value>.
-    Map {
-        /// Key of the map.
-        key: Box<Imported>,
-        /// Value of the map.
-        value: Box<Imported>,
-    },
-    /// An array, []<inner>.
-    Array {
-        /// Inner value of the array.
-        inner: Box<Imported>,
-    },
-    /// An interface type, interface{}.
-    Interface,
-}
+impl TypeTrait for Type {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Type(self)
+    }
 
-impl Imported {
     fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
-        match self {
-            Self::Type { name, .. } => {
-                if let Some(module) = name.module.clone() {
-                    modules.insert(module);
-                }
-            }
-            Self::Map { key, value, .. } => {
-                key.type_imports(modules);
-                value.type_imports(modules);
-            }
-            Self::Array { inner, .. } => {
-                inner.type_imports(modules);
-            }
-            Self::Interface => {}
-        };
+        if let Some(module) = &self.module {
+            modules.insert(module.clone());
+        }
     }
 }
 
-impl LangItem<Go> for Imported {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        match self {
-            Self::Type {
-                name: Name { module, name, .. },
-                ..
-            } => {
-                if let Some(module) = module.as_ref().and_then(|m| m.as_ref().split("/").last()) {
-                    out.write_str(module)?;
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(name)?;
-            }
-            Self::Map { key, value, .. } => {
-                out.write_str("map[")?;
-                key.format(out, config, level + 1)?;
-                out.write_str("]")?;
-                value.format(out, config, level + 1)?;
-            }
-            Self::Array { inner, .. } => {
-                out.write_str("[")?;
-                out.write_str("]")?;
-                inner.format(out, config, level + 1)?;
-            }
-            Self::Interface => {
-                out.write_str("interface{}")?;
-            }
+impl LangItem<Go> for Type {
+    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
+            out.write_str(module)?;
+            out.write_str(SEP)?;
         }
 
+        out.write_str(&self.name)?;
         Ok(())
     }
 
-    fn as_import(&self) -> Option<&Self> {
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// A map `map[<key>]<value>`.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Map {
+    /// Key of the map.
+    key: TypeBox,
+    /// Value of the map.
+    value: TypeBox,
+}
+
+impl TypeTrait for Map {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Map(self)
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+        self.key.type_imports(modules);
+        self.value.type_imports(modules);
+    }
+}
+
+impl LangItem<Go> for Map {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        out.write_str("map[")?;
+        self.key.format(out, config, level + 1)?;
+        out.write_str("]")?;
+        self.value.format(out, config, level + 1)?;
+        Ok(())
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// An array `[]<inner>`.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Array {
+    /// Inner value of the array.
+    inner: TypeBox,
+}
+
+impl TypeTrait for Array {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Array(self)
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+        self.inner.type_imports(modules);
+    }
+}
+
+impl LangItem<Go> for Array {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        out.write_str("[")?;
+        out.write_str("]")?;
+        self.inner.format(out, config, level + 1)?;
+        Ok(())
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// The interface type `interface{}`.
+#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Interface(());
+
+impl TypeTrait for Interface {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Interface(self)
+    }
+}
+
+impl LangItem<Go> for Interface {
+    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        out.write_str("interface{}")
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
 }
 
 /// Config data for Go.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Config {
-    package: String,
+    package: Option<Cons<'static>>,
 }
 
 impl Config {
-    /// Build the config structure from a package.
-    pub fn from_package<S: AsRef<str>>(package: S) -> Self {
+    /// Configure the specified package.
+    pub fn with_package<P: Into<Cons<'static>>>(self, package: P) -> Self {
         Self {
-            package: package.as_ref().to_string(),
+            package: Some(package.into()),
+            ..self
         }
     }
 }
@@ -151,7 +194,7 @@ impl Go {
 
 impl Lang for Go {
     type Config = Config;
-    type Import = Imported;
+    type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -180,78 +223,71 @@ impl Lang for Go {
     ) -> fmt::Result {
         let mut toks = Tokens::new();
 
-        toks.append("package");
-        toks.spacing();
-        toks.append(config.package.clone());
-        toks.line_spacing();
-
-        if let Some(imports) = Self::imports(&tokens) {
-            toks.push(imports);
-            toks.line_spacing();
+        if let Some(package) = &config.package {
+            toks.append("package");
+            toks.spacing();
+            toks.append(package.clone());
         }
 
+        if let Some(imports) = Self::imports(&tokens) {
+            toks.line_spacing();
+            toks.push(imports);
+        }
+
+        toks.line_spacing();
         toks.extend(tokens);
         toks.format(out, config, level)
     }
 }
 
 /// Setup an imported element.
-pub fn imported<M, N>(module: M, name: N) -> Imported
+pub fn imported<M, N>(module: M, name: N) -> Type
 where
     M: Into<Cons<'static>>,
     N: Into<Cons<'static>>,
 {
-    Imported::Type {
-        name: Name {
-            module: Some(module.into()),
-            name: name.into(),
-        },
+    Type {
+        module: Some(module.into()),
+        name: name.into(),
     }
 }
 
 /// Setup a local element.
-pub fn local<N>(name: N) -> Imported
+pub fn local<N>(name: N) -> Type
 where
     N: Into<Cons<'static>>,
 {
-    Imported::Type {
-        name: Name {
-            module: None,
-            name: name.into(),
-        },
+    Type {
+        module: None,
+        name: name.into(),
     }
 }
 
 /// Setup a map.
-pub fn map<K, V>(key: K, value: V) -> Imported
+pub fn map<K, V>(key: K, value: V) -> Map
 where
-    K: Into<Imported>,
-    V: Into<Imported>,
+    K: Into<TypeBox>,
+    V: Into<TypeBox>,
 {
-    Imported::Map {
-        key: Box::new(key.into()),
-        value: Box::new(value.into()),
+    Map {
+        key: key.into(),
+        value: value.into(),
     }
 }
 
 /// Setup an array.
-pub fn array<I>(inner: I) -> Imported
+pub fn array<I>(inner: I) -> Array
 where
-    I: Into<Imported>,
+    I: Into<TypeBox>,
 {
-    Imported::Array {
-        inner: Box::new(inner.into()),
+    Array {
+        inner: inner.into(),
     }
-}
-
-/// Setup an interface.
-pub fn interface<'a>() -> Imported {
-    Imported::Interface
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{array, imported, interface, map, Config, Go, Tokens};
+    use super::{array, imported, map, Config, Go, Tokens, INTERFACE};
     use crate as genco;
     use crate::{quote, FormatterConfig, Quoted};
 
@@ -285,7 +321,7 @@ mod tests {
 
     #[test]
     fn test_map() {
-        let keyed = map(imported("foo", "Debug"), interface());
+        let keyed = map(imported("foo", "Debug"), INTERFACE);
 
         let mut toks = Tokens::new();
         toks.push(quote!(#keyed));

@@ -7,14 +7,14 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Rust.
 pub type Tokens<'el> = crate::Tokens<'el, JavaScript>;
 
-impl_lang_item!(Imported, JavaScript);
+impl_lang_item!(Type, JavaScript);
 
 static SEP: &'static str = ".";
 static PATH_SEP: &'static str = "/";
 
 /// An imported item in JavaScript.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Imported {
+pub struct Type {
     /// Module of the imported name.
     module: Option<Cons<'static>>,
     /// Name imported.
@@ -23,7 +23,7 @@ pub struct Imported {
     alias: Option<Cons<'static>>,
 }
 
-impl Imported {
+impl Type {
     /// Alias the given type.
     pub fn alias<N: Into<Cons<'static>>>(self, alias: N) -> Self {
         Self {
@@ -33,7 +33,7 @@ impl Imported {
     }
 }
 
-impl fmt::Display for Imported {
+impl fmt::Display for Type {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         if let Some(alias) = &self.alias {
             fmt.write_str(alias)?;
@@ -45,7 +45,7 @@ impl fmt::Display for Imported {
     }
 }
 
-impl LangItem<JavaScript> for Imported {
+impl LangItem<JavaScript> for Type {
     fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
         write!(out, "{}", self)
     }
@@ -133,7 +133,7 @@ impl JavaScript {
 
 impl Lang for JavaScript {
     type Config = ();
-    type Import = Imported;
+    type Import = Type;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -176,12 +176,12 @@ impl Lang for JavaScript {
 }
 
 /// Setup an imported element.
-pub fn imported<'el, M, N>(module: M, name: N) -> Imported
+pub fn imported<'el, M, N>(module: M, name: N) -> Type
 where
     M: Into<Cons<'static>>,
     N: Into<Cons<'static>>,
 {
-    Imported {
+    Type {
         module: Some(module.into()),
         name: name.into(),
         alias: None,
@@ -189,11 +189,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<'el, N>(name: N) -> Imported
+pub fn local<'el, N>(name: N) -> Type
 where
     N: Into<Cons<'static>>,
 {
-    Imported {
+    Type {
         module: None,
         name: name.into(),
         alias: None,

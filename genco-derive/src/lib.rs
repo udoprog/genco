@@ -113,6 +113,15 @@ impl From<Span> for Cursor {
     }
 }
 
+impl<'a> From<&'a Span> for Cursor {
+    fn from(span: &'a Span) -> Self {
+        Self {
+            start: span.start(),
+            end: span.end(),
+        }
+    }
+}
+
 impl Parse for Tokens {
     fn parse(input: ParseStream) -> Result<Self> {
         use std::iter::from_fn;
@@ -200,14 +209,14 @@ impl Parse for Tokens {
                         }
                     }
                 }
-                Item::Expression(_, expr) => {
+                Item::Expression(span, expr) => {
                     item_buffer.flush(&mut tokens);
 
-                    let group = Group::new(Delimiter::None, quote::quote!(__toks.append(Clone::clone(&#expr));));
+                    let group = Group::new(Delimiter::None, quote::quote_spanned!(span => __toks.append(Clone::clone(&#expr));));
                     tokens.push(TokenTree::Group(group));
                 }
-                Item::Register(_, expr) => {
-                    registers.push(quote::quote!(__toks.register(#expr)));
+                Item::Register(span, expr) => {
+                    registers.push(quote::quote_spanned!(span => __toks.register(#expr)));
                 }
                 Item::DelimiterClose(_, delimiter) => {
                     match delimiter {
@@ -262,8 +271,8 @@ impl ItemBuffer {
 #[derive(Debug)]
 enum Item {
     Tree(TokenTree),
-    Expression(Cursor, TokenTree),
-    Register(Cursor, TokenTree),
+    Expression(Span, TokenTree),
+    Register(Span, TokenTree),
     DelimiterClose(Cursor, Delimiter),
 }
 
@@ -271,8 +280,8 @@ impl Item {
     fn cursor(&self) -> Cursor {
         match self {
             Self::Tree(tt) => Cursor::from(tt.span()),
-            Self::Expression(cursor, ..) => *cursor,
-            Self::Register(cursor, ..) => *cursor,
+            Self::Expression(span, ..) => Cursor::from(span),
+            Self::Register(span, ..) => Cursor::from(span),
             Self::DelimiterClose(cursor, ..) => *cursor,
         }
     }
@@ -301,11 +310,10 @@ fn process_expressions(mut queue: impl FnMut(Item), mut it: impl Iterator<Item =
             // Context evaluation.
             (TokenTree::Punct(first), Some(argument)) if first.as_char() == '#' => {
                 let span = first.span().join(argument.span()).expect("failed to join spans");
-                let cursor = Cursor::from(span);
 
                 match argument {
                     other => {
-                        queue(Item::Expression(cursor, other));
+                        queue(Item::Expression(span, other));
                         it.next().transpose()?
                     }
                 }
@@ -313,11 +321,10 @@ fn process_expressions(mut queue: impl FnMut(Item), mut it: impl Iterator<Item =
             // Register evaluation.
             (TokenTree::Punct(first), Some(argument)) if first.as_char() == '@' => {
                 let span = first.span().join(argument.span()).expect("failed to join spans");
-                let cursor = Cursor::from(span);
 
                 match argument {
                     other => {
-                        queue(Item::Register(cursor, other));
+                        queue(Item::Register(span, other));
                         it.next().transpose()?
                     }
                 }

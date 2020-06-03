@@ -7,92 +7,112 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Rust.
 pub type Tokens<'el> = crate::Tokens<'el, Swift>;
 
-impl_lang_item!(Imported, Swift);
+impl_type_basics!(Swift, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array});
 
-/// Name of an imported type.
+/// Trait implemented by all types
+pub trait TypeTrait: 'static + fmt::Debug + LangItem<Swift> {
+    /// Coerce trait into an enum that can be used for type-specific operations
+    fn as_enum(&self) -> TypeEnum<'_>;
+
+    /// Handle imports for the given type.
+    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>);
+}
+
+/// Swift token specialization.
+pub struct Swift(());
+
+/// A regular type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Name {
+pub struct Type {
     /// Module of the imported name.
     module: Option<Cons<'static>>,
     /// Name imported.
     name: Cons<'static>,
 }
 
-/// Swift token specialization.
-pub struct Swift(());
+impl TypeTrait for Type {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Type(self)
+    }
 
-/// An imported Swift element.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Imported {
-    /// A regular type.
-    Type {
-        /// The name being referenced.
-        name: Name,
-    },
-    /// A map, [<key>: <value>].
-    Map {
-        /// Key of the map.
-        key: Box<Imported>,
-        /// Value of the map.
-        value: Box<Imported>,
-    },
-    /// An array, [<inner>].
-    Array {
-        /// Inner value of the array.
-        inner: Box<Imported>,
-    },
-}
-
-impl Imported {
     fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
-        match self {
-            Self::Type { name, .. } => {
-                if let Some(module) = name.module.as_ref() {
-                    modules.insert(module.clone());
-                }
-            }
-            Self::Map { key, value, .. } => {
-                key.type_imports(modules);
-                value.type_imports(modules);
-            }
-            Self::Array { inner, .. } => {
-                inner.type_imports(modules);
-            }
-        };
+        if let Some(module) = &self.module {
+            modules.insert(module.clone());
+        }
     }
 }
 
-impl LangItem<Swift> for Imported {
-    /// Format the language item appropriately.
-    fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
-        match self {
-            Self::Type {
-                name: Name { name, .. },
-                ..
-            } => {
-                out.write_str(name)?;
-            }
-            Self::Map { key, value, .. } => {
-                out.write_str("[")?;
-                key.format(out, config, level + 1)?;
-                out.write_str(": ")?;
-                value.format(out, config, level + 1)?;
-                out.write_str("]")?;
-            }
-            Self::Array { inner, .. } => {
-                out.write_str("[")?;
-                inner.format(out, config, level + 1)?;
-                out.write_str("]")?;
-            }
-        }
+impl LangItem<Swift> for Type {
+    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        out.write_str(&self.name)
+    }
 
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// A map `[<key>: <value>]`.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Map {
+    /// Key of the map.
+    key: TypeBox,
+    /// Value of the map.
+    value: TypeBox,
+}
+
+impl TypeTrait for Map {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Map(self)
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+        self.key.type_imports(modules);
+        self.value.type_imports(modules);
+    }
+}
+
+impl LangItem<Swift> for Map {
+    fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
+        out.write_str("[")?;
+        self.key.format(out, config, level + 1)?;
+        out.write_str(": ")?;
+        self.value.format(out, config, level + 1)?;
+        out.write_str("]")?;
         Ok(())
     }
 
-    /// Coerce into an imported type.
-    ///
-    /// This is used for import resolution for custom language items.
-    fn as_import(&self) -> Option<&Self> {
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// An array, `[<inner>]`.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Array {
+    /// Inner value of the array.
+    inner: TypeBox,
+}
+
+impl TypeTrait for Array {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Array(self)
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+        self.inner.type_imports(modules);
+    }
+}
+
+impl LangItem<Swift> for Array {
+    fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
+        out.write_str("[")?;
+        self.inner.format(out, config, level + 1)?;
+        out.write_str("]")?;
+        Ok(())
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
 }
@@ -128,7 +148,7 @@ impl Swift {
 
 impl Lang for Swift {
     type Config = ();
-    type Import = Imported;
+    type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -168,51 +188,47 @@ impl Lang for Swift {
 }
 
 /// Setup an imported element.
-pub fn imported<M, N>(module: M, name: N) -> Imported
+pub fn imported<M, N>(module: M, name: N) -> Type
 where
     M: Into<Cons<'static>>,
     N: Into<Cons<'static>>,
 {
-    Imported::Type {
-        name: Name {
-            module: Some(module.into()),
-            name: name.into(),
-        },
+    Type {
+        module: Some(module.into()),
+        name: name.into(),
     }
 }
 
 /// Setup a local element.
-pub fn local<N>(name: N) -> Imported
+pub fn local<N>(name: N) -> Type
 where
     N: Into<Cons<'static>>,
 {
-    Imported::Type {
-        name: Name {
-            module: None,
-            name: name.into(),
-        },
+    Type {
+        module: None,
+        name: name.into(),
     }
 }
 
 /// Setup a map.
-pub fn map<K, V>(key: K, value: V) -> Imported
+pub fn map<K, V>(key: K, value: V) -> Map
 where
-    K: Into<Imported>,
-    V: Into<Imported>,
+    K: Into<TypeBox>,
+    V: Into<TypeBox>,
 {
-    Imported::Map {
-        key: Box::new(key.into()),
-        value: Box::new(value.into()),
+    Map {
+        key: key.into(),
+        value: value.into(),
     }
 }
 
 /// Setup an array.
-pub fn array<'a, I>(inner: I) -> Imported
+pub fn array<'a, I>(inner: I) -> Array
 where
-    I: Into<Imported>,
+    I: Into<TypeBox>,
 {
-    Imported::Array {
-        inner: Box::new(inner.into()),
+    Array {
+        inner: inner.into(),
     }
 }
 

@@ -28,7 +28,7 @@ where
     /// Configuration associated with building a formatting element.
     type Config;
     /// The type used when resolving imports.
-    type Import;
+    type Import: ?Sized;
 
     /// The default indentation for the current language.
     fn default_indentation() -> usize {

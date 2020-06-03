@@ -8,7 +8,7 @@ use std::rc::Rc;
 /// Tokens container specialization for Rust.
 pub type Tokens<'el> = crate::Tokens<'el, Rust>;
 
-impl_lang_item!(Imported, Rust);
+impl_lang_item!(Type, Rust);
 
 static SEP: &'static str = "::";
 
@@ -62,18 +62,18 @@ pub struct Name {
     /// Name  of class.
     name: Cons<'static>,
     /// Arguments of the class.
-    arguments: Vec<Imported>,
+    arguments: Vec<Type>,
 }
 
 impl Name {
     /// Format the name.
     fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        if let Some(reference) = self.reference.as_ref() {
-            match *reference {
+        if let Some(reference) = &self.reference {
+            match reference {
                 Reference::StaticRef => {
                     out.write_str("&'static ")?;
                 }
-                Reference::Named(ref name) => {
+                Reference::Named(name) => {
                     out.write_str("&'")?;
                     out.write_str(name.as_ref())?;
                     out.write_str(" ")?;
@@ -106,7 +106,7 @@ impl Name {
     }
 
     /// Add generic arguments to the given type.
-    pub fn with_arguments(self, arguments: Vec<Imported>) -> Name {
+    pub fn with_arguments(self, arguments: Vec<Type>) -> Name {
         Name {
             arguments: arguments,
             ..self
@@ -144,7 +144,7 @@ impl Default for Config {
 
 /// An imported name in Rust.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Imported {
+pub struct Type {
     /// Module of the imported name.
     module: Option<Cons<'static>>,
     /// Alias of module.
@@ -155,7 +155,7 @@ pub struct Imported {
     qualified: bool,
 }
 
-impl Imported {
+impl Type {
     fn walk_custom(&self, modules: &mut BTreeSet<(Cons<'static>, Option<Cons<'static>>)>) {
         if let Some(module) = self.module.as_ref() {
             if self.qualified || self.alias.is_some() {
@@ -172,32 +172,32 @@ impl Imported {
     }
 
     /// Alias the given type.
-    pub fn alias<A: Into<Cons<'static>>>(self, alias: A) -> Imported {
-        Imported {
+    pub fn alias<A: Into<Cons<'static>>>(self, alias: A) -> Type {
+        Type {
             alias: Some(alias.into()),
             ..self
         }
     }
 
     /// Add generic arguments to the given type.
-    pub fn with_arguments(self, arguments: Vec<Imported>) -> Imported {
-        Imported {
+    pub fn with_arguments(self, arguments: Vec<Type>) -> Type {
+        Type {
             name: self.name.with_arguments(arguments),
             ..self
         }
     }
 
     /// Change to be a qualified import.
-    pub fn qualified(self) -> Imported {
-        Imported {
+    pub fn qualified(self) -> Type {
+        Type {
             qualified: true,
             ..self
         }
     }
 
     /// Make the type a reference.
-    pub fn reference<R: Into<Reference>>(self, reference: R) -> Imported {
-        Imported {
+    pub fn reference<R: Into<Reference>>(self, reference: R) -> Type {
+        Type {
             module: self.module,
             name: self.name.reference(reference),
             alias: self.alias,
@@ -206,7 +206,7 @@ impl Imported {
     }
 }
 
-impl LangItem<Rust> for Imported {
+impl LangItem<Rust> for Type {
     fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
         if let Some(alias) = self.alias.as_ref() {
             out.write_str(alias)?;
@@ -271,7 +271,7 @@ pub struct Rust(());
 
 impl Lang for Rust {
     type Config = Config;
-    type Import = Imported;
+    type Import = Type;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -311,12 +311,12 @@ impl Lang for Rust {
 }
 
 /// Setup an imported element.
-pub fn imported<M, N>(module: M, name: N) -> Imported
+pub fn imported<M, N>(module: M, name: N) -> Type
 where
     M: Into<Cons<'static>>,
     N: Into<Cons<'static>>,
 {
-    Imported {
+    Type {
         module: Some(module.into()),
         alias: None,
         name: Name::from(name.into()),
@@ -325,11 +325,11 @@ where
 }
 
 /// Setup a local element.
-pub fn local<N>(name: N) -> Imported
+pub fn local<N>(name: N) -> Type
 where
     N: Into<Cons<'static>>,
 {
-    Imported {
+    Type {
         module: None,
         alias: None,
         name: Name::from(name.into()),

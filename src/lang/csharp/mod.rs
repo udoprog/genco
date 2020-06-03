@@ -12,141 +12,111 @@ use std::fmt;
 /// Tokens container specialization for C#.
 pub type Tokens<'el> = crate::Tokens<'el, Csharp>;
 
+impl_type_basics!(Csharp, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Simple, Optional, Type, Array, Void});
+
+/// Trait implemented by all types
+pub trait TypeTrait: 'static + fmt::Debug + LangItem<Csharp> {
+    /// Coerce trait into an enum that can be used for type-specific operations
+    fn as_enum(&self) -> TypeEnum<'_>;
+
+    /// Get the name of the type.
+    fn name(&self) -> &str;
+
+    /// Get the namespace of the type, if available.
+    fn namespace(&self) -> Option<&str> {
+        None
+    }
+
+    /// Check if type is nullable.
+    fn is_nullable(&self) -> bool;
+
+    /// Handle imports recursively.
+    fn type_imports(&self, _: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {}
+}
+
 static SYSTEM: &'static str = "System";
 static SEP: &'static str = ".";
 
-/// Boolean Type
-pub const BOOLEAN: Imported = Imported::Simple {
+/// Boolean type
+pub const BOOLEAN: Simple = Simple {
     name: "bool",
     alias: "Boolean",
 };
 
-/// Byte Type.
-pub const BYTE: Imported = Imported::Simple {
+/// Byte type.
+pub const BYTE: Simple = Simple {
     name: "byte",
     alias: "Byte",
 };
 
-/// Signed Byte Type.
-pub const SBYTE: Imported = Imported::Simple {
+/// Signed Byte type.
+pub const SBYTE: Simple = Simple {
     name: "sbyte",
     alias: "SByte",
 };
 
-/// Decimal Type
-pub const DECIMAL: Imported = Imported::Simple {
+/// Decimal type
+pub const DECIMAL: Simple = Simple {
     name: "decimal",
     alias: "Decimal",
 };
 
-/// Float Type.
-pub const SINGLE: Imported = Imported::Simple {
+/// Float type.
+pub const SINGLE: Simple = Simple {
     name: "float",
     alias: "Single",
 };
 
-/// Double Type.
-pub const DOUBLE: Imported = Imported::Simple {
+/// Double type.
+pub const DOUBLE: Simple = Simple {
     name: "double",
     alias: "Double",
 };
 
-/// Int16 Type.
-pub const INT16: Imported = Imported::Simple {
+/// Int16 type.
+pub const INT16: Simple = Simple {
     name: "short",
     alias: "Int16",
 };
 
-/// Uint16 Type.
-pub const UINT16: Imported = Imported::Simple {
+/// Uint16 type.
+pub const UINT16: Simple = Simple {
     name: "ushort",
     alias: "UInt16",
 };
 
-/// Int32 Type.
-pub const INT32: Imported = Imported::Simple {
+/// Int32 type.
+pub const INT32: Simple = Simple {
     name: "int",
     alias: "Int32",
 };
 
-/// Uint32 Type.
-pub const UINT32: Imported = Imported::Simple {
+/// Uint32 type.
+pub const UINT32: Simple = Simple {
     name: "uint",
     alias: "UInt32",
 };
 
-/// Int64 Type.
-pub const INT64: Imported = Imported::Simple {
+/// Int64 type.
+pub const INT64: Simple = Simple {
     name: "long",
     alias: "Int64",
 };
 
-/// UInt64 Type.
-pub const UINT64: Imported = Imported::Simple {
+/// UInt64 type.
+pub const UINT64: Simple = Simple {
     name: "ulong",
     alias: "UInt64",
 };
 
-/// A class.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type {
-    /// namespace of the class.
-    namespace: Cons<'static>,
-    /// Name  of class.
-    name: Cons<'static>,
-    /// Path of class when nested.
-    path: Vec<Cons<'static>>,
-    /// Arguments of the class.
-    arguments: Vec<Imported>,
-    /// Use as qualified type.
-    qualified: bool,
-}
-
-impl Type {
-    /// Handle type imports.
-    fn type_import(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
-        for argument in &self.arguments {
-            argument.type_imports(modules);
-        }
-
-        modules.insert((self.namespace.clone(), self.name.clone()));
-    }
-}
-
-/// Csharp token specialization.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Imported {
-    /// Simple type.
-    Simple {
-        /// The name of the simple type.
-        name: &'static str,
-        /// Their .NET aliases.
-        alias: &'static str,
-    },
-    /// An array of some type.
-    Array(Box<Imported>),
-    /// A struct of some type.
-    Struct(Type),
-    /// The special `void` type.
-    Void,
-    /// A class, with or without arguments, using from somewhere.
-    Class(Type),
-    /// An enum of some type.
-    Enum(Type),
-    /// A local name with no specific qualification.
-    Local {
-        /// Name of class.
-        name: Cons<'static>,
-    },
-    /// Optional type.
-    Optional(Box<Imported>),
-}
+/// The `void` type.
+pub const VOID: Void = Void(());
 
 /// Config data for Csharp formatting.
 #[derive(Debug, Default)]
 pub struct Config {
     /// namespace to use.
-    pub namespace: Option<Cons<'static>>,
+    namespace: Option<Cons<'static>>,
 
     /// Names which have been imported (namespace + name).
     imported_names: HashMap<String, String>,
@@ -154,277 +124,200 @@ pub struct Config {
 
 impl Config {
     /// Set the namespace name to build.
-    pub fn namespace<P>(&mut self, namespace: P)
+    pub fn with_namespace<N>(self, namespace: N) -> Self
     where
-        P: Into<Cons<'static>>,
+        N: Into<Cons<'static>>,
     {
-        self.namespace = Some(namespace.into())
+        Self {
+            namespace: Some(namespace.into()),
+            ..self
+        }
     }
 }
 
-impl Imported {
-    /// Extend the type with a nested path.
-    ///
-    /// This discards any arguments associated with it.
-    pub fn path<P: Into<Cons<'static>>>(&self, part: P) -> Imported {
-        use self::Imported::*;
+/// An optional type.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Optional {
+    inner: TypeBox,
+}
 
-        match *self {
-            Class(ref class) => {
-                let mut path = class.path.clone();
-                path.push(part.into());
+impl TypeTrait for Optional {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Optional(self)
+    }
 
-                Class(Type {
-                    namespace: class.namespace.clone(),
-                    name: class.name.clone(),
-                    path: path,
-                    arguments: vec![],
-                    qualified: class.qualified,
-                })
-            }
-            ref csharp => csharp.clone(),
-        }
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn namespace(&self) -> Option<&str> {
+        self.inner.namespace()
+    }
+
+    fn is_nullable(&self) -> bool {
+        false
     }
 
     fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
-        match self {
-            Self::Simple { alias, .. } => {
-                modules.insert((SYSTEM.into(), (*alias).into()));
-            }
-            Self::Class(inner) | Self::Struct(inner) | Self::Enum(inner) => {
-                inner.type_import(modules);
-            }
-            Self::Array(ty) | Self::Optional(ty) => {
-                ty.type_imports(modules);
-            }
-            _ => {}
-        };
+        self.inner.type_imports(modules)
+    }
+}
+
+impl LangItem<Csharp> for Optional {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        self.inner.format(out, config, level)?;
+
+        if !self.inner.is_nullable() {
+            out.write_str("?")?;
+        }
+
+        Ok(())
     }
 
-    /// Add arguments to the given variable.
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// The kind of the pointed to type.
+#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub enum Kind {
+    /// The pointed to type is an enum.
+    Enum,
+    /// The pointed to type is a class.
+    Class,
+    /// The pointed to type is a struct.
+    Struct,
+}
+
+/// A class.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Type {
+    /// namespace of the class.
+    namespace: Option<Cons<'static>>,
+    /// Name  of class.
+    name: Cons<'static>,
+    /// Path of class when nested.
+    path: Vec<Cons<'static>>,
+    /// Arguments of the class.
+    arguments: Vec<TypeBox>,
+    /// Use as qualified type.
+    qualified: bool,
+    /// The kind of the type.
+    kind: Kind,
+}
+
+impl Type {
+    /// Extend the type with a nested path.
+    ///
+    /// This discards any arguments associated with it.
+    pub fn path<P: Into<Cons<'static>>>(self, part: P) -> Self {
+        let mut path = self.path;
+        path.push(part.into());
+
+        Self {
+            path: path,
+            arguments: vec![],
+            ..self
+        }
+    }
+
+    /// Add arguments to the given type.
     ///
     /// Only applies to classes, any other will return the same value.
-    pub fn with_arguments(&self, arguments: Vec<Imported>) -> Imported {
-        use self::Imported::*;
-
-        match *self {
-            Class(ref cls) => Class(Type {
-                namespace: cls.namespace.clone(),
-                name: cls.name.clone(),
-                path: cls.path.clone(),
-                arguments: arguments,
-                qualified: cls.qualified,
-            }),
-            ref csharp => csharp.clone(),
-        }
-    }
-
-    /// Convert this type into a struct.
-    pub fn into_struct(self) -> Imported {
-        use self::Imported::*;
-
-        match self {
-            Class(inner) => Struct(inner),
-            csharp => csharp,
-        }
-    }
-
-    /// Convert this type into an enum.
-    pub fn into_enum(self) -> Imported {
-        use self::Imported::*;
-
-        match self {
-            Class(inner) => Enum(inner),
-            csharp => csharp,
+    pub fn with_arguments(self, args: impl TypeArgs) -> Self {
+        Self {
+            arguments: args.into_args(),
+            ..self
         }
     }
 
     /// Make this type into a qualified type that is always used with a namespace.
-    pub fn qualified(self) -> Imported {
-        use self::Imported::*;
-
-        match self {
-            Class(cls) => Class(Type {
-                qualified: true,
-                ..cls
-            }),
-            csharp => csharp,
+    pub fn qualified(self) -> Self {
+        Self {
+            qualified: true,
+            ..self
         }
     }
 
-    /// Compare if two types are equal.
-    pub fn equals(&self, other: &Imported) -> bool {
-        use self::Imported::*;
-
-        match (self, other) {
-            (
-                &Simple {
-                    name: ref l_name, ..
-                },
-                &Simple {
-                    name: ref r_name, ..
-                },
-            ) => l_name == r_name,
-            (&Class(ref l), &Class(ref r)) => {
-                l.namespace == r.namespace
-                    && l.name == r.name
-                    && l.arguments.len() == r.arguments.len()
-                    && l.arguments
-                        .iter()
-                        .zip(r.arguments.iter())
-                        .all(|(l, r)| l.equals(r))
-            }
-            _ => false,
+    /// Convert this type into a struct.
+    pub fn into_struct(self) -> Self {
+        Self {
+            kind: Kind::Struct,
+            arguments: vec![],
+            ..self
         }
     }
 
-    /// Get the name of the type.
-    pub fn name(&self) -> Cons<'static> {
-        use self::Imported::*;
-
-        match *self {
-            Simple { ref name, .. } => Cons::Borrowed(name),
-            Enum(ref inner) | Struct(ref inner) | Class(ref inner) => inner.name.clone(),
-            Local { ref name, .. } => name.clone(),
-            Optional(ref value) => value.name(),
-            Array(ref inner) => inner.name(),
-            Void => Cons::Borrowed("void"),
+    /// Convert this type into an enum.
+    pub fn into_enum(self) -> Self {
+        Self {
+            kind: Kind::Enum,
+            arguments: vec![],
+            ..self
         }
     }
+}
 
-    /// Get the name of the type.
-    pub fn namespace(&self) -> Option<Cons<'static>> {
-        use self::Imported::*;
-
-        match *self {
-            Simple { .. } => Some(Cons::Borrowed(SYSTEM)),
-            Enum(ref inner) | Struct(ref inner) | Class(ref inner) => Some(inner.namespace.clone()),
-            Local { .. } => None,
-            Optional(ref value) => value.namespace(),
-            Array(ref inner) => inner.namespace(),
-            Void => None,
-        }
+impl TypeTrait for Type {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Type(self)
     }
 
-    /// Get the arguments
-    pub fn arguments(&self) -> Option<&[Imported]> {
-        use self::Imported::*;
-
-        match *self {
-            Class(ref inner) => Some(&inner.arguments),
-            Optional(ref value) => value.arguments(),
-            _ => None,
-        }
+    fn name(&self) -> &str {
+        &*self.name
     }
 
-    /// Get the value type (strips optionality).
-    pub fn as_value(&self) -> Imported {
-        self.as_optional()
-            .map(|opt| opt.clone())
-            .unwrap_or_else(|| self.clone())
+    fn namespace(&self) -> Option<&str> {
+        self.namespace.as_deref()
     }
 
-    /// Check if type is optional.
-    pub fn is_optional(&self) -> bool {
-        use self::Imported::*;
-
-        match *self {
-            Optional(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Check if type is nullable.
-    pub fn is_nullable(&self) -> bool {
-        use self::Imported::*;
-
-        match *self {
-            Enum(_) | Struct(_) | Simple { .. } => false,
+    fn is_nullable(&self) -> bool {
+        match self.kind {
+            Kind::Enum | Kind::Struct => false,
             _ => true,
         }
     }
 
-    /// Check if variable is simple.
-    pub fn is_simple(&self) -> bool {
-        use self::Imported::*;
+    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+        for argument in &self.arguments {
+            argument.type_imports(modules);
+        }
 
-        match *self {
-            Simple { .. } => true,
-            _ => false,
+        if let Some(namespace) = &self.namespace {
+            modules.insert((namespace.clone(), self.name.clone()));
         }
     }
+}
 
-    /// Check if type is array.
-    pub fn is_array(&self) -> bool {
-        use self::Imported::*;
-
-        match *self {
-            Array(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Check if type is struct.
-    pub fn is_struct(&self) -> bool {
-        use self::Imported::*;
-
-        match *self {
-            Struct(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Check if type is an enum.
-    pub fn is_enum(&self) -> bool {
-        use self::Imported::*;
-
-        match *self {
-            Enum(_) => true,
-            _ => false,
-        }
-    }
-
-    /// Get type as optional.
-    pub fn as_optional(&self) -> Option<&Imported> {
-        use self::Imported::*;
-
-        match *self {
-            Optional(ref optional) => Some(optional),
-            _ => None,
-        }
-    }
-
-    fn inner_format(
-        &self,
-        inner: &Type,
-        out: &mut Formatter,
-        config: &mut Config,
-        level: usize,
-    ) -> fmt::Result {
+impl LangItem<Csharp> for Type {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
         {
-            let qualified = match inner.qualified {
+            let qualified = match self.qualified {
                 true => true,
                 false => {
                     let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
                     let imported = config
                         .imported_names
-                        .get(inner.name.as_ref())
+                        .get(self.name.as_ref())
                         .map(String::as_str);
-                    let pkg = Some(inner.namespace.as_ref());
+                    let pkg = self.namespace.as_deref();
                     imported != pkg && file_namespace != pkg
                 }
             };
 
-            if qualified {
-                out.write_str(inner.namespace.as_ref())?;
-                out.write_str(SEP)?;
+            if let Some(namespace) = &self.namespace {
+                if qualified {
+                    out.write_str(namespace)?;
+                    out.write_str(SEP)?;
+                }
             }
         }
 
         {
-            out.write_str(inner.name.as_ref())?;
+            out.write_str(self.name.as_ref())?;
 
-            let mut it = inner.path.iter();
+            let mut it = self.path.iter();
 
             while let Some(n) = it.next() {
                 out.write_str(".")?;
@@ -432,10 +325,10 @@ impl Imported {
             }
         }
 
-        if !inner.arguments.is_empty() {
+        if !self.arguments.is_empty() {
             out.write_str("<")?;
 
-            let mut it = inner.arguments.iter().peekable();
+            let mut it = self.arguments.iter().peekable();
 
             while let Some(argument) = it.next() {
                 argument.format(out, config, level + 1usize)?;
@@ -450,47 +343,122 @@ impl Imported {
 
         Ok(())
     }
-}
 
-impl LangItem<Csharp> for Imported {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        use self::Imported::*;
-
-        match *self {
-            Simple { ref alias, .. } => {
-                out.write_str(alias.as_ref())?;
-            }
-            Array(ref inner) => {
-                inner.format(out, config, level)?;
-                out.write_str("[]")?;
-            }
-            Void => {
-                out.write_str("void")?;
-            }
-            Enum(ref inner) | Struct(ref inner) | Class(ref inner) => {
-                self.inner_format(inner, out, config, level)?;
-            }
-            Local { ref name } => {
-                out.write_str(name.as_ref())?;
-            }
-            Optional(ref value) => {
-                value.format(out, config, level)?;
-
-                if !value.is_nullable() {
-                    out.write_str("?")?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn as_import(&self) -> Option<&Self> {
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
 }
 
-impl_lang_item!(Imported, Csharp);
+/// Simple type.
+#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Simple {
+    /// The name of the simple type.
+    name: &'static str,
+    /// Their .NET aliases.
+    alias: &'static str,
+}
+
+impl TypeTrait for Simple {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Simple(self)
+    }
+
+    fn name(&self) -> &str {
+        self.name
+    }
+
+    fn namespace(&self) -> Option<&str> {
+        Some(SYSTEM)
+    }
+
+    fn is_nullable(&self) -> bool {
+        false
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+        modules.insert((SYSTEM.into(), self.alias.into()));
+    }
+}
+
+impl LangItem<Csharp> for Simple {
+    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        out.write_str(self.alias)?;
+        Ok(())
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// An array type in C#.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Array {
+    inner: TypeBox,
+}
+
+impl TypeTrait for Array {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Array(self)
+    }
+
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn namespace(&self) -> Option<&str> {
+        self.inner.namespace()
+    }
+
+    fn is_nullable(&self) -> bool {
+        true
+    }
+
+    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+        self.inner.type_imports(modules);
+    }
+}
+
+impl LangItem<Csharp> for Array {
+    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        self.inner.format(out, config, level)?;
+        out.write_str("[]")?;
+        Ok(())
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// The special `void` type.
+#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Void(());
+
+impl TypeTrait for Void {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Void(self)
+    }
+
+    fn name(&self) -> &str {
+        "void"
+    }
+
+    fn is_nullable(&self) -> bool {
+        false
+    }
+}
+
+impl LangItem<Csharp> for Void {
+    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        out.write_str("void")?;
+        Ok(())
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
 
 /// Language specialization for C#.
 pub struct Csharp(());
@@ -543,7 +511,7 @@ impl Csharp {
 
 impl Lang for Csharp {
     type Config = Config;
-    type Import = Imported;
+    type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         use std::fmt::Write as _;
@@ -597,34 +565,41 @@ impl Lang for Csharp {
 }
 
 /// Setup an imported element.
-pub fn using<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(namespace: P, name: N) -> Imported {
-    Imported::Class(Type {
-        namespace: namespace.into(),
+pub fn using<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(namespace: P, name: N) -> Type {
+    Type {
+        namespace: Some(namespace.into()),
         name: name.into(),
         path: vec![],
         arguments: vec![],
         qualified: false,
-    })
-}
-
-/// Setup a struct type.
-pub fn struct_<I: Into<Imported>>(value: I) -> Imported {
-    value.into().into_struct()
+        kind: Kind::Class,
+    }
 }
 
 /// Setup a local element from borrowed components.
-pub fn local<N: Into<Cons<'static>>>(name: N) -> Imported {
-    Imported::Local { name: name.into() }
+pub fn local<N: Into<Cons<'static>>>(name: N) -> Type {
+    Type {
+        namespace: None,
+        name: name.into(),
+        path: vec![],
+        arguments: vec![],
+        qualified: false,
+        kind: Kind::Class,
+    }
 }
 
 /// Setup an array type.
-pub fn array<I: Into<Imported>>(value: I) -> Imported {
-    Imported::Array(Box::new(value.into()))
+pub fn array<I: Into<TypeBox>>(value: I) -> Array {
+    Array {
+        inner: value.into(),
+    }
 }
 
 /// Setup an optional type.
-pub fn optional<I: Into<Imported>>(value: I) -> Imported {
-    Imported::Optional(Box::new(value.into()))
+pub fn optional<I: Into<TypeBox>>(value: I) -> Optional {
+    Optional {
+        inner: value.into(),
+    }
 }
 
 #[cfg(test)]
@@ -632,22 +607,6 @@ mod tests {
     use super::*;
     use crate as genco;
     use crate::{quote, Csharp, Quoted, Tokens};
-
-    #[test]
-    fn test_simple() {
-        assert!(BOOLEAN.is_simple());
-        assert!(BYTE.is_simple());
-        assert!(SBYTE.is_simple());
-        assert!(DECIMAL.is_simple());
-        assert!(SINGLE.is_simple());
-        assert!(DOUBLE.is_simple());
-        assert!(INT16.is_simple());
-        assert!(UINT16.is_simple());
-        assert!(INT32.is_simple());
-        assert!(UINT32.is_simple());
-        assert!(INT64.is_simple());
-        assert!(UINT64.is_simple());
-    }
 
     #[test]
     fn test_string() {
@@ -662,7 +621,7 @@ mod tests {
         let a = using("Foo.Bar", "A");
         let b = using("Foo.Bar", "B");
         let ob = using("Foo.Baz", "B");
-        let ob_a = ob.with_arguments(vec![a.clone()]);
+        let ob_a = ob.clone().with_arguments(a.clone());
 
         let toks: Tokens<Csharp> = quote!(#a #b #ob #ob_a);
 
