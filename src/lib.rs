@@ -28,7 +28,7 @@
 //!
 //! You can run one of the examples above using:
 //!
-//! ```
+//! ```bash
 //! cargo run --example go
 //! ```
 //!

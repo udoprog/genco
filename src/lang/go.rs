@@ -296,7 +296,7 @@ mod tests {
         let mut toks = Tokens::new();
         toks.append("hello \n world".quoted());
         let res = toks.to_string_with(
-            Config::from_package("foo"),
+            Config::default().with_package("foo"),
             FormatterConfig::from_lang::<Go>(),
         );
 
@@ -312,7 +312,7 @@ mod tests {
         assert_eq!(
             vec!["package foo", "", "import \"foo\"", "", "foo.Debug", ""],
             toks.to_file_vec_with(
-                Config::from_package("foo"),
+                Config::default().with_package("foo"),
                 FormatterConfig::from_lang::<Go>()
             )
             .unwrap()
@@ -336,7 +336,7 @@ mod tests {
                 ""
             ],
             toks.to_file_vec_with(
-                Config::from_package("foo"),
+                Config::default().with_package("foo"),
                 FormatterConfig::from_lang::<Go>()
             )
             .unwrap()
@@ -353,7 +353,7 @@ mod tests {
         assert_eq!(
             Ok("package foo\n\nimport \"foo\"\n\n[]foo.Debug\n"),
             toks.to_file_string_with(
-                Config::from_package("foo"),
+                Config::default().with_package("foo"),
                 FormatterConfig::from_lang::<Go>()
             )
             .as_ref()
