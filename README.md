@@ -5,15 +5,16 @@
 
 GenCo is an even simpler code generator for Rust, written for use in [reproto].
 
-The workhorse of GenCo is the [`quote!`] macro. While tokens can be constructed,
+The workhorse of GenCo is the [`quote!`] macro. While tokens can be constructed
 manually, [`quote!`] makes this process much easier.
 
-GenCo does not deal with language-specific syntax, instead it limits itself to
-do the following basic necessities through specialization:
+GenCo only minimally deals with language-specific syntax, but primarily deals
+with solving the following:
 
-* Handle and collapse import statements.
-* Quote strings according to language convention.
-* Indents and spaces your code according to generic [indentation rules].
+* Generates and groups import statements.
+* Quote (and escape) strings using [`<stmt>.quoted()`].
+* Indents and spaces your code according to generic [indentation rules] that can
+  be tweaked on a per-language basis.
 
 ## Examples
 
@@ -33,26 +34,42 @@ The following is a simple example showcasing code generation for Rust.
 ```rust
 #![feature(proc_macro_hygiene)]
 
-use genco::rust::imported;
-use genco::{quote, Rust, Tokens};
+use genco::rust::{imported, Config};
+use genco::{quote, FormatterConfig, Rust};
 
-// Import the LittleEndian item, without referencing it through the last
-// module component it is part of.
-let little_endian = imported("byteorder", "LittleEndian").qualified();
-let big_endian = imported("byteorder", "BigEndian");
+use std::fmt;
 
-// This is a trait, so only import it into the scope (unless we intent to
-// implement it).
-let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+fn main() -> fmt::Result {
+    // Import the LittleEndian item, without referencing it through the last
+    // module component it is part of.
+    let little_endian = imported("byteorder", "LittleEndian").qualified();
+    let big_endian = imported("byteorder", "BigEndian");
 
-let tokens: Tokens<Rust> = quote! {
-    @write_bytes_ext
+    // This is a trait, so only import it into the scope (unless we intent to
+    // implement it).
+    let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
 
-    let mut wtr = vec![];
-    wtr.write_u16::<#little_endian>(517).unwrap();
-    wtr.write_u16::<#big_endian>(768).unwrap();
-    assert_eq!(wtr, vec![5, 2, 3, 0]);
-};
+    let tokens = quote! {
+        @write_bytes_ext
+        fn test() {
+            let mut wtr = vec![];
+            wtr.write_u16::<#little_endian>(517).unwrap();
+            wtr.write_u16::<#big_endian>(768).unwrap();
+            assert_eq!(wtr, vec![5, 2, 3, 0]);
+        }
+    };
+
+    // Simpler printing with default indentation:
+    // println!("{}", tokens.to_file_string()?);
+
+    tokens.to_io_writer_with(
+        std::io::stdout().lock(),
+        Config::default(),
+        FormatterConfig::from_lang::<Rust>().with_indentation(2),
+    )?;
+
+    Ok(())
+}
 ```
 
 ## Indentation Rules
@@ -138,3 +155,4 @@ fn test() {
 [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
 [`quote!`]: https://github.com/udoprog/genco/blob/master/tests/test_quote.rs
+[`<stmt>.quoted()`]: https://docs.rs/genco/latest/genco/trait.Quoted.html

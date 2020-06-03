@@ -222,7 +222,7 @@ mod tests {
         });
         push!(t, "var foo = bar();");
 
-        let mut expected = vec![
+        let expected = vec![
             "function bar(a, b) {",
             "    var v = a + b;",
             "    return v;",

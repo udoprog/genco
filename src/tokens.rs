@@ -177,6 +177,29 @@ where
     }
 
     /// Add an registered custom element that is _not_ rendered.
+    ///
+    /// Registration can be used to generate imports that do not render a
+    /// visible result.
+    ///
+    /// # Examples
+    ///
+    /// The `register` functionality is available through the [`quote`] macro as
+    /// `@<stmt>`.
+    ///
+    /// ```rust
+    /// #![feature(proc_macro_hygiene)]
+    ///
+    /// use genco::rust::{imported, Config};
+    /// use genco::quote;
+    ///
+    /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+    ///
+    /// let tokens = quote!(@write_bytes_ext);
+    ///
+    /// assert_eq!("use byteorder::WriteBytesExt as _;\n\n", tokens.to_file_string().unwrap());
+    /// ```
+    ///
+    /// [`quote`]: crate::quote
     pub fn register(&mut self, custom: impl Into<LangBox<'el, L>>) {
         self.elements.push(Element::Registered(custom.into()));
     }

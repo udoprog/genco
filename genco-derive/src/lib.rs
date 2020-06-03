@@ -10,6 +10,21 @@ use std::collections::VecDeque;
 
 /// Quotes the specified expression as a stream of tokens for use with genco.
 ///
+/// # Mechanisms
+///
+/// * Elements are interpolated using `#`, so to include the variable `test`,
+///   you could write `#test`. Returned elements must implement
+///   [`FormatTokens`].
+/// * Inline statements can be evaluated using `#(<stmt>)`, or `#{<stmt>}`,
+///   or `#[<stmt>]`. In effect, anything that counts as a _group_ in Rust.
+///   For example: `#("test".quoted())` can be used to quote a string.
+/// * The [`register`] functionality of [`Tokens`] is available by prefixing an
+///   expression with `@` as `@<stmt>`.
+///   For example: `@only_imports`.
+/// * `#` and `@` can be escaped by repeating it twice in case it's needed in
+///   the target language. So `##` would produce a single `#`, and `@@` would
+///   produce a single `@`.
+///
 /// # Examples
 ///
 /// ```rust
@@ -38,6 +53,9 @@ use std::collections::VecDeque;
 ///
 /// println!("{}", tokens.to_file_string().unwrap());
 /// ```
+///
+/// [`FormatTokens`]: https://docs.rs/genco/latest/genco/trait.FormatTokens.html
+/// [`register`]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.register
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let Tokens(registers, output) = parse_macro_input!(input as Tokens);

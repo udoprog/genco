@@ -1,4 +1,4 @@
-//! Individual L# modifier
+//! Individual C# modifier
 
 use crate::{Csharp, FormatTokens, Tokens};
 use std::collections::BTreeSet;
