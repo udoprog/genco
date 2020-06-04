@@ -173,7 +173,7 @@
 
 #![deny(missing_docs)]
 // Note: Replace internal use of macros `push!`, `nested!` with `quote!`.
-#![allow(deprecated)]
+#![feature(proc_macro_hygiene)]
 
 pub use genco_macros::{quote, quote_in};
 

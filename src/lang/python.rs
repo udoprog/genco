@@ -118,7 +118,8 @@ impl Python {
                 s.append(alias);
             }
 
-            out.push(s);
+            out.append(s);
+            out.push();
         }
 
         Some(out)
@@ -160,8 +161,8 @@ impl Lang for Python {
         let mut toks = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens) {
-            toks.push(imports);
-            toks.line_spacing();
+            toks.append(imports);
+            toks.push_line();
         }
 
         toks.extend(tokens);

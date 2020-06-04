@@ -7,7 +7,7 @@ pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
 
 use crate as genco;
-use crate::{quote, Formatter, ItemStr, Lang, LangItem};
+use crate::{quote, quote_in, Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
@@ -439,7 +439,9 @@ impl Java {
                 continue;
             }
 
-            out.push(quote!(import #(package.clone())#(SEP)#(name.clone());));
+            out.append(quote!(import #(package.clone())#(SEP)#(name.clone());));
+            out.push();
+
             config
                 .imported
                 .insert(name.to_string(), package.to_string());
@@ -486,13 +488,13 @@ impl Lang for Java {
         let mut toks = Tokens::new();
 
         if let Some(ref package) = config.package {
-            toks.push(toks!["package ", package.clone(), ";"]);
-            toks.line_spacing();
+            quote_in!(toks => package #package;);
+            toks.push_line();
         }
 
         if let Some(imports) = Self::imports(&tokens, config) {
-            toks.push(imports);
-            toks.line_spacing();
+            toks.append(imports);
+            toks.push_line();
         }
 
         toks.extend(tokens);

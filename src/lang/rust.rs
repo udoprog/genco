@@ -262,7 +262,8 @@ impl Rust {
 
             s.append(";");
 
-            out.push(s);
+            out.append(s);
+            out.push();
         }
 
         Some(out)
@@ -304,8 +305,8 @@ impl Lang for Rust {
         let mut toks: Tokens = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens) {
-            toks.push(imports);
-            toks.line_spacing();
+            toks.append(imports);
+            toks.push_line();
         }
 
         toks.extend(tokens);

@@ -76,7 +76,7 @@ impl QuoteParser<'_> {
                     } else if last_column > next.start.column {
                         tokens.extend(quote::quote!(#receiver.unindent();));
                     } else if !line_spaced {
-                        tokens.extend(quote::quote!(#receiver.push_spacing();));
+                        tokens.extend(quote::quote!(#receiver.push_line();));
                     }
 
                     last_column = next.start.column;

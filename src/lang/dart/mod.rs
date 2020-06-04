@@ -6,7 +6,8 @@ mod utils;
 pub use self::modifier::Modifier;
 pub use self::utils::DocComment;
 
-use crate::{Formatter, ItemStr, Lang, LangItem};
+use crate as genco;
+use crate::{quote_in, Ext as _, Formatter, ItemStr, Lang, LangItem};
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Dart.
@@ -220,7 +221,6 @@ pub struct Dart(());
 impl Dart {
     /// Resolve all imports.
     fn imports(input: &Tokens, _: &mut Config) -> Tokens {
-        use crate::Ext as _;
         use std::collections::BTreeSet;
 
         let mut modules = BTreeSet::new();
@@ -236,16 +236,16 @@ impl Dart {
         }
 
         if modules.is_empty() {
-            return toks!();
+            return Tokens::new();
         }
 
-        let mut o = toks!();
+        let mut o = Tokens::new();
 
         for (name, alias) in modules {
             if let Some(alias) = alias {
-                o.push(toks!("import ", name.quoted(), " as ", alias, ";"));
+                quote_in!(o => import #(name.quoted()) as #alias;);
             } else {
-                o.push(toks!("import ", name.quoted(), ";"));
+                quote_in!(o => import #(name.quoted()););
             }
         }
 
@@ -290,8 +290,8 @@ impl Lang for Dart {
         let imports = Self::imports(&tokens, config);
 
         if !imports.is_empty() {
-            toks.push(imports);
-            toks.line_spacing();
+            toks.append(imports);
+            toks.push();
         }
 
         toks.append(tokens);

@@ -20,14 +20,11 @@ where
     /// A custom element that is not rendered.
     Registered(LangBox<L>),
     /// Push a new line, unless the current line is empty.
-    PushSpacing,
+    Push,
     /// Unconditionally push a line.
     Line,
     /// Spacing between language items.
     Spacing,
-    /// Push a new line, unless the current line is empty, then add another line
-    /// after that to create an empty line as spacing.
-    LineSpacing,
     /// Indent one step.
     Indent,
     /// Unindent one step.
@@ -57,14 +54,10 @@ where
                 lang.format(out, config, level)?;
             }
             // whitespace below
-            PushSpacing => {
+            Push => {
                 out.new_line_unless_empty()?;
             }
             Line => {
-                out.new_line()?;
-            }
-            LineSpacing => {
-                out.new_line_unless_empty()?;
                 out.new_line()?;
             }
             Spacing => {
@@ -95,10 +88,9 @@ where
             Self::Quoted(s) => write!(fmt, "Quoted({:?})", s),
             Self::LangBox(item) => write!(fmt, "LangBox({:?})", item),
             Self::Registered(item) => write!(fmt, "Registered({:?})", item),
-            Self::PushSpacing => write!(fmt, "PushSpacing"),
+            Self::Push => write!(fmt, "Push"),
             Self::Line => write!(fmt, "Line"),
             Self::Spacing => write!(fmt, "Spacing"),
-            Self::LineSpacing => write!(fmt, "LineSpacing"),
             Self::Indent => write!(fmt, "Indent"),
             Self::Unindent => write!(fmt, "Unindent"),
         }
@@ -170,10 +162,9 @@ where
             Self::Quoted(quoted) => Self::Quoted(quoted.clone()),
             Self::LangBox(lang) => Self::LangBox(lang.clone()),
             Self::Registered(lang) => Self::Registered(lang.clone()),
-            Self::PushSpacing => Self::PushSpacing,
+            Self::Push => Self::Push,
             Self::Line => Self::Line,
             Self::Spacing => Self::Spacing,
-            Self::LineSpacing => Self::LineSpacing,
             Self::Indent => Self::Indent,
             Self::Unindent => Self::Unindent,
         }

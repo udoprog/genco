@@ -3,11 +3,13 @@
 mod modifier;
 mod utils;
 
-pub use self::modifier::Modifier;
-pub use self::utils::BlockComment;
-use crate::{Formatter, ItemStr, Lang, LangItem};
+use crate as genco;
+use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
+
+pub use self::modifier::Modifier;
+pub use self::utils::BlockComment;
 
 /// Tokens container specialization for C#.
 pub type Tokens = crate::Tokens<Csharp>;
@@ -496,7 +498,8 @@ impl Csharp {
             }
 
             if !imported.contains(&*namespace) {
-                out.push(toks!("using ", namespace.clone(), ";"));
+                quote_in!(out => using #(&namespace););
+                out.push();
                 imported.insert(namespace.to_string());
             }
 
@@ -546,16 +549,18 @@ impl Lang for Csharp {
         let mut toks: Tokens = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens, config) {
-            toks.push(imports);
-            toks.line_spacing();
+            toks.append(imports);
+            toks.push();
         }
 
         if let Some(ref namespace) = config.namespace {
-            toks.push(toks!["namespace ", namespace.clone(), " {"]);
-            toks.indent();
-            toks.append(tokens);
-            toks.unindent();
-            toks.push("}");
+            quote_in! { toks =>
+                namespace #namespace {
+                    #tokens
+                }
+            }
+
+            toks.push()
         } else {
             toks.append(tokens);
         }

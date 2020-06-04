@@ -8,9 +8,11 @@
 //! toks.append("foo");
 //! ```
 
+use crate as genco;
 use crate::formatter::{FmtWriter, IoWriter};
 use crate::{
-    FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens, VecWriter,
+    quote, quote_in, FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem,
+    RegisterTokens, VecWriter,
 };
 use std::collections::LinkedList;
 use std::fmt;
@@ -47,66 +49,6 @@ where
         Tokens {
             elements: Vec::new(),
         }
-    }
-
-    /// Push a nested definition.
-    pub fn nested<T>(&mut self, tokens: T)
-    where
-        T: FormatTokens<L>,
-    {
-        self.elements.push(Item::Indent);
-        tokens.format_tokens(self);
-        self.elements.push(Item::Unindent);
-    }
-
-    /// Push a nested definition.
-    pub fn nested_into<B>(&mut self, builder: B) -> ()
-    where
-        B: FnOnce(&mut Tokens<L>) -> (),
-    {
-        let mut t = Tokens::new();
-        builder(&mut t);
-        self.nested(t);
-    }
-
-    /// Push a definition, guaranteed to be preceded with one newline.
-    pub fn push<T>(&mut self, tokens: T)
-    where
-        T: FormatTokens<L>,
-    {
-        self.elements.push(Item::PushSpacing);
-        tokens.format_tokens(self);
-    }
-
-    /// Push a new created definition, guaranteed to be preceded with one newline.
-    pub fn push_into<B>(&mut self, builder: B) -> ()
-    where
-        B: FnOnce(&mut Tokens<L>) -> (),
-    {
-        let mut t = Tokens::new();
-        builder(&mut t);
-        self.push(t);
-    }
-
-    /// Push the given set of tokens, unless it is empty.
-    ///
-    /// This is useful when you wish to preserve the structure of nested and joined tokens.
-    pub fn push_unless_empty<T>(&mut self, tokens: T)
-    where
-        T: FormatTokens<L>,
-    {
-        if !tokens.is_empty() {
-            self.elements.push(Item::PushSpacing);
-            tokens.format_tokens(self);
-        }
-    }
-
-    /// Insert the given element.
-    pub fn insert<E>(&mut self, pos: usize, element: E)
-    where
-        E: Into<Item<L>>,
-    {
-        self.elements.insert(pos, element.into());
     }
 
     /// Append the given element.
@@ -174,14 +116,38 @@ where
         self.elements.push(Item::Spacing);
     }
 
-    /// Add a single line spacing to the token stream.
-    pub fn line_spacing(&mut self) {
-        self.elements.push(Item::LineSpacing);
+    /// Add a single push spacing operation.
+    pub fn push(&mut self) {
+        // Already a push in the stream. Another one will do nothing.
+        if let Some(Item::Push) = self.elements.last() {
+            return;
+        }
+
+        self.elements.push(Item::Push);
     }
 
-    /// Add a single push spacing operation.
-    pub fn push_spacing(&mut self) {
-        self.elements.push(Item::PushSpacing);
+    /// Assert that there's the necessary elements to create one empty line at
+    /// the top of the queue.
+    pub fn push_line(&mut self) {
+        let mut it = self.elements.iter().rev();
+
+        let last = it.next();
+        let ntl = it.next();
+
+        match (ntl, last) {
+            // A push + line is already at the end of the stream.
+            (Some(Item::Push), Some(Item::Line)) => (),
+            (_, Some(Item::Push)) => {
+                self.elements.push(Item::Line);
+            }
+            // Assert that there is something to push behind us.
+            (_, Some(..)) => {
+                self.elements.push(Item::Push);
+                self.elements.push(Item::Line);
+            }
+            // do nothing.
+            _ => (),
+        }
     }
 
     /// Add a single indentation to the token stream.
@@ -457,17 +423,12 @@ mod tests {
 
     #[test]
     fn test_walk_custom() {
-        let mut toks: Tokens<Lang> = Tokens::new();
-
-        toks.push(quote!(1:1 #(Import(1)) 1:2));
-
-        // static string
-        toks.append("bar");
-
-        toks.nested(quote!(2:1 2:2 #(quote!(3:1 3:2)) #(Import(2))));
-
-        // owned literal
-        toks.append(String::from("nope"));
+        let toks: Tokens<Lang> = quote! {
+            1:1 #(Import(1)) 1:2
+            bar
+            2:1 2:2 #(quote!(3:1 3:2)) #(Import(2))
+            #(String::from("nope"))
+        };
 
         let output: Vec<_> = toks
             .walk_custom()

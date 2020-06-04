@@ -112,7 +112,8 @@ impl JavaScript {
             s.append(Self::module_to_path(&*module).quoted());
             s.append(";");
 
-            out.push(s);
+            out.append(s);
+            out.push();
         }
 
         for (module, alias) in wildcard {
@@ -124,7 +125,8 @@ impl JavaScript {
             s.append(Self::module_to_path(&*module).quoted());
             s.append(";");
 
-            out.push(s);
+            out.append(s);
+            out.push();
         }
 
         Some(out)
@@ -166,8 +168,8 @@ impl Lang for JavaScript {
         let mut toks = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens) {
-            toks.push(imports);
-            toks.line_spacing();
+            toks.append(imports);
+            toks.push_line();
         }
 
         toks.append(tokens);
@@ -203,21 +205,29 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, local, Tokens};
-    use crate::Ext as _;
+    use crate as genco;
+    use crate::{quote, Ext as _};
 
     #[test]
     fn test_function() {
-        let mut file = Tokens::new();
+        let file: Tokens = quote! {
+            function foo(v) {
+                return v + ", World";
+            }
 
-        file.push("function foo(v) {");
-        file.nested(toks!("return v + ", ", World".quoted(), ";"));
-        file.push("}");
-
-        file.push(toks!("foo(", "Hello".quoted(), ");"));
+            foo("Hello");
+        };
 
         assert_eq!(
-            "function foo(v) {\n    return v + \", World\";\n}\nfoo(\"Hello\");",
-            file.to_string().unwrap()
+            vec![
+                "function foo(v) {",
+                "    return v + \", World\";",
+                "}",
+                "",
+                "foo(\"Hello\");",
+                ""
+            ],
+            file.to_file_vec().unwrap()
         );
     }
 

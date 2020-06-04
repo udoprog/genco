@@ -1,6 +1,7 @@
 //! Specialization for Go code generation.
 
-use crate::{Ext as _, Formatter, ItemStr, Lang, LangItem};
+use crate as genco;
+use crate::{quote_in, Ext as _, Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -180,12 +181,8 @@ impl Go {
         let mut out = Tokens::new();
 
         for module in modules {
-            let mut s = Tokens::new();
-
-            s.append("import ");
-            s.append(module.quoted());
-
-            out.push(s);
+            quote_in!(out => import #(module.quoted()));
+            out.push();
         }
 
         Some(out)
@@ -224,17 +221,16 @@ impl Lang for Go {
         let mut toks = Tokens::new();
 
         if let Some(package) = &config.package {
-            toks.append("package");
-            toks.spacing();
-            toks.append(package.clone());
+            quote_in!(toks => package #package);
+            toks.push_line();
         }
 
         if let Some(imports) = Self::imports(&tokens) {
-            toks.line_spacing();
-            toks.push(imports);
+            toks.append(imports);
+            toks.push_line();
         }
 
-        toks.line_spacing();
+        toks.push_line();
         toks.extend(tokens);
         toks.format(out, config, level)
     }

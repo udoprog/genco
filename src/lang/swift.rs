@@ -139,7 +139,8 @@ impl Swift {
             s.append("import ");
             s.append(module);
 
-            out.push(s);
+            out.append(s);
+            out.push();
         }
 
         Some(out)
@@ -178,8 +179,8 @@ impl Lang for Swift {
         let mut toks = Tokens::new();
 
         if let Some(imports) = Self::imports(&tokens) {
-            toks.push(imports);
-            toks.line_spacing();
+            toks.append(imports);
+            toks.push_line();
         }
 
         toks.extend(tokens);
@@ -240,46 +241,40 @@ mod tests {
 
     #[test]
     fn test_string() {
-        let mut toks = Tokens::new();
-        toks.append("hello \n world".quoted());
-        let res = toks.to_string();
-
-        assert_eq!(Ok("\"hello \\n world\""), res.as_ref().map(|s| s.as_str()));
+        let toks: Tokens = quote!(#("hello \n world".quoted()));
+        assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
     }
 
     #[test]
     fn test_imported() {
         let dbg = imported("Foo", "Debug");
-        let mut toks = Tokens::new();
-        toks.push(quote!(#dbg));
+        let mut toks: Tokens = quote!(#dbg);
 
         assert_eq!(
-            Ok("import Foo\n\nDebug\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
+            vec!["import Foo", "", "Debug", ""],
+            toks.to_file_vec().unwrap()
         );
     }
 
     #[test]
     fn test_array() {
         let dbg = array(imported("Foo", "Debug"));
-        let mut toks = Tokens::new();
-        toks.push(quote!(#dbg));
+        let mut toks: Tokens = quote!(#dbg);
 
         assert_eq!(
-            Ok("import Foo\n\n[Debug]\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
+            vec!["import Foo", "", "[Debug]", ""],
+            toks.to_file_vec().unwrap()
         );
     }
 
     #[test]
     fn test_map() {
         let dbg = map(local("String"), imported("Foo", "Debug"));
-        let mut toks = Tokens::new();
-        toks.push(quote!(#dbg));
+        let mut toks: Tokens = quote!(#dbg);
 
         assert_eq!(
-            Ok("import Foo\n\n[String: Debug]\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
+            vec!["import Foo", "", "[String: Debug]", ""],
+            toks.to_file_vec().unwrap()
         );
     }
 }
