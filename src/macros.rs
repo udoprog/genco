@@ -9,7 +9,7 @@
 /// let n1: genco::Tokens<()> = toks!("var v = ", "bar".quoted(), ";");
 /// ```
 #[macro_export]
-// #[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
+#[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! toks {
     ($($x:expr),*) => {
         {
@@ -73,7 +73,7 @@ macro_rules! toks {
 /// # }
 /// ```
 #[macro_export]
-// #[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
+#[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! push {
     ($dest:expr, |$t:ident| $code:block) => {
         $dest.push({
@@ -148,7 +148,7 @@ macro_rules! push {
 /// # }
 /// ```
 #[macro_export]
-// #[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
+#[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! nested {
     ($dest:expr, |$t:ident| $code:block) => {
         $dest.nested({

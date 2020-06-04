@@ -103,10 +103,10 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// You specify the destination stream as the first argument, followed by a `=>`
 /// and then the code to generate. To avoid taking ownership of the parameter
-/// argument you can use the syntax `&mut <ident>`. This can prevent borrowing
+/// argument you can use the syntax `&mut *<ident>`. This can prevent borrowing
 /// issues you encounter (see the `Borrowing` section below).
 ///
-/// For example: `quote_in! { &mut tokens => fn foo() {  } }`.
+/// For example: `quote_in! { &mut *tokens => fn foo() {  } }`.
 ///
 /// Note that there is a potential issue with reborrowing
 ///
@@ -142,8 +142,8 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// let tokens = &mut tokens;
 ///
 /// for name in &["foo", "bar", "baz"] {
-///     quote_in! { &mut tokens =>
-///         fn #name() -> u32 {
+///     quote_in! { &mut *tokens =>
+///         fn #(*name)() -> u32 {
 ///             #{tokens => {
 ///                 tokens.append("42");
 ///             }}

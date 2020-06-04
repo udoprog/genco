@@ -139,6 +139,15 @@ where
     }
 }
 
+impl<'a, L> FormatTokens<L> for &'a ItemStr
+where
+    L: Lang,
+{
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
+        tokens.elements.push(self.clone().into());
+    }
+}
+
 /// Convert stringy things.
 impl<L, T> FormatTokens<L> for Option<T>
 where
