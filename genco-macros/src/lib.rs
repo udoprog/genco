@@ -45,18 +45,29 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// ```rust
 /// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
 ///
-/// use genco::rust::imported;
-/// use genco::{quote, Rust, Tokens};
+/// let tokens: Tokens<Rust> = quote!(#[test]);
+/// assert_eq!("#[test]", tokens.to_string().unwrap());
+///
+/// let tokens: Tokens<Rust> = quote!(#{t => { quote_in!(t => #[test]) }});
+/// assert_eq!("#[test]", tokens.to_string().unwrap());
+/// ```
+///
+/// Bigger example:
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
 ///
 /// // Import the LittleEndian item, without referencing it through the last
 /// // module component it is part of.
-/// let little_endian = imported("byteorder", "LittleEndian").qualified();
-/// let big_endian = imported("byteorder", "BigEndian");
+/// let little_endian = rust::imported("byteorder", "LittleEndian").qualified();
+/// let big_endian = rust::imported("byteorder", "BigEndian");
 ///
 /// // This is a trait, so only import it into the scope (unless we intent to
 /// // implement it).
-/// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+/// let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
 ///
 /// let tokens: Tokens<Rust> = quote! {
 ///     #@write_bytes_ext
@@ -134,9 +145,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// ```rust
 /// #![feature(proc_macro_hygiene)]
-///
-/// use genco::rust::imported;
-/// use genco::{quote_in, Rust, Tokens};
+/// use genco::prelude::*;
 ///
 /// let mut tokens = Tokens::<Rust>::new();
 /// let tokens = &mut tokens;
@@ -156,9 +165,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// ```rust
 /// #![feature(proc_macro_hygiene)]
-///
-/// use genco::rust::imported;
-/// use genco::{quote_in, Rust, Tokens};
+/// use genco::prelude::*;
 ///
 /// let mut tokens = Tokens::<Rust>::new();
 ///

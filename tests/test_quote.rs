@@ -73,9 +73,3 @@ fn test_scope() {
 
     assert_eq!("fn test() -> u32 { 42 }", tokens.to_string().unwrap());
 }
-
-#[test]
-fn test_brackets() {
-    let tokens: Tokens<Rust> = quote!(#[test]);
-    assert_eq!("#[test]", tokens.to_string().unwrap());
-}
