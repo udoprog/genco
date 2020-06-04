@@ -1,14 +1,14 @@
 //! Specialization for Rust code generation.
 
-use crate::{Cons, Formatter, Lang, LangItem};
+use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 use std::rc::Rc;
 
 /// Tokens container specialization for Rust.
-pub type Tokens<'el> = crate::Tokens<'el, Rust>;
+pub type Tokens = crate::Tokens<Rust>;
 /// Language box specialization for Rust.
-pub type LangBox<'el> = crate::LangBox<'el, Rust>;
+pub type LangBox = crate::LangBox<Rust>;
 
 impl_lang_item!(Type, Rust);
 impl_plain_variadic_args!(Args, Type);
@@ -31,7 +31,7 @@ pub enum Reference {
     /// A static reference.
     StaticRef,
     /// A named reference.
-    Named(Cons<'static>),
+    Named(ItemStr),
 }
 
 impl From<Ref> for Reference {
@@ -48,13 +48,13 @@ impl From<StaticRef> for Reference {
 
 impl From<Rc<String>> for Reference {
     fn from(value: Rc<String>) -> Self {
-        Reference::Named(Cons::from(value))
+        Reference::Named(ItemStr::from(value))
     }
 }
 
-impl<'el> From<&'static str> for Reference {
+impl From<&'static str> for Reference {
     fn from(value: &'static str) -> Self {
-        Reference::Named(Cons::from(value))
+        Reference::Named(ItemStr::Static(value))
     }
 }
 
@@ -63,7 +63,7 @@ impl<'el> From<&'static str> for Reference {
 pub struct Name {
     reference: Option<Reference>,
     /// Name  of class.
-    name: Cons<'static>,
+    name: ItemStr,
     /// Arguments of the class.
     arguments: Vec<Type>,
 }
@@ -125,8 +125,8 @@ impl Name {
     }
 }
 
-impl<'el> From<Cons<'static>> for Name {
-    fn from(value: Cons<'static>) -> Self {
+impl From<ItemStr> for Name {
+    fn from(value: ItemStr) -> Self {
         Name {
             reference: None,
             name: value,
@@ -149,9 +149,9 @@ impl Default for Config {
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
     /// Module of the imported name.
-    module: Option<Cons<'static>>,
+    module: Option<ItemStr>,
     /// Alias of module.
-    alias: Option<Cons<'static>>,
+    alias: Option<ItemStr>,
     /// Name imported.
     name: Name,
     /// Qualified import.
@@ -159,10 +159,10 @@ pub struct Type {
 }
 
 impl Type {
-    fn walk_custom(&self, modules: &mut BTreeSet<(Cons<'static>, Option<Cons<'static>>)>) {
+    fn walk_custom(&self, modules: &mut BTreeSet<(ItemStr, Option<ItemStr>)>) {
         if let Some(module) = self.module.as_ref() {
             if self.qualified || self.alias.is_some() {
-                let module = Cons::from(format!("{}::{}", module, self.name.name.as_ref()));
+                let module = ItemStr::from(format!("{}::{}", module, self.name.name.as_ref()));
                 modules.insert((module, self.alias.clone()));
             } else {
                 modules.insert((module.clone(), self.alias.clone()));
@@ -175,7 +175,7 @@ impl Type {
     }
 
     /// Alias the given type.
-    pub fn alias<A: Into<Cons<'static>>>(self, alias: A) -> Type {
+    pub fn alias<A: Into<ItemStr>>(self, alias: A) -> Type {
         Type {
             alias: Some(alias.into()),
             ..self
@@ -230,7 +230,7 @@ impl LangItem<Rust> for Type {
 }
 
 impl Rust {
-    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
+    fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -296,7 +296,7 @@ impl Lang for Rust {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -316,8 +316,8 @@ impl Lang for Rust {
 /// Setup an imported element.
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
-    M: Into<Cons<'static>>,
-    N: Into<Cons<'static>>,
+    M: Into<ItemStr>,
+    N: Into<ItemStr>,
 {
     Type {
         module: Some(module.into()),
@@ -330,7 +330,7 @@ where
 /// Setup a local element.
 pub fn local<N>(name: N) -> Type
 where
-    N: Into<Cons<'static>>,
+    N: Into<ItemStr>,
 {
     Type {
         module: None,

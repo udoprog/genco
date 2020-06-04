@@ -7,12 +7,12 @@ pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
 
 use crate as genco;
-use crate::{quote, Cons, Formatter, Lang, LangItem};
+use crate::{quote, Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
 /// Tokens container specialized for Java.
-pub type Tokens<'el> = crate::Tokens<'el, Java>;
+pub type Tokens = crate::Tokens<Java>;
 
 impl_type_basics!(Java, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Primitive, Void, Type, Optional, Local});
 
@@ -35,11 +35,11 @@ pub trait TypeTrait: 'static + fmt::Debug + LangItem<Java> {
     }
 
     /// Process which kinds of imports to deal with.
-    fn type_imports(&self, _: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {}
+    fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
 }
 
-static JAVA_LANG: &'static str = "java.lang";
-static SEP: &'static str = ".";
+const JAVA_LANG: &'static str = "java.lang";
+const SEP: &'static str = ".";
 
 /// Short primitive type.
 pub const SHORT: Primitive = Primitive {
@@ -96,7 +96,7 @@ pub const VOID: Void = Void(());
 #[derive(Debug)]
 pub struct Config {
     /// Package to use.
-    package: Option<Cons<'static>>,
+    package: Option<ItemStr>,
 
     /// Types which has been imported into the local namespace.
     imported: HashMap<String, String>,
@@ -104,7 +104,7 @@ pub struct Config {
 
 impl Config {
     /// Configure package to use.
-    pub fn with_package(self, package: impl Into<Cons<'static>>) -> Self {
+    pub fn with_package(self, package: impl Into<ItemStr>) -> Self {
         Self {
             package: Some(package.into()),
             ..self
@@ -125,11 +125,11 @@ impl Default for Config {
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
     /// Package of the class.
-    package: Cons<'static>,
+    package: ItemStr,
     /// Name  of class.
-    name: Cons<'static>,
+    name: ItemStr,
     /// Path of class when nested.
-    path: Vec<Cons<'static>>,
+    path: Vec<ItemStr>,
     /// Arguments of the class.
     arguments: Vec<TypeBox>,
 }
@@ -138,7 +138,7 @@ impl Type {
     /// Extend the type with a nested path.
     ///
     /// This discards any arguments associated with it.
-    pub fn path<P: Into<Cons<'static>>>(self, part: P) -> Self {
+    pub fn path<P: Into<ItemStr>>(self, part: P) -> Self {
         let mut path = self.path;
         path.push(part.into());
 
@@ -245,7 +245,7 @@ impl TypeTrait for Type {
         Some(&self.arguments)
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
         for argument in &self.arguments {
             if let TypeEnum::Type(ty) = argument.as_enum() {
                 ty.type_imports(modules);
@@ -291,10 +291,10 @@ pub struct Primitive {
 
 impl Primitive {
     /// Get a boxed version of a primitive type.
-    pub fn into_boxed(self) -> Type {
+    pub const fn into_boxed(self) -> Type {
         Type {
-            package: Cons::Borrowed(JAVA_LANG),
-            name: Cons::Borrowed(self.boxed),
+            package: ItemStr::Static(JAVA_LANG),
+            name: ItemStr::Static(self.boxed),
             path: vec![],
             arguments: vec![],
         }
@@ -329,7 +329,7 @@ impl TypeTrait for Primitive {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Local {
     /// Name of class.
-    name: Cons<'static>,
+    name: ItemStr,
 }
 
 impl TypeTrait for Local {
@@ -378,7 +378,7 @@ impl TypeTrait for Optional {
         self.value.arguments()
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
         self.value.type_imports(modules);
     }
 }
@@ -409,7 +409,7 @@ impl LangItem<Java> for Optional {
 pub struct Java(());
 
 impl Java {
-    fn imports<'el>(tokens: &Tokens<'el>, config: &mut Config) -> Option<Tokens<'el>> {
+    fn imports(tokens: &Tokens, config: &mut Config) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
         let file_package = config.package.as_ref().map(|p| p.as_ref());
@@ -478,7 +478,7 @@ impl Lang for Java {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -501,7 +501,7 @@ impl Lang for Java {
 }
 
 /// Setup an imported element.
-pub fn imported<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(package: P, name: N) -> Type {
+pub fn imported<P: Into<ItemStr>, N: Into<ItemStr>>(package: P, name: N) -> Type {
     Type {
         package: package.into(),
         name: name.into(),
@@ -511,12 +511,12 @@ pub fn imported<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(package: P, name
 }
 
 /// Setup a local element from borrowed components.
-pub fn local<'el, N: Into<Cons<'static>>>(name: N) -> Local {
+pub fn local<N: Into<ItemStr>>(name: N) -> Local {
     Local { name: name.into() }
 }
 
 /// Setup an optional type.
-pub fn optional<'el, I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> Optional {
+pub fn optional<I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> Optional {
     Optional {
         value: value.into(),
         field: field.into(),

@@ -72,14 +72,14 @@ impl Modifier {
     }
 }
 
-impl<'el> FormatTokens<'el, Csharp> for Modifier {
-    fn format_tokens(self, tokens: &mut Tokens<'el, Csharp>) {
+impl FormatTokens<Csharp> for Modifier {
+    fn format_tokens(self, tokens: &mut Tokens<Csharp>) {
         tokens.append(self.name());
     }
 }
 
-impl<'el> FormatTokens<'el, Csharp> for Vec<Modifier> {
-    fn format_tokens(self, tokens: &mut Tokens<'el, Csharp>) {
+impl FormatTokens<Csharp> for Vec<Modifier> {
+    fn format_tokens(self, tokens: &mut Tokens<Csharp>) {
         let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
 
         if let Some(modifier) = it.next() {

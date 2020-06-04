@@ -1,11 +1,11 @@
 //! Specialization for Python code generation.
 
-use crate::{Cons, Formatter, Lang, LangItem};
+use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Python.
-pub type Tokens<'el> = crate::Tokens<'el, Python>;
+pub type Tokens = crate::Tokens<Python>;
 
 impl_lang_item!(Type, Python);
 
@@ -15,13 +15,13 @@ static SEP: &'static str = ".";
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
     /// Module of the imported name.
-    module: Option<Cons<'static>>,
+    module: Option<ItemStr>,
     /// Alias of module.
-    alias: Option<Cons<'static>>,
+    alias: Option<ItemStr>,
     /// Name imported.
     ///
     /// If `None`, last component of module will be used.
-    name: Option<Cons<'static>>,
+    name: Option<ItemStr>,
 }
 
 impl fmt::Display for Type {
@@ -58,7 +58,7 @@ impl fmt::Display for Type {
 
 impl Type {
     /// Set alias for python element.
-    pub fn alias<N: Into<Cons<'static>>>(self, new_alias: N) -> Type {
+    pub fn alias<N: Into<ItemStr>>(self, new_alias: N) -> Type {
         Self {
             alias: Some(new_alias.into()),
             ..self
@@ -66,7 +66,7 @@ impl Type {
     }
 
     /// Set name for python element.
-    pub fn name<N: Into<Cons<'static>>>(self, new_name: N) -> Type {
+    pub fn name<N: Into<ItemStr>>(self, new_name: N) -> Type {
         Self {
             name: Some(new_name.into()),
             ..self
@@ -88,7 +88,7 @@ impl LangItem<Python> for Type {
 pub struct Python(());
 
 impl Python {
-    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
+    fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -152,7 +152,7 @@ impl Lang for Python {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -172,7 +172,7 @@ impl Lang for Python {
 /// Setup an imported element.
 pub fn imported<M>(module: M) -> Type
 where
-    M: Into<Cons<'static>>,
+    M: Into<ItemStr>,
 {
     Type {
         module: Some(module.into()),
@@ -184,7 +184,7 @@ where
 /// Setup a local element.
 pub fn local<N>(name: N) -> Type
 where
-    N: Into<Cons<'static>>,
+    N: Into<ItemStr>,
 {
     Type {
         module: None,

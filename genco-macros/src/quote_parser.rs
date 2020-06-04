@@ -131,7 +131,7 @@ impl QuoteParser<'_> {
                                 #receiver.append(element);
 
                                 if iter.peek().is_some() {
-                                    #receiver.append(#separator);
+                                    #receiver.append(genco::ItemStr::Static(#separator));
                                     #receiver.spacing();
                                 }
                             }

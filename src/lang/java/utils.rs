@@ -1,10 +1,10 @@
-use crate::{Cons, Element, FormatTokens, Java, Tokens};
+use crate::{Element, FormatTokens, ItemStr, Java, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
-pub struct BlockComment<'el>(pub Vec<Cons<'el>>);
+pub struct BlockComment(pub Vec<ItemStr>);
 
-impl<'el> FormatTokens<'el, Java> for BlockComment<'el> {
-    fn format_tokens(self, tokens: &mut Tokens<'el, Java>) {
+impl FormatTokens<Java> for BlockComment {
+    fn format_tokens(self, tokens: &mut Tokens<Java>) {
         if self.0.is_empty() {
             return;
         }

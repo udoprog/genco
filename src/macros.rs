@@ -32,11 +32,11 @@ macro_rules! toks {
 /// # #![allow(deprecated)]
 /// # use genco::push;
 /// # fn main() {
-/// use genco::{Tokens, Java, Cons};
+/// use genco::{Tokens, Java, ItemStr};
 ///
 /// let mut toks = Tokens::<Java>::new();
 /// // id being cloned.
-/// let id = Cons::from(String::from("hello"));
+/// let id = ItemStr::Static("hello");
 ///
 /// push!(toks, "foo ", id);
 /// push!(toks, "bar ", id);
@@ -54,11 +54,11 @@ macro_rules! toks {
 /// ```rust
 /// # #[macro_use] extern crate genco;
 /// # fn main() {
-/// use genco::{Tokens, Java, Cons};
+/// use genco::{Tokens, Java, ItemStr};
 ///
 /// let mut toks = Tokens::<Java>::new();
 /// // id being cloned.
-/// let id = Cons::from(String::from("hello"));
+/// let id = ItemStr::from("hello");
 ///
 /// push!(toks, |t| {
 ///   push!(t, "foo ", id);
@@ -104,11 +104,11 @@ macro_rules! push {
 /// # #![allow(deprecated)]
 /// # use genco::nested;
 /// # fn main() {
-/// use genco::{Tokens, Java, Cons};
+/// use genco::{Tokens, Java, ItemStr};
 ///
 /// let mut toks = Tokens::<Java>::new();
 /// // id being cloned.
-/// let id = Cons::from(String::from("hello"));
+/// let id = ItemStr::from("hello");
 ///
 /// nested!(toks, "foo ", id);
 /// nested!(toks, "bar ", id);
@@ -128,11 +128,11 @@ macro_rules! push {
 /// # #![allow(deprecated)]
 /// # use genco::{nested, push};
 /// # fn main() {
-/// use genco::{Tokens, Java, Cons};
+/// use genco::{Tokens, Java, ItemStr};
 ///
 /// let mut toks = Tokens::<Java>::new();
 /// // id being cloned.
-/// let id = Cons::from(String::from("hello"));
+/// let id = ItemStr::from("hello");
 ///
 /// nested!(toks, |t| {
 ///   push!(t, "foo ", id);
@@ -171,28 +171,29 @@ macro_rules! nested {
 
 macro_rules! impl_lang_item {
     ($ty:ident, $lang:ty) => {
-        impl<'el> crate::FormatTokens<'el, $lang> for $ty {
-            fn format_tokens(self, tokens: &mut crate::Tokens<'el, $lang>) {
+        impl crate::FormatTokens<$lang> for $ty {
+            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
                 tokens.elements.push(crate::Element::LangBox(self.into()));
             }
         }
 
-        impl<'el> crate::FormatTokens<'el, $lang> for &'el $ty {
-            fn format_tokens(self, tokens: &mut crate::Tokens<'el, $lang>) {
+        impl<'a> crate::FormatTokens<$lang> for &'a $ty {
+            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
                 tokens.elements.push(crate::Element::LangBox(self.into()));
             }
         }
 
-        impl<'el> From<$ty> for crate::LangBox<'el, $lang> {
+        impl From<$ty> for crate::LangBox<$lang> {
             fn from(value: $ty) -> Self {
                 use std::rc::Rc;
-                crate::LangBox::Rc(Rc::new(value) as Rc<dyn LangItem<$lang>>)
+                crate::LangBox::from(Rc::new(value) as Rc<dyn LangItem<$lang>>)
             }
         }
 
-        impl<'el> From<&'el $ty> for crate::LangBox<'el, $lang> {
-            fn from(value: &'el $ty) -> Self {
-                crate::LangBox::Ref(value)
+        impl<'a> From<&'a $ty> for crate::LangBox<$lang> {
+            fn from(value: &'a $ty) -> Self {
+                use std::rc::Rc;
+                crate::LangBox::from(Rc::new(value.clone()) as Rc<dyn LangItem<$lang>>)
             }
         }
     };

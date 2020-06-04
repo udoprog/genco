@@ -1,10 +1,10 @@
-use crate::{Cons, Csharp, Element, FormatTokens, Tokens};
+use crate::{Csharp, Element, FormatTokens, ItemStr, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
-pub struct BlockComment<'el>(pub Vec<Cons<'el>>);
+pub struct BlockComment(pub Vec<ItemStr>);
 
-impl<'el> FormatTokens<'el, Csharp> for BlockComment<'el> {
-    fn format_tokens(self, tokens: &mut Tokens<'el, Csharp>) {
+impl FormatTokens<Csharp> for BlockComment {
+    fn format_tokens(self, tokens: &mut Tokens<Csharp>) {
         if self.0.is_empty() {
             return;
         }

@@ -1,27 +1,25 @@
 //! A single element
 
-use crate::{Cons, ErasedElement, Formatter, Lang, LangBox, LangItem as _};
+use crate::{Formatter, ItemStr, Lang, LangBox, LangItem as _};
 use std::fmt;
 use std::rc::Rc;
 
 /// A single element in a set of tokens.
 #[derive(Debug)]
-pub enum Element<'el, L>
+pub enum Element<L>
 where
     L: Lang,
 {
     /// A refcounted member.
-    Rc(Rc<Element<'el, L>>),
-    /// A borrowed element.
-    Borrowed(&'el Element<'el, L>),
+    Rc(Rc<Element<L>>),
     /// A borrowed string.
-    Literal(Cons<'el>),
+    Literal(ItemStr),
     /// A borrowed quoted string.
-    Quoted(Cons<'el>),
+    Quoted(ItemStr),
     /// Language-specific boxed items.
-    LangBox(LangBox<'el, L>),
+    LangBox(LangBox<L>),
     /// A custom element that is not rendered.
-    Registered(LangBox<'el, L>),
+    Registered(LangBox<L>),
     /// Push a new line, unless the current line is empty.
     PushSpacing,
     /// Unconditionally push a line.
@@ -35,35 +33,9 @@ where
     Indent,
     /// Unindent one step.
     Unindent,
-    /// Empty element which renders nothing.
-    None,
 }
 
-impl<'el, L> Element<'el, L>
-where
-    L: Lang,
-{
-    /// Test if the element is none.
-    pub fn is_none(&self) -> bool {
-        match self {
-            Self::None => true,
-            _ => false,
-        }
-    }
-}
-
-impl<'el, L> From<ErasedElement<'el>> for Element<'el, L>
-where
-    L: Lang,
-{
-    fn from(erased: ErasedElement<'el>) -> Self {
-        match erased {
-            ErasedElement::Quoted(text) => Self::Quoted(text),
-        }
-    }
-}
-
-impl<'el, L> Element<'el, L>
+impl<L> Element<L>
 where
     L: Lang,
 {
@@ -73,11 +45,7 @@ where
 
         match *self {
             Registered(_) => {}
-            None => {}
             Rc(ref element) => {
-                element.format(out, config, level)?;
-            }
-            Borrowed(element) => {
                 element.format(out, config, level)?;
             }
             Literal(ref literal) => {
@@ -117,7 +85,7 @@ where
     }
 }
 
-impl<'el, L> From<String> for Element<'el, L>
+impl<L> From<String> for Element<L>
 where
     L: Lang,
 {
@@ -126,16 +94,16 @@ where
     }
 }
 
-impl<'el, L> From<&'el str> for Element<'el, L>
+impl<'a, L> From<&'a str> for Element<L>
 where
     L: Lang,
 {
-    fn from(value: &'el str) -> Self {
+    fn from(value: &'a str) -> Self {
         Element::Literal(value.into())
     }
 }
 
-impl<'el, L> From<Rc<String>> for Element<'el, L>
+impl<L> From<Rc<String>> for Element<L>
 where
     L: Lang,
 {
@@ -144,41 +112,40 @@ where
     }
 }
 
-impl<'el, L> From<Cons<'el>> for Element<'el, L>
+impl<L> From<ItemStr> for Element<L>
 where
     L: Lang,
 {
-    fn from(value: Cons<'el>) -> Self {
+    fn from(value: ItemStr) -> Self {
         Element::Literal(value)
     }
 }
 
-impl<'el, L> From<&'el Element<'el, L>> for Element<'el, L>
+impl<'a, L> From<&'a Element<L>> for Element<L>
 where
     L: Lang,
 {
-    fn from(value: &'el Element<'el, L>) -> Self {
-        Element::Borrowed(value)
+    fn from(value: &'a Element<L>) -> Self {
+        value.clone()
     }
 }
 
-impl<'el, L> From<Rc<Element<'el, L>>> for Element<'el, L>
+impl<L> From<Rc<Element<L>>> for Element<L>
 where
     L: Lang,
 {
-    fn from(value: Rc<Element<'el, L>>) -> Self {
+    fn from(value: Rc<Element<L>>) -> Self {
         Element::Rc(value)
     }
 }
 
-impl<'el, L> Clone for Element<'el, L>
+impl<L> Clone for Element<L>
 where
     L: Lang,
 {
     fn clone(&self) -> Self {
         match self {
             Self::Rc(element) => Self::Rc(element.clone()),
-            Self::Borrowed(element) => Self::Borrowed(*element),
             Self::Literal(literal) => Self::Literal(literal.clone()),
             Self::Quoted(quoted) => Self::Quoted(quoted.clone()),
             Self::LangBox(lang) => Self::LangBox(lang.clone()),
@@ -189,7 +156,6 @@ where
             Self::LineSpacing => Self::LineSpacing,
             Self::Indent => Self::Indent,
             Self::Unindent => Self::Unindent,
-            Self::None => Self::None,
         }
     }
 }

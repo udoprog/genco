@@ -3,32 +3,32 @@
 use super::{Element, Lang, LangBox, Tokens};
 
 /// Helper trait to convert something into a tokens registration.
-pub trait RegisterTokens<'el, L>
+pub trait RegisterTokens<L>
 where
     L: Lang,
 {
     /// Convert the type into tokens.
-    fn register_tokens(self, tokens: &mut Tokens<'el, L>);
+    fn register_tokens(self, tokens: &mut Tokens<L>);
 }
 
-impl<'el, T, L: 'el> RegisterTokens<'el, L> for T
+impl<T, L> RegisterTokens<L> for T
 where
-    T: Into<LangBox<'el, L>>,
+    T: Into<LangBox<L>>,
     L: Lang,
 {
-    fn register_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn register_tokens(self, tokens: &mut Tokens<L>) {
         tokens.elements.push(Element::Registered(self.into()))
     }
 }
 
 macro_rules! impl_register_tokens {
     ($($ty:ident => $var:ident),*) => {
-        impl<'el, L: 'el, $($ty,)*> RegisterTokens<'el, L> for ($($ty,)*)
+        impl<L, $($ty,)*> RegisterTokens<L> for ($($ty,)*)
         where
-            $($ty: Into<LangBox<'el, L>>,)*
+            $($ty: Into<LangBox<L>>,)*
             L: Lang,
         {
-            fn register_tokens(self, tokens: &mut Tokens<'el, L>) {
+            fn register_tokens(self, tokens: &mut Tokens<L>) {
                 let ($($var,)*) = self;
                 $(tokens.elements.push(Element::Registered($var.into()));)*
             }

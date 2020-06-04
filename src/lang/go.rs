@@ -1,11 +1,11 @@
 //! Specialization for Go code generation.
 
-use crate::{Cons, Ext as _, Formatter, Lang, LangItem};
+use crate::{Ext as _, Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Go.
-pub type Tokens<'el> = crate::Tokens<'el, Go>;
+pub type Tokens = crate::Tokens<Go>;
 
 impl_type_basics!(Go, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array, Interface});
 
@@ -15,7 +15,7 @@ pub trait TypeTrait: 'static + fmt::Debug + LangItem<Go> {
     fn as_enum(&self) -> TypeEnum<'_>;
 
     /// Handle imports for the given type.
-    fn type_imports(&self, _: &mut BTreeSet<Cons<'static>>) {}
+    fn type_imports(&self, _: &mut BTreeSet<ItemStr>) {}
 }
 
 /// The interface type `interface{}`.
@@ -27,9 +27,9 @@ const SEP: &str = ".";
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
     /// Module of the imported name.
-    module: Option<Cons<'static>>,
+    module: Option<ItemStr>,
     /// Name imported.
-    name: Cons<'static>,
+    name: ItemStr,
 }
 
 impl TypeTrait for Type {
@@ -37,7 +37,7 @@ impl TypeTrait for Type {
         TypeEnum::Type(self)
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
         if let Some(module) = &self.module {
             modules.insert(module.clone());
         }
@@ -74,7 +74,7 @@ impl TypeTrait for Map {
         TypeEnum::Map(self)
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
         self.key.type_imports(modules);
         self.value.type_imports(modules);
     }
@@ -106,7 +106,7 @@ impl TypeTrait for Array {
         TypeEnum::Array(self)
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
         self.inner.type_imports(modules);
     }
 }
@@ -147,12 +147,12 @@ impl LangItem<Go> for Interface {
 /// Config data for Go.
 #[derive(Debug, Default)]
 pub struct Config {
-    package: Option<Cons<'static>>,
+    package: Option<ItemStr>,
 }
 
 impl Config {
     /// Configure the specified package.
-    pub fn with_package<P: Into<Cons<'static>>>(self, package: P) -> Self {
+    pub fn with_package<P: Into<ItemStr>>(self, package: P) -> Self {
         Self {
             package: Some(package.into()),
             ..self
@@ -164,7 +164,7 @@ impl Config {
 pub struct Go(());
 
 impl Go {
-    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
+    fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -216,7 +216,7 @@ impl Lang for Go {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -243,8 +243,8 @@ impl Lang for Go {
 /// Setup an imported element.
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
-    M: Into<Cons<'static>>,
-    N: Into<Cons<'static>>,
+    M: Into<ItemStr>,
+    N: Into<ItemStr>,
 {
     Type {
         module: Some(module.into()),
@@ -255,7 +255,7 @@ where
 /// Setup a local element.
 pub fn local<N>(name: N) -> Type
 where
-    N: Into<Cons<'static>>,
+    N: Into<ItemStr>,
 {
     Type {
         module: None,

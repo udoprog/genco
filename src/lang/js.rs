@@ -1,11 +1,11 @@
 //! Specialization for JavaScript code generation.
 
-use crate::{Cons, Ext as _, Formatter, Lang, LangItem};
+use crate::{Ext as _, Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Rust.
-pub type Tokens<'el> = crate::Tokens<'el, JavaScript>;
+pub type Tokens = crate::Tokens<JavaScript>;
 
 impl_lang_item!(Type, JavaScript);
 
@@ -16,16 +16,16 @@ static PATH_SEP: &'static str = "/";
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
     /// Module of the imported name.
-    module: Option<Cons<'static>>,
+    module: Option<ItemStr>,
     /// Name imported.
-    name: Cons<'static>,
+    name: ItemStr,
     /// Alias of module.
-    alias: Option<Cons<'static>>,
+    alias: Option<ItemStr>,
 }
 
 impl Type {
     /// Alias the given type.
-    pub fn alias<N: Into<Cons<'static>>>(self, alias: N) -> Self {
+    pub fn alias<N: Into<ItemStr>>(self, alias: N) -> Self {
         Self {
             alias: Some(alias.into()),
             ..self
@@ -66,7 +66,7 @@ impl JavaScript {
     }
 
     /// Translate imports into the necessary tokens.
-    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
+    fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut sets = BTreeMap::new();
         let mut wildcard = BTreeSet::new();
 
@@ -158,7 +158,7 @@ impl Lang for JavaScript {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -176,10 +176,10 @@ impl Lang for JavaScript {
 }
 
 /// Setup an imported element.
-pub fn imported<'el, M, N>(module: M, name: N) -> Type
+pub fn imported<M, N>(module: M, name: N) -> Type
 where
-    M: Into<Cons<'static>>,
-    N: Into<Cons<'static>>,
+    M: Into<ItemStr>,
+    N: Into<ItemStr>,
 {
     Type {
         module: Some(module.into()),
@@ -189,9 +189,9 @@ where
 }
 
 /// Setup a local element.
-pub fn local<'el, N>(name: N) -> Type
+pub fn local<N>(name: N) -> Type
 where
-    N: Into<Cons<'static>>,
+    N: Into<ItemStr>,
 {
     Type {
         module: None,

@@ -42,7 +42,7 @@ where
 
     /// Write a file according to convention by custom element.
     fn write_file(
-        tokens: Tokens<'_, Self>,
+        tokens: Tokens<Self>,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -52,7 +52,7 @@ where
 }
 
 /// Dummy implementation for unit.
-impl<'el> Lang for () {
+impl Lang for () {
     type Config = ();
     type Import = ();
 }
@@ -78,29 +78,22 @@ where
 }
 
 /// A box containing a lang item.
-pub enum LangBox<'el, L>
-where
-    L: Lang,
-{
-    /// A reference-counted dynamic language item.
-    Rc(Rc<dyn LangItem<L>>),
-    /// A reference to a dynamic language item.
-    Ref(&'el dyn LangItem<L>),
+pub struct LangBox<L> {
+    inner: Rc<dyn LangItem<L>>,
 }
 
-impl<'el, L> Clone for LangBox<'el, L>
+impl<L> Clone for LangBox<L>
 where
     L: Lang,
 {
     fn clone(&self) -> Self {
-        match self {
-            Self::Rc(lang) => Self::Rc(lang.clone()),
-            Self::Ref(lang) => Self::Ref(*lang),
+        Self {
+            inner: self.inner.clone(),
         }
     }
 }
 
-impl<'el, L> fmt::Debug for LangBox<'el, L>
+impl<L> fmt::Debug for LangBox<L>
 where
     L: Lang,
 {
@@ -109,21 +102,24 @@ where
     }
 }
 
-impl<'el, L> LangItem<L> for LangBox<'el, L>
+impl<L> LangItem<L> for LangBox<L>
 where
     L: Lang,
 {
     fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
-        match self {
-            Self::Rc(this) => this.format(out, config, level),
-            Self::Ref(this) => this.format(out, config, level),
-        }
+        self.inner.format(out, config, level)
     }
 
     fn as_import(&self) -> Option<&L::Import> {
-        match self {
-            Self::Rc(this) => this.as_import(),
-            Self::Ref(this) => this.as_import(),
-        }
+        self.inner.as_import()
+    }
+}
+
+impl<L> From<Rc<dyn LangItem<L>>> for LangBox<L>
+where
+    L: Lang,
+{
+    fn from(value: Rc<dyn LangItem<L>>) -> Self {
+        Self { inner: value }
     }
 }

@@ -183,24 +183,22 @@ pub use genco_macros::{quote, quote_in};
 
 #[macro_use]
 mod macros;
-mod cons;
 mod element;
-mod erased_element;
 mod ext;
 mod format_tokens;
 mod formatter;
+mod item_str;
 mod lang;
 /// Prelude to import.
 pub mod prelude;
 mod register_tokens;
 mod tokens;
 
-pub use self::cons::Cons;
 pub use self::element::Element;
-pub use self::erased_element::ErasedElement;
-pub use self::ext::{Ext, TokenizeIter};
+pub use self::ext::Ext;
 pub use self::format_tokens::FormatTokens;
 pub use self::formatter::{Formatter, FormatterConfig, VecWriter};
+pub use self::item_str::ItemStr;
 pub use self::lang::*;
 pub use self::register_tokens::RegisterTokens;
 pub use self::tokens::Tokens;

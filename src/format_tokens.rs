@@ -1,18 +1,18 @@
 //! Converter traits for things that can be converted into tokens.
 
-use super::{Cons, Element, ErasedElement, Lang, Tokens};
+use super::{Element, ItemStr, Lang, Tokens};
 use std::rc::Rc;
 
 /// Helper trait to convert something into tokens.
-pub trait FormatTokens<'el, L>
+pub trait FormatTokens<L>
 where
     L: Lang,
 {
     /// Convert the type into tokens.
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>);
+    fn format_tokens(self, tokens: &mut Tokens<L>);
 
     /// Convert into tokens.
-    fn into_tokens(self) -> Tokens<'el, L>
+    fn into_tokens(self) -> Tokens<L>
     where
         Self: Sized,
     {
@@ -27,7 +27,7 @@ where
     }
 }
 
-impl<'el, L> FormatTokens<'el, L> for Tokens<'el, L>
+impl<L> FormatTokens<L> for Tokens<L>
 where
     L: Lang,
 {
@@ -40,11 +40,11 @@ where
     }
 }
 
-impl<'el, L> FormatTokens<'el, L> for &'el Tokens<'el, L>
+impl<'a, L> FormatTokens<L> for &'a Tokens<L>
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
         tokens.elements.extend(self.elements.iter().cloned());
     }
 
@@ -54,11 +54,11 @@ where
 }
 
 /// Convert collection to tokens.
-impl<'el, L> FormatTokens<'el, L> for Vec<Tokens<'el, L>>
+impl<L> FormatTokens<L> for Vec<Tokens<L>>
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
         for t in self {
             tokens.elements.extend(t.elements);
         }
@@ -70,92 +70,82 @@ where
 }
 
 /// Convert element to tokens.
-impl<'el, L> FormatTokens<'el, L> for Element<'el, L>
+impl<L> FormatTokens<L> for Element<L>
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
         tokens.elements.push(self);
     }
 }
 
-/// Convert an erased element to tokens.
-impl<'el, L> FormatTokens<'el, L> for ErasedElement<'el>
+/// Convert borrowed strings.
+impl<'a, L> FormatTokens<L> for &'a str
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
-        tokens.elements.push(self.into());
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
+        tokens.elements.push(self.to_string().into());
     }
 }
 
 /// Convert borrowed strings.
-impl<'el, L> FormatTokens<'el, L> for &'el str
+impl<'a, L> FormatTokens<L> for &'a String
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
-        tokens.elements.push(self.into());
-    }
-}
-
-/// Convert borrowed strings.
-impl<'el, L> FormatTokens<'el, L> for &'el String
-where
-    L: Lang,
-{
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
-        tokens.elements.push(self.as_str().into());
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
+        tokens.elements.push(self.clone().into());
     }
 }
 
 /// Convert strings.
-impl<'el, L> FormatTokens<'el, L> for String
+impl<L> FormatTokens<L> for String
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert refcounted strings.
-impl<'el, L> FormatTokens<'el, L> for Rc<String>
+impl<L> FormatTokens<L> for Rc<String>
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert reference to refcounted strings.
-impl<'el, L> FormatTokens<'el, L> for &'el Rc<String>
+impl<'a, L> FormatTokens<L> for &'a Rc<String>
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
-        tokens.elements.push(Cons::Borrowed(self.as_str()).into());
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
+        tokens.elements.push(self.clone().into());
     }
 }
 
 /// Convert stringy things.
-impl<'el, L> FormatTokens<'el, L> for Cons<'el>
+impl<L> FormatTokens<L> for ItemStr
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
         tokens.elements.push(self.into());
     }
 }
 
 /// Convert stringy things.
-impl<'el, L, T> FormatTokens<'el, L> for Option<T>
+impl<L, T> FormatTokens<L> for Option<T>
 where
     L: Lang,
-    T: FormatTokens<'el, L>,
+    T: FormatTokens<L>,
 {
-    fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
         if let Some(inner) = self {
             inner.format_tokens(tokens);
         }
@@ -165,11 +155,11 @@ where
 macro_rules! impl_display {
     ($($ty:ty),*) => {
         $(
-            impl<'el, L> FormatTokens<'el, L> for $ty
+            impl<L> FormatTokens<L> for $ty
             where
                 L: Lang,
             {
-                fn format_tokens(self, tokens: &mut Tokens<'el, L>) {
+                fn format_tokens(self, tokens: &mut Tokens<L>) {
                     tokens.append(self.to_string());
                 }
             }

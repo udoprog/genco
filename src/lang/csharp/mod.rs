@@ -5,12 +5,12 @@ mod utils;
 
 pub use self::modifier::Modifier;
 pub use self::utils::BlockComment;
-use crate::{Cons, Formatter, Lang, LangItem};
+use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 
 /// Tokens container specialization for C#.
-pub type Tokens<'el> = crate::Tokens<'el, Csharp>;
+pub type Tokens = crate::Tokens<Csharp>;
 
 impl_type_basics!(Csharp, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Simple, Optional, Type, Array, Void});
 
@@ -31,7 +31,7 @@ pub trait TypeTrait: 'static + fmt::Debug + LangItem<Csharp> {
     fn is_nullable(&self) -> bool;
 
     /// Handle imports recursively.
-    fn type_imports(&self, _: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {}
+    fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
 }
 
 static SYSTEM: &'static str = "System";
@@ -116,7 +116,7 @@ pub const VOID: Void = Void(());
 #[derive(Debug, Default)]
 pub struct Config {
     /// namespace to use.
-    namespace: Option<Cons<'static>>,
+    namespace: Option<ItemStr>,
 
     /// Names which have been imported (namespace + name).
     imported_names: HashMap<String, String>,
@@ -126,7 +126,7 @@ impl Config {
     /// Set the namespace name to build.
     pub fn with_namespace<N>(self, namespace: N) -> Self
     where
-        N: Into<Cons<'static>>,
+        N: Into<ItemStr>,
     {
         Self {
             namespace: Some(namespace.into()),
@@ -158,7 +158,7 @@ impl TypeTrait for Optional {
         false
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
         self.inner.type_imports(modules)
     }
 }
@@ -194,11 +194,11 @@ pub enum Kind {
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
     /// namespace of the class.
-    namespace: Option<Cons<'static>>,
+    namespace: Option<ItemStr>,
     /// Name  of class.
-    name: Cons<'static>,
+    name: ItemStr,
     /// Path of class when nested.
-    path: Vec<Cons<'static>>,
+    path: Vec<ItemStr>,
     /// Arguments of the class.
     arguments: Vec<TypeBox>,
     /// Use as qualified type.
@@ -211,7 +211,7 @@ impl Type {
     /// Extend the type with a nested path.
     ///
     /// This discards any arguments associated with it.
-    pub fn path<P: Into<Cons<'static>>>(self, part: P) -> Self {
+    pub fn path<P: Into<ItemStr>>(self, part: P) -> Self {
         let mut path = self.path;
         path.push(part.into());
 
@@ -279,7 +279,7 @@ impl TypeTrait for Type {
         }
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
         for argument in &self.arguments {
             argument.type_imports(modules);
         }
@@ -375,7 +375,7 @@ impl TypeTrait for Simple {
         false
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
         modules.insert((SYSTEM.into(), self.alias.into()));
     }
 }
@@ -414,7 +414,7 @@ impl TypeTrait for Array {
         true
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<(Cons<'static>, Cons<'static>)>) {
+    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
         self.inner.type_imports(modules);
     }
 }
@@ -464,7 +464,7 @@ impl LangItem<Csharp> for Void {
 pub struct Csharp(());
 
 impl Csharp {
-    fn imports<'el>(tokens: &Tokens<'el>, config: &mut Config) -> Option<Tokens<'el>> {
+    fn imports(tokens: &Tokens, config: &mut Config) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
         let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
@@ -538,7 +538,7 @@ impl Lang for Csharp {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -565,7 +565,7 @@ impl Lang for Csharp {
 }
 
 /// Setup an imported element.
-pub fn using<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(namespace: P, name: N) -> Type {
+pub fn using<P: Into<ItemStr>, N: Into<ItemStr>>(namespace: P, name: N) -> Type {
     Type {
         namespace: Some(namespace.into()),
         name: name.into(),
@@ -577,7 +577,7 @@ pub fn using<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(namespace: P, name:
 }
 
 /// Setup a local element from borrowed components.
-pub fn local<N: Into<Cons<'static>>>(name: N) -> Type {
+pub fn local<N: Into<ItemStr>>(name: N) -> Type {
     Type {
         namespace: None,
         name: name.into(),

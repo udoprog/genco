@@ -24,8 +24,8 @@ impl Modifier {
     }
 }
 
-impl<'el> FormatTokens<'el, Dart> for Vec<Modifier> {
-    fn format_tokens(self, tokens: &mut Tokens<'el, Dart>) {
+impl FormatTokens<Dart> for Vec<Modifier> {
+    fn format_tokens(self, tokens: &mut Tokens<Dart>) {
         let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
 
         if let Some(modifier) = it.next() {

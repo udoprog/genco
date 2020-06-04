@@ -43,14 +43,14 @@ impl Modifier {
     }
 }
 
-impl<'el> FormatTokens<'el, Java> for Modifier {
-    fn format_tokens(self, tokens: &mut Tokens<'el>) {
+impl FormatTokens<Java> for Modifier {
+    fn format_tokens(self, tokens: &mut Tokens) {
         tokens.append(self.name());
     }
 }
 
-impl<'el> FormatTokens<'el, Java> for Vec<Modifier> {
-    fn format_tokens(self, tokens: &mut Tokens<'el>) {
+impl FormatTokens<Java> for Vec<Modifier> {
+    fn format_tokens(self, tokens: &mut Tokens) {
         let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
 
         if let Some(modifier) = it.next() {

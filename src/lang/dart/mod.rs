@@ -6,11 +6,11 @@ mod utils;
 pub use self::modifier::Modifier;
 pub use self::utils::DocComment;
 
-use crate::{Cons, Formatter, Lang, LangItem};
+use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Dart.
-pub type Tokens<'el> = crate::Tokens<'el, Dart>;
+pub type Tokens = crate::Tokens<Dart>;
 
 impl_type_basics!(Dart, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, BuiltIn, Local, Void, Dynamic});
 
@@ -66,7 +66,7 @@ impl LangItem<Dart> for BuiltIn {
 /// a locally defined type.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Local {
-    name: Cons<'static>,
+    name: ItemStr,
 }
 
 impl TypeTrait for Local {
@@ -117,18 +117,18 @@ impl LangItem<Dart> for Dynamic {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Type {
     /// Path to import.
-    path: Cons<'static>,
+    path: ItemStr,
     /// Name imported.
-    name: Cons<'static>,
+    name: ItemStr,
     /// Alias of module.
-    alias: Option<Cons<'static>>,
+    alias: Option<ItemStr>,
     /// Generic arguments.
     arguments: Vec<TypeBox>,
 }
 
 impl Type {
     /// Add an `as` keyword to the import.
-    pub fn alias(self, alias: impl Into<Cons<'static>>) -> Type {
+    pub fn alias(self, alias: impl Into<ItemStr>) -> Type {
         Self {
             alias: Some(alias.into()),
             ..self
@@ -221,7 +221,7 @@ pub struct Dart(());
 
 impl Dart {
     /// Resolve all imports.
-    fn imports<'el>(input: &Tokens<'el>, _: &mut Config) -> Tokens<'el> {
+    fn imports(input: &Tokens, _: &mut Config) -> Tokens {
         use crate::Ext as _;
         use std::collections::BTreeSet;
 
@@ -282,7 +282,7 @@ impl Lang for Dart {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -302,7 +302,7 @@ impl Lang for Dart {
 }
 
 /// Setup an imported element.
-pub fn imported<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(path: P, name: N) -> Type {
+pub fn imported<P: Into<ItemStr>, N: Into<ItemStr>>(path: P, name: N) -> Type {
     Type {
         path: path.into(),
         alias: None,
@@ -312,7 +312,7 @@ pub fn imported<P: Into<Cons<'static>>, N: Into<Cons<'static>>>(path: P, name: N
 }
 
 /// Setup a local element.
-pub fn local<N: Into<Cons<'static>>>(name: N) -> Local {
+pub fn local<N: Into<ItemStr>>(name: N) -> Local {
     Local { name: name.into() }
 }
 

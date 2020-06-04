@@ -61,3 +61,15 @@ fn test_escape() {
     let tokens: Tokens<Rust> = quote!(#### ## #### #### ## ## ##[test]);
     assert_eq!("## # ## ## # # #[test]", tokens.to_string().unwrap());
 }
+
+#[test]
+fn test_factory() {
+    let tokens: Tokens<Rust> = quote! {
+        // Nested factory.
+        #{tokens => {
+            quote_in!(tokens => fn test() -> u32 { 42 });
+        }}
+    };
+
+    assert_eq!("", tokens.to_string().unwrap());
+}

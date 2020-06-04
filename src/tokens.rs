@@ -21,20 +21,20 @@ use std::vec;
 
 /// A set of tokens.
 #[derive(Debug, Default)]
-pub struct Tokens<'el, L>
+pub struct Tokens<L>
 where
     L: Lang,
 {
-    pub(crate) elements: Vec<Element<'el, L>>,
+    pub(crate) elements: Vec<Element<L>>,
 }
 
 /// Generic methods.
-impl<'el, L> Tokens<'el, L>
+impl<L> Tokens<L>
 where
     L: Lang,
 {
     /// Create a new set of tokens.
-    pub fn new() -> Tokens<'el, L> {
+    pub fn new() -> Tokens<L> {
         Tokens {
             elements: Vec::new(),
         }
@@ -43,7 +43,7 @@ where
     /// Push a nested definition.
     pub fn nested<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, L>,
+        T: FormatTokens<L>,
     {
         self.elements.push(Element::Indent);
         tokens.format_tokens(self);
@@ -53,38 +53,17 @@ where
     /// Push a nested definition.
     pub fn nested_into<B>(&mut self, builder: B) -> ()
     where
-        B: FnOnce(&mut Tokens<'el, L>) -> (),
+        B: FnOnce(&mut Tokens<L>) -> (),
     {
         let mut t = Tokens::new();
         builder(&mut t);
         self.nested(t);
     }
 
-    /// Push a nested definition.
-    ///
-    /// This is a fallible version that expected the builder to return a result.
-    pub fn try_nested_into<E, B>(&mut self, builder: B) -> Result<(), E>
-    where
-        B: FnOnce(&mut Tokens<'el, L>) -> Result<(), E>,
-    {
-        let mut t = Tokens::new();
-        builder(&mut t)?;
-        self.nested(t);
-        Ok(())
-    }
-
-    /// Push a nested reference to a definition.
-    pub fn nested_ref(&mut self, tokens: &'el Tokens<'el, L>) {
-        self.elements.push(Element::Indent);
-        self.elements
-            .extend(tokens.elements.iter().map(Element::Borrowed));
-        self.elements.push(Element::Unindent);
-    }
-
     /// Push a definition, guaranteed to be preceded with one newline.
     pub fn push<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, L>,
+        T: FormatTokens<L>,
     {
         self.elements.push(Element::PushSpacing);
         tokens.format_tokens(self);
@@ -93,24 +72,11 @@ where
     /// Push a new created definition, guaranteed to be preceded with one newline.
     pub fn push_into<B>(&mut self, builder: B) -> ()
     where
-        B: FnOnce(&mut Tokens<'el, L>) -> (),
+        B: FnOnce(&mut Tokens<L>) -> (),
     {
         let mut t = Tokens::new();
         builder(&mut t);
         self.push(t);
-    }
-
-    /// Push a new created definition, guaranteed to be preceded with one newline.
-    ///
-    /// This is a fallible version that expected the builder to return a result.
-    pub fn try_push_into<E, B>(&mut self, builder: B) -> Result<(), E>
-    where
-        B: FnOnce(&mut Tokens<'el, L>) -> Result<(), E>,
-    {
-        let mut t = Tokens::new();
-        builder(&mut t)?;
-        self.push(t);
-        Ok(())
     }
 
     /// Push the given set of tokens, unless it is empty.
@@ -118,7 +84,7 @@ where
     /// This is useful when you wish to preserve the structure of nested and joined tokens.
     pub fn push_unless_empty<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, L>,
+        T: FormatTokens<L>,
     {
         if !tokens.is_empty() {
             self.elements.push(Element::PushSpacing);
@@ -129,7 +95,7 @@ where
     /// Insert the given element.
     pub fn insert<E>(&mut self, pos: usize, element: E)
     where
-        E: Into<Element<'el, L>>,
+        E: Into<Element<L>>,
     {
         self.elements.insert(pos, element.into());
     }
@@ -137,14 +103,9 @@ where
     /// Append the given element.
     pub fn append<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, L>,
+        T: FormatTokens<L>,
     {
         tokens.format_tokens(self)
-    }
-
-    /// Append a reference to a definition.
-    pub fn append_ref(&mut self, element: &'el Element<'el, L>) {
-        self.elements.push(Element::Borrowed(element));
     }
 
     /// Append the given set of tokens, unless it is empty.
@@ -152,7 +113,7 @@ where
     /// This is useful when you wish to preserve the structure of nested and joined tokens.
     pub fn append_unless_empty<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<'el, L>,
+        T: FormatTokens<L>,
     {
         if tokens.is_empty() {
             return;
@@ -164,13 +125,13 @@ where
     /// Extend with another set of tokens.
     pub fn extend<I>(&mut self, it: I)
     where
-        I: IntoIterator<Item = Element<'el, L>>,
+        I: IntoIterator<Item = Element<L>>,
     {
         self.elements.extend(it.into_iter());
     }
 
     /// Walk over all elements.
-    pub fn walk_custom(&self) -> WalkCustom<'_, 'el, L> {
+    pub fn walk_custom(&self) -> WalkCustom<'_, L> {
         let mut queue = LinkedList::new();
         queue.extend(self.elements.iter());
         WalkCustom { queue: queue }
@@ -204,7 +165,7 @@ where
     /// [quote!]: genco_derive@quote!
     pub fn register<T>(&mut self, tokens: T)
     where
-        T: RegisterTokens<'el, L>,
+        T: RegisterTokens<L>,
     {
         tokens.register_tokens(self);
     }
@@ -240,7 +201,7 @@ where
     }
 }
 
-impl<'el, L> Clone for Tokens<'el, L>
+impl<L> Clone for Tokens<L>
 where
     L: Lang,
 {
@@ -251,19 +212,19 @@ where
     }
 }
 
-impl<'el, L> IntoIterator for Tokens<'el, L>
+impl<L> IntoIterator for Tokens<L>
 where
     L: Lang,
 {
-    type Item = Element<'el, L>;
-    type IntoIter = vec::IntoIter<Element<'el, L>>;
+    type Item = Element<L>;
+    type IntoIter = vec::IntoIter<Element<L>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
     }
 }
 
-impl<'el, L: Lang> Tokens<'el, L> {
+impl<L: Lang> Tokens<L> {
     /// Format the tokens.
     pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
         for element in &self.elements {
@@ -371,7 +332,7 @@ impl<'el, L: Lang> Tokens<'el, L> {
     }
 }
 
-impl<'el, C: Default, L: Lang<Config = C>> Tokens<'el, L> {
+impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// Format the token stream as a file for the given target language to a
     /// string. Using the default configuration.
     pub fn to_file_string(self) -> result::Result<String, fmt::Error> {
@@ -417,55 +378,50 @@ impl<'el, C: Default, L: Lang<Config = C>> Tokens<'el, L> {
     }
 }
 
-impl<'el, L> FromIterator<&'el Element<'el, L>> for Tokens<'el, L>
+impl<'a, L> FromIterator<&'a Element<L>> for Tokens<L>
 where
     L: Lang,
 {
-    fn from_iter<I: IntoIterator<Item = &'el Element<'el, L>>>(iter: I) -> Tokens<'el, L> {
+    fn from_iter<I: IntoIterator<Item = &'a Element<L>>>(iter: I) -> Tokens<L> {
         Tokens {
-            elements: iter.into_iter().map(|e| Element::Borrowed(e)).collect(),
+            elements: iter.into_iter().map(Clone::clone).collect(),
         }
     }
 }
 
-impl<'el, L> FromIterator<Element<'el, L>> for Tokens<'el, L>
+impl<L> FromIterator<Element<L>> for Tokens<L>
 where
     L: Lang,
 {
-    fn from_iter<I: IntoIterator<Item = Element<'el, L>>>(iter: I) -> Tokens<'el, L> {
+    fn from_iter<I: IntoIterator<Item = Element<L>>>(iter: I) -> Tokens<L> {
         Tokens {
             elements: iter.into_iter().collect(),
         }
     }
 }
 
-pub struct WalkCustom<'a, 'el, L>
+pub struct WalkCustom<'a, L>
 where
     L: Lang,
 {
-    queue: LinkedList<&'a Element<'el, L>>,
+    queue: LinkedList<&'a Element<L>>,
 }
 
-impl<'a, 'el, L> Iterator for WalkCustom<'a, 'el, L>
+impl<'a, L> Iterator for WalkCustom<'a, L>
 where
     L: Lang,
 {
     type Item = &'a dyn LangItem<L>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        use self::Element::*;
-
         // read until custom element is encountered.
         while let Some(next) = self.queue.pop_front() {
-            match *next {
-                Rc(ref element) => {
+            match next {
+                Element::Rc(element) => {
                     self.queue.push_back(element.as_ref());
                 }
-                Borrowed(ref element) => {
-                    self.queue.push_back(element);
-                }
-                LangBox(ref item) => return Some(&*item),
-                Registered(ref item) => return Some(&*item),
+                Element::LangBox(item) => return Some(&*item),
+                Element::Registered(item) => return Some(&*item),
                 _ => {}
             }
         }
@@ -500,7 +456,7 @@ mod tests {
     #[derive(Clone, Copy)]
     struct Lang(());
 
-    impl<'el> crate::Lang for Lang {
+    impl crate::Lang for Lang {
         type Config = ();
         type Import = Import;
     }

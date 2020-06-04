@@ -1,11 +1,11 @@
 //! Specialization for Swift code generation.
 
-use crate::{Cons, Formatter, Lang, LangItem};
+use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Rust.
-pub type Tokens<'el> = crate::Tokens<'el, Swift>;
+pub type Tokens = crate::Tokens<Swift>;
 
 impl_type_basics!(Swift, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array});
 
@@ -15,7 +15,7 @@ pub trait TypeTrait: 'static + fmt::Debug + LangItem<Swift> {
     fn as_enum(&self) -> TypeEnum<'_>;
 
     /// Handle imports for the given type.
-    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>);
+    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>);
 }
 
 /// Swift token specialization.
@@ -25,9 +25,9 @@ pub struct Swift(());
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
     /// Module of the imported name.
-    module: Option<Cons<'static>>,
+    module: Option<ItemStr>,
     /// Name imported.
-    name: Cons<'static>,
+    name: ItemStr,
 }
 
 impl TypeTrait for Type {
@@ -35,7 +35,7 @@ impl TypeTrait for Type {
         TypeEnum::Type(self)
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
         if let Some(module) = &self.module {
             modules.insert(module.clone());
         }
@@ -66,7 +66,7 @@ impl TypeTrait for Map {
         TypeEnum::Map(self)
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
         self.key.type_imports(modules);
         self.value.type_imports(modules);
     }
@@ -99,7 +99,7 @@ impl TypeTrait for Array {
         TypeEnum::Array(self)
     }
 
-    fn type_imports(&self, modules: &mut BTreeSet<Cons<'static>>) {
+    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
         self.inner.type_imports(modules);
     }
 }
@@ -118,7 +118,7 @@ impl LangItem<Swift> for Array {
 }
 
 impl Swift {
-    fn imports<'el>(tokens: &Tokens<'el>) -> Option<Tokens<'el>> {
+    fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
@@ -170,7 +170,7 @@ impl Lang for Swift {
     }
 
     fn write_file(
-        tokens: Tokens<'_>,
+        tokens: Tokens,
         out: &mut Formatter,
         config: &mut Self::Config,
         level: usize,
@@ -190,8 +190,8 @@ impl Lang for Swift {
 /// Setup an imported element.
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
-    M: Into<Cons<'static>>,
-    N: Into<Cons<'static>>,
+    M: Into<ItemStr>,
+    N: Into<ItemStr>,
 {
     Type {
         module: Some(module.into()),
@@ -202,7 +202,7 @@ where
 /// Setup a local element.
 pub fn local<N>(name: N) -> Type
 where
-    N: Into<Cons<'static>>,
+    N: Into<ItemStr>,
 {
     Type {
         module: None,
