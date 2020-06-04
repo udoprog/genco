@@ -81,6 +81,14 @@ struct Cursor {
 }
 
 impl Cursor {
+    /// Join two spans.
+    fn join(a: Span, b: Span) -> Self {
+        Cursor {
+            start: a.start(),
+            end: b.end(),
+        }
+    }
+
     /// Calculate the start character for the span.
     fn start_character(self) -> Self {
         Cursor {
@@ -209,14 +217,14 @@ impl Parse for Tokens {
                         }
                     }
                 }
-                Item::Expression(span, expr) => {
+                Item::Expression(_, expr) => {
                     item_buffer.flush(&mut tokens);
 
-                    let group = Group::new(Delimiter::None, quote::quote_spanned!(span => __toks.append(Clone::clone(&#expr));));
+                    let group = Group::new(Delimiter::None, quote::quote_spanned!(expr.span() => __toks.append(Clone::clone(&#expr));));
                     tokens.push(TokenTree::Group(group));
                 }
-                Item::Register(span, expr) => {
-                    registers.push(quote::quote_spanned!(span => __toks.register(#expr)));
+                Item::Register(_, expr) => {
+                    registers.push(quote::quote_spanned!(expr.span() => __toks.register(#expr)));
                 }
                 Item::DelimiterClose(_, delimiter) => {
                     match delimiter {
@@ -271,8 +279,8 @@ impl ItemBuffer {
 #[derive(Debug)]
 enum Item {
     Tree(TokenTree),
-    Expression(Span, TokenTree),
-    Register(Span, TokenTree),
+    Expression(Cursor, TokenTree),
+    Register(Cursor, TokenTree),
     DelimiterClose(Cursor, Delimiter),
 }
 
@@ -280,8 +288,8 @@ impl Item {
     fn cursor(&self) -> Cursor {
         match self {
             Self::Tree(tt) => Cursor::from(tt.span()),
-            Self::Expression(span, ..) => Cursor::from(span),
-            Self::Register(span, ..) => Cursor::from(span),
+            Self::Expression(cursor, ..) => *cursor,
+            Self::Register(cursor, ..) => *cursor,
             Self::DelimiterClose(cursor, ..) => *cursor,
         }
     }
@@ -294,40 +302,28 @@ fn process_expressions(mut queue: impl FnMut(Item), mut it: impl Iterator<Item =
     while let Some(n0) = std::mem::replace(&mut n1, it.next().transpose()?) {
         n1 = match (n0, n1) {
             // Escape sequence for hash.
-            (TokenTree::Punct(mut a), Some(TokenTree::Punct(b))) if a.as_char() == '#' && b.as_char() == '#' => {
-                let span = a.span().join(b.span()).expect("failed to join spans");
-                a.set_span(span);
-                queue(Item::Tree(TokenTree::Punct(a)));
+            (TokenTree::Punct(a), Some(TokenTree::Punct(b))) if a.as_char() == '#' && b.as_char() == '#' => {
+                queue(Item::Tree(TokenTree::Punct(b)));
                 it.next().transpose()?
             }
             // Escape sequence for register.
-            (TokenTree::Punct(mut a), Some(TokenTree::Punct(b))) if a.as_char() == '@' && b.as_char() == '@' => {
-                let span = a.span().join(b.span()).expect("failed to join spans");
-                a.set_span(span);
-                queue(Item::Tree(TokenTree::Punct(a)));
+            (TokenTree::Punct(a), Some(TokenTree::Punct(b))) if a.as_char() == '@' && b.as_char() == '@' => {
+                queue(Item::Tree(TokenTree::Punct(b)));
                 it.next().transpose()?
             }
             // Context evaluation.
             (TokenTree::Punct(first), Some(argument)) if first.as_char() == '#' => {
-                let span = first.span().join(argument.span()).expect("failed to join spans");
+                let cursor = Cursor::join(first.span(), argument.span());
 
-                match argument {
-                    other => {
-                        queue(Item::Expression(span, other));
-                        it.next().transpose()?
-                    }
-                }
+                queue(Item::Expression(cursor, argument));
+                it.next().transpose()?
             }
             // Register evaluation.
             (TokenTree::Punct(first), Some(argument)) if first.as_char() == '@' => {
-                let span = first.span().join(argument.span()).expect("failed to join spans");
+                let cursor = Cursor::join(first.span(), argument.span());
 
-                match argument {
-                    other => {
-                        queue(Item::Register(span, other));
-                        it.next().transpose()?
-                    }
-                }
+                queue(Item::Register(cursor, argument));
+                it.next().transpose()?
             }
             (tt, next) => {
                 queue(Item::Tree(tt));

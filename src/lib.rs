@@ -166,7 +166,7 @@
 // Note: Replace internal use of macros `push!`, `nested!` with `quote!`.
 #![allow(deprecated)]
 
-pub use genco_derive::quote;
+pub use genco_macros::quote;
 
 #[macro_use]
 mod macros;

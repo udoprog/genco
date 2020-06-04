@@ -1,6 +1,6 @@
 [package]
-name = "genco-derive"
-version = "0.5.0-alpha.5"
+name = "genco-macros"
+version = "0.5.0-alpha.6"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 license = "MIT/Apache-2.0"
 edition = "2018"
@@ -8,7 +8,7 @@ repository = "https://github.com/udoprog/genco"
 homepage = "https://github.com/udoprog/genco"
 documentation = "https://docs.rs/genco"
 description = """
-Quote macro for the even simpler code generation for Rust.
+Macros used by Genco, the even simpler code generator for Rust.
 """
 
 [dependencies]
@@ -17,7 +17,7 @@ quote = "1.0.3"
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 
 [dev-dependencies]
-genco = { path = "..", version = "=0.5.0-alpha.5" }
+genco = { path = "..", version = "=0.5.0-alpha.6" }
 
 [lib]
 proc-macro = true
