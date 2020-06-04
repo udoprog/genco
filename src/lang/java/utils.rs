@@ -1,4 +1,4 @@
-use crate::{Element, FormatTokens, ItemStr, Java, Tokens};
+use crate::{FormatTokens, Item, ItemStr, Java, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 pub struct BlockComment(pub Vec<ItemStr>);
@@ -17,6 +17,6 @@ impl FormatTokens<Java> for BlockComment {
         }
 
         tokens.push(" */");
-        tokens.push(Element::PushSpacing);
+        tokens.push(Item::PushSpacing);
     }
 }

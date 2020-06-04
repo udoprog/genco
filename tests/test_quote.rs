@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene)]
 
-use genco::{quote, Ext as _, Rust, Tokens};
+use genco::{quote, quote_in, Ext as _, Rust, Tokens};
 
 #[test]
 fn test_quote() {
@@ -63,7 +63,7 @@ fn test_escape() {
 }
 
 #[test]
-fn test_factory() {
+fn test_scope() {
     let tokens: Tokens<Rust> = quote! {
         // Nested factory.
         #{tokens => {
@@ -71,5 +71,5 @@ fn test_factory() {
         }}
     };
 
-    assert_eq!("", tokens.to_string().unwrap());
+    assert_eq!("fn test() -> u32 { 42 }", tokens.to_string().unwrap());
 }

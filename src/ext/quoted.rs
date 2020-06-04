@@ -1,4 +1,4 @@
-use crate::{Element, FormatTokens, ItemStr, Lang, Tokens};
+use crate::{FormatTokens, Item, ItemStr, Lang, Tokens};
 
 #[derive(Clone, Copy)]
 pub struct Quoted<T> {
@@ -17,6 +17,6 @@ where
     T: Into<ItemStr>,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(Element::Quoted(self.inner.into()));
+        tokens.elements.push(Item::Quoted(self.inner.into()));
     }
 }

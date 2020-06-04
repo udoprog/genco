@@ -10,7 +10,7 @@
 
 use crate::formatter::{FmtWriter, IoWriter};
 use crate::{
-    Element, FormatTokens, Formatter, FormatterConfig, Lang, LangItem, RegisterTokens, VecWriter,
+    FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens, VecWriter,
 };
 use std::collections::LinkedList;
 use std::fmt;
@@ -20,12 +20,21 @@ use std::result;
 use std::vec;
 
 /// A set of tokens.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Tokens<L>
 where
     L: Lang,
 {
-    pub(crate) elements: Vec<Element<L>>,
+    pub(crate) elements: Vec<Item<L>>,
+}
+
+impl<L> fmt::Debug for Tokens<L>
+where
+    L: Lang,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_list().entries(self.elements.iter()).finish()
+    }
 }
 
 /// Generic methods.
@@ -45,9 +54,9 @@ where
     where
         T: FormatTokens<L>,
     {
-        self.elements.push(Element::Indent);
+        self.elements.push(Item::Indent);
         tokens.format_tokens(self);
-        self.elements.push(Element::Unindent);
+        self.elements.push(Item::Unindent);
     }
 
     /// Push a nested definition.
@@ -65,7 +74,7 @@ where
     where
         T: FormatTokens<L>,
     {
-        self.elements.push(Element::PushSpacing);
+        self.elements.push(Item::PushSpacing);
         tokens.format_tokens(self);
     }
 
@@ -87,7 +96,7 @@ where
         T: FormatTokens<L>,
     {
         if !tokens.is_empty() {
-            self.elements.push(Element::PushSpacing);
+            self.elements.push(Item::PushSpacing);
             tokens.format_tokens(self);
         }
     }
@@ -95,7 +104,7 @@ where
     /// Insert the given element.
     pub fn insert<E>(&mut self, pos: usize, element: E)
     where
-        E: Into<Element<L>>,
+        E: Into<Item<L>>,
     {
         self.elements.insert(pos, element.into());
     }
@@ -108,24 +117,10 @@ where
         tokens.format_tokens(self)
     }
 
-    /// Append the given set of tokens, unless it is empty.
-    ///
-    /// This is useful when you wish to preserve the structure of nested and joined tokens.
-    pub fn append_unless_empty<T>(&mut self, tokens: T)
-    where
-        T: FormatTokens<L>,
-    {
-        if tokens.is_empty() {
-            return;
-        }
-
-        tokens.format_tokens(self);
-    }
-
     /// Extend with another set of tokens.
     pub fn extend<I>(&mut self, it: I)
     where
-        I: IntoIterator<Item = Element<L>>,
+        I: IntoIterator<Item = Item<L>>,
     {
         self.elements.extend(it.into_iter());
     }
@@ -177,27 +172,27 @@ where
 
     /// Add a single spacing to the token stream.
     pub fn spacing(&mut self) {
-        self.elements.push(Element::Spacing);
+        self.elements.push(Item::Spacing);
     }
 
     /// Add a single line spacing to the token stream.
     pub fn line_spacing(&mut self) {
-        self.elements.push(Element::LineSpacing);
+        self.elements.push(Item::LineSpacing);
     }
 
     /// Add a single push spacing operation.
     pub fn push_spacing(&mut self) {
-        self.elements.push(Element::PushSpacing);
+        self.elements.push(Item::PushSpacing);
     }
 
     /// Add a single indentation to the token stream.
     pub fn indent(&mut self) {
-        self.elements.push(Element::Indent);
+        self.elements.push(Item::Indent);
     }
 
     /// Add a single unindentation to the token stream.
     pub fn unindent(&mut self) {
-        self.elements.push(Element::Unindent);
+        self.elements.push(Item::Unindent);
     }
 }
 
@@ -216,8 +211,8 @@ impl<L> IntoIterator for Tokens<L>
 where
     L: Lang,
 {
-    type Item = Element<L>;
-    type IntoIter = vec::IntoIter<Element<L>>;
+    type Item = Item<L>;
+    type IntoIter = vec::IntoIter<Item<L>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
@@ -378,22 +373,22 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     }
 }
 
-impl<'a, L> FromIterator<&'a Element<L>> for Tokens<L>
+impl<'a, L> FromIterator<&'a Item<L>> for Tokens<L>
 where
     L: Lang,
 {
-    fn from_iter<I: IntoIterator<Item = &'a Element<L>>>(iter: I) -> Tokens<L> {
+    fn from_iter<I: IntoIterator<Item = &'a Item<L>>>(iter: I) -> Tokens<L> {
         Tokens {
             elements: iter.into_iter().map(Clone::clone).collect(),
         }
     }
 }
 
-impl<L> FromIterator<Element<L>> for Tokens<L>
+impl<L> FromIterator<Item<L>> for Tokens<L>
 where
     L: Lang,
 {
-    fn from_iter<I: IntoIterator<Item = Element<L>>>(iter: I) -> Tokens<L> {
+    fn from_iter<I: IntoIterator<Item = Item<L>>>(iter: I) -> Tokens<L> {
         Tokens {
             elements: iter.into_iter().collect(),
         }
@@ -404,7 +399,7 @@ pub struct WalkCustom<'a, L>
 where
     L: Lang,
 {
-    queue: LinkedList<&'a Element<L>>,
+    queue: LinkedList<&'a Item<L>>,
 }
 
 impl<'a, L> Iterator for WalkCustom<'a, L>
@@ -417,11 +412,11 @@ where
         // read until custom element is encountered.
         while let Some(next) = self.queue.pop_front() {
             match next {
-                Element::Rc(element) => {
+                Item::Rc(element) => {
                     self.queue.push_back(element.as_ref());
                 }
-                Element::LangBox(item) => return Some(&*item),
-                Element::Registered(item) => return Some(&*item),
+                Item::LangBox(item) => return Some(&*item),
+                Item::Registered(item) => return Some(&*item),
                 _ => {}
             }
         }

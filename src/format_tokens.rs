@@ -1,6 +1,6 @@
 //! Converter traits for things that can be converted into tokens.
 
-use super::{Element, ItemStr, Lang, Tokens};
+use super::{Item, ItemStr, Lang, Tokens};
 use std::rc::Rc;
 
 /// Helper trait to convert something into tokens.
@@ -70,7 +70,7 @@ where
 }
 
 /// Convert element to tokens.
-impl<L> FormatTokens<L> for Element<L>
+impl<L> FormatTokens<L> for Item<L>
 where
     L: Lang,
 {

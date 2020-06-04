@@ -1,4 +1,4 @@
-use crate::{Csharp, Element, FormatTokens, ItemStr, Tokens};
+use crate::{Csharp, FormatTokens, Item, ItemStr, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 pub struct BlockComment(pub Vec<ItemStr>);
@@ -14,6 +14,6 @@ impl FormatTokens<Csharp> for BlockComment {
             tokens.append(line);
         }
 
-        tokens.push(Element::PushSpacing);
+        tokens.push(Item::PushSpacing);
     }
 }

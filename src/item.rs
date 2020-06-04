@@ -5,13 +5,12 @@ use std::fmt;
 use std::rc::Rc;
 
 /// A single element in a set of tokens.
-#[derive(Debug)]
-pub enum Element<L>
+pub enum Item<L>
 where
     L: Lang,
 {
     /// A refcounted member.
-    Rc(Rc<Element<L>>),
+    Rc(Rc<Item<L>>),
     /// A borrowed string.
     Literal(ItemStr),
     /// A borrowed quoted string.
@@ -35,13 +34,13 @@ where
     Unindent,
 }
 
-impl<L> Element<L>
+impl<L> Item<L>
 where
     L: Lang,
 {
     /// Format the given element.
     pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
-        use self::Element::*;
+        use self::Item::*;
 
         match *self {
             Registered(_) => {}
@@ -85,61 +84,82 @@ where
     }
 }
 
-impl<L> From<String> for Element<L>
+impl<L> fmt::Debug for Item<L>
+where
+    L: Lang,
+{
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Rc(element) => write!(fmt, "Rc({:?})", element),
+            Self::Literal(s) => write!(fmt, "Literal({:?})", s),
+            Self::Quoted(s) => write!(fmt, "Quoted({:?})", s),
+            Self::LangBox(item) => write!(fmt, "LangBox({:?})", item),
+            Self::Registered(item) => write!(fmt, "Registered({:?})", item),
+            Self::PushSpacing => write!(fmt, "PushSpacing"),
+            Self::Line => write!(fmt, "Line"),
+            Self::Spacing => write!(fmt, "Spacing"),
+            Self::LineSpacing => write!(fmt, "LineSpacing"),
+            Self::Indent => write!(fmt, "Indent"),
+            Self::Unindent => write!(fmt, "Unindent"),
+        }
+    }
+}
+
+impl<L> From<String> for Item<L>
 where
     L: Lang,
 {
     fn from(value: String) -> Self {
-        Element::Literal(value.into())
+        Item::Literal(value.into())
     }
 }
 
-impl<'a, L> From<&'a str> for Element<L>
+impl<'a, L> From<&'a str> for Item<L>
 where
     L: Lang,
 {
     fn from(value: &'a str) -> Self {
-        Element::Literal(value.into())
+        Item::Literal(value.into())
     }
 }
 
-impl<L> From<Rc<String>> for Element<L>
+impl<L> From<Rc<String>> for Item<L>
 where
     L: Lang,
 {
     fn from(value: Rc<String>) -> Self {
-        Element::Literal(value.into())
+        Item::Literal(value.into())
     }
 }
 
-impl<L> From<ItemStr> for Element<L>
+impl<L> From<ItemStr> for Item<L>
 where
     L: Lang,
 {
     fn from(value: ItemStr) -> Self {
-        Element::Literal(value)
+        Item::Literal(value)
     }
 }
 
-impl<'a, L> From<&'a Element<L>> for Element<L>
+impl<'a, L> From<&'a Item<L>> for Item<L>
 where
     L: Lang,
 {
-    fn from(value: &'a Element<L>) -> Self {
+    fn from(value: &'a Item<L>) -> Self {
         value.clone()
     }
 }
 
-impl<L> From<Rc<Element<L>>> for Element<L>
+impl<L> From<Rc<Item<L>>> for Item<L>
 where
     L: Lang,
 {
-    fn from(value: Rc<Element<L>>) -> Self {
-        Element::Rc(value)
+    fn from(value: Rc<Item<L>>) -> Self {
+        Item::Rc(value)
     }
 }
 
-impl<L> Clone for Element<L>
+impl<L> Clone for Item<L>
 where
     L: Lang,
 {

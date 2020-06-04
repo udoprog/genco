@@ -36,6 +36,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///   spacing will be added after it.
 ///   Example: `#(var),*` will treat `var` as an iterator and add `,` and a
 ///   spacing between each element.
+/// * Scoped expressions using `#{<binding> => { <block> }}`, giving mutable
+///   and scoped access to the token stream being built. This can be used with
+///   the [quote_in!] macro for improved flow control.
+///   Example: `quote!(#{tokens => { quote_in!(tokens => fn foo() {}) }})`.
 ///
 /// # Examples
 ///
@@ -73,7 +77,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let toks = Ident::new("__toks", Span::call_site());
 
-    let parser = quote_parser::QuoteParser { receiver: &toks };
+    let parser = quote_parser::QuoteParser {
+        receiver: &toks,
+        borrowed: false,
+    };
 
     let parser = move |stream: ParseStream| parser.parse(stream);
 
@@ -93,6 +100,74 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
 /// Same as [quote!], except that it allows for quoting directly to a token
 /// stream.
+///
+/// You specify the destination stream as the first argument, followed by a `=>`
+/// and then the code to generate. To avoid taking ownership of the parameter
+/// argument you can use the syntax `&mut <ident>`. This can prevent borrowing
+/// issues you encounter (see the `Borrowing` section below).
+///
+/// For example: `quote_in! { &mut tokens => fn foo() {  } }`.
+///
+/// Note that there is a potential issue with reborrowing
+///
+/// # Reborrowing
+///
+/// In case you get a borrow issue like the following:
+///
+/// ```text
+/// 9  |   let tokens = &mut tokens;
+///    |       ------ help: consider changing this to be mutable: `mut tokens`
+/// ...
+/// 12 | /     quote_in! { tokens =>
+/// 13 | |         fn #name() -> u32 {
+/// 14 | |             #{tokens => {
+/// 15 | |                 tokens.append("42");
+/// 16 | |             }}
+/// 17 | |         }
+/// 18 | |     }
+///    | |_____^ cannot borrow as mutable
+/// ```
+///
+/// This is because inner scoped like `#{tokens => { <block> }}` take ownership
+/// of their variable by default. To have it perform a proper reborrow, you can
+/// do the following instead:
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+///
+/// use genco::rust::imported;
+/// use genco::{quote_in, Rust, Tokens};
+///
+/// let mut tokens = Tokens::<Rust>::new();
+/// let tokens = &mut tokens;
+///
+/// for name in &["foo", "bar", "baz"] {
+///     quote_in! { &mut tokens =>
+///         fn #name() -> u32 {
+///             #{tokens => {
+///                 tokens.append("42");
+///             }}
+///         }
+///     }
+/// }
+/// ```
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+///
+/// use genco::rust::imported;
+/// use genco::{quote_in, Rust, Tokens};
+///
+/// let mut tokens = Tokens::<Rust>::new();
+///
+/// quote_in! { tokens =>
+///     fn foo() -> u32 {
+///         42
+///     }
+/// }
+/// ```
 ///
 /// # Examples
 ///

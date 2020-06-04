@@ -14,6 +14,9 @@ pub(crate) enum Item {
     Register(Cursor, TokenTree),
     DelimiterClose(Cursor, Delimiter),
     Repeat(Cursor, TokenTree, Option<TokenTree>),
+    /// A local scope which exposes the tokens being built as the specified
+    /// variable.
+    Scope(Cursor, Ident, TokenTree),
 }
 
 impl Item {
@@ -24,12 +27,14 @@ impl Item {
             Self::Register(cursor, ..) => *cursor,
             Self::DelimiterClose(cursor, ..) => *cursor,
             Self::Repeat(cursor, ..) => *cursor,
+            Self::Scope(cursor, ..) => *cursor,
         }
     }
 }
 
 pub(crate) struct QuoteParser<'a> {
     pub(crate) receiver: &'a Ident,
+    pub(crate) borrowed: bool,
 }
 
 impl QuoteParser<'_> {
@@ -48,7 +53,7 @@ impl QuoteParser<'_> {
 
         let mut item_buffer = ItemBuffer::new(receiver);
 
-        parse_expression(|item| queue.push_back(item), input)?;
+        parse_inner(|item| queue.push_back(item), input)?;
 
         while let Some(item) = queue.pop_front() {
             let next = item.cursor();
@@ -59,18 +64,19 @@ impl QuoteParser<'_> {
 
                     debug_assert!(next.start.line > cursor.start.line);
 
-                    let stream = if next.start.line - cursor.start.line > 1 {
-                        quote::quote!(#receiver.line_spacing();)
+                    let line_spaced = if next.start.line - cursor.end.line > 1 {
+                        tokens.extend(quote::quote!(#receiver.line_spacing();));
+                        true
                     } else {
-                        quote::quote!(#receiver.push_spacing();)
+                        false
                     };
-
-                    tokens.extend(stream);
 
                     if last_column < next.start.column {
                         tokens.extend(quote::quote!(#receiver.indent();));
                     } else if last_column > next.start.column {
                         tokens.extend(quote::quote!(#receiver.unindent();));
+                    } else if !line_spaced {
+                        tokens.extend(quote::quote!(#receiver.push_spacing();));
                     }
 
                     last_column = next.start.column;
@@ -144,6 +150,27 @@ impl QuoteParser<'_> {
                         }});
                     }
                 }
+                Item::Scope(_, var, group) => {
+                    item_buffer.flush(&mut tokens);
+
+                    // If the receiver is borrowed, we need to reborrow to
+                    // satisfy the borrow checker in case it's in a loop.
+                    if self.borrowed {
+                        tokens.extend(quote::quote! {
+                            {
+                                let #var = &mut *#receiver;
+                                #group
+                            }
+                        });
+                    } else {
+                        tokens.extend(quote::quote! {
+                            {
+                                let #var = &mut #receiver;
+                                #group
+                            }
+                        });
+                    }
+                }
                 Item::Register(_, expr) => {
                     registers.push(quote::quote_spanned!(expr.span() => #receiver.register(#expr)));
                     // Reset cursor, so that registers don't count as items to be offset from.
@@ -172,19 +199,14 @@ impl QuoteParser<'_> {
 
 /// Process expressions in the token stream.
 fn parse_tree_iterator(queue: impl FnMut(Item), it: impl Iterator<Item = TokenTree>) -> Result<()> {
-    let parser = |input: ParseStream| parse_expression(queue, input);
+    let parser = |input: ParseStream| parse_inner(queue, input);
 
     let stream = TokenStream::from_iter(it);
     parser.parse2(stream)?;
     Ok(())
 }
 
-fn parse_group(
-    start: Span,
-    input: ParseStream,
-    can_repeat: bool,
-    factory: fn(Cursor, TokenTree) -> Item,
-) -> Result<Item> {
+fn parse_register(start: Span, input: ParseStream) -> Result<Item> {
     let (cursor, inner) = if input.peek(token::Paren) {
         let content;
         let delim = syn::parenthesized!(content in input);
@@ -200,37 +222,66 @@ fn parse_group(
         (cursor, TokenTree::Ident(ident))
     };
 
-    if can_repeat {
-        if input.peek2(Token![*]) {
-            let separator = input.parse::<TokenTree>()?;
-            let star = input.parse::<Token![*]>()?;
-            let cursor = cursor.with_end(star.span.end());
-            return Ok(Item::Repeat(cursor, inner, Some(separator)));
-        }
-
-        if input.peek(Token![*]) {
-            let star = input.parse::<Token![*]>()?;
-            let cursor = cursor.with_end(star.span.end());
-            return Ok(Item::Repeat(cursor, inner, None));
-        }
-    }
-
-    Ok(factory(cursor, inner))
+    Ok(Item::Register(cursor, inner))
 }
 
-fn parse_expression(mut queue: impl FnMut(Item), input: ParseStream) -> Result<()> {
+fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
+    if input.peek(token::Brace) {
+        let content;
+        syn::braced!(content in input);
+
+        let var = content.parse::<Ident>()?;
+        content.parse::<Token![=>]>()?;
+
+        let scope;
+        let delim = syn::braced!(scope in content);
+
+        let mut group = Group::new(Delimiter::None, scope.parse()?);
+        group.set_span(delim.span);
+
+        let cursor = Cursor::join(start, delim.span);
+        return Ok(Item::Scope(cursor, var, TokenTree::Group(group)));
+    }
+
+    let (cursor, inner) = if input.peek(token::Paren) {
+        let content;
+        let delim = syn::parenthesized!(content in input);
+
+        let mut group = Group::new(Delimiter::None, content.parse()?);
+        group.set_span(delim.span);
+
+        let cursor = Cursor::join(start, delim.span);
+        (cursor, TokenTree::Group(group))
+    } else {
+        let ident = input.parse::<Ident>()?;
+        let cursor = Cursor::join(start, ident.span());
+        (cursor, TokenTree::Ident(ident))
+    };
+
+    if input.peek2(Token![*]) {
+        let separator = input.parse::<TokenTree>()?;
+        let star = input.parse::<Token![*]>()?;
+        let cursor = cursor.with_end(star.span.end());
+        return Ok(Item::Repeat(cursor, inner, Some(separator)));
+    }
+
+    if input.peek(Token![*]) {
+        let star = input.parse::<Token![*]>()?;
+        let cursor = cursor.with_end(star.span.end());
+        return Ok(Item::Repeat(cursor, inner, None));
+    }
+
+    Ok(Item::Expression(cursor, inner))
+}
+
+fn parse_inner(mut queue: impl FnMut(Item), input: ParseStream) -> Result<()> {
     syn::custom_punctuation!(Register, #@);
     syn::custom_punctuation!(Escape, ##);
 
     while !input.is_empty() {
         if input.peek(Register) {
             let register = input.parse::<Register>()?;
-            queue(parse_group(
-                register.spans[0],
-                input,
-                false,
-                Item::Register,
-            )?);
+            queue(parse_register(register.spans[0], input)?);
             continue;
         }
 
@@ -246,7 +297,7 @@ fn parse_expression(mut queue: impl FnMut(Item), input: ParseStream) -> Result<(
 
         if input.peek(Token![#]) {
             let hash = input.parse::<Token![#]>()?;
-            queue(parse_group(hash.span, input, true, Item::Expression)?);
+            queue(parse_expression(hash.span, input)?);
             continue;
         }
 

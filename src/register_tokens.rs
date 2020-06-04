@@ -1,6 +1,6 @@
 //! Converter traits for things that can be converted into tokens.
 
-use super::{Element, Lang, LangBox, Tokens};
+use super::{Item, Lang, LangBox, Tokens};
 
 /// Helper trait to convert something into a tokens registration.
 pub trait RegisterTokens<L>
@@ -17,7 +17,7 @@ where
     L: Lang,
 {
     fn register_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(Element::Registered(self.into()))
+        tokens.elements.push(Item::Registered(self.into()))
     }
 }
 
@@ -30,7 +30,7 @@ macro_rules! impl_register_tokens {
         {
             fn register_tokens(self, tokens: &mut Tokens<L>) {
                 let ($($var,)*) = self;
-                $(tokens.elements.push(Element::Registered($var.into()));)*
+                $(tokens.elements.push(Item::Registered($var.into()));)*
             }
         }
     }
