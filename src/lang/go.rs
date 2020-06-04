@@ -1,6 +1,6 @@
 //! Specialization for Go code generation.
 
-use crate::{Cons, Formatter, Lang, LangItem, Quoted};
+use crate::{Cons, Ext as _, Formatter, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -289,7 +289,7 @@ where
 mod tests {
     use super::{array, imported, map, Config, Go, Tokens, INTERFACE};
     use crate as genco;
-    use crate::{quote, FormatterConfig, Quoted};
+    use crate::{quote, Ext as _, FormatterConfig};
 
     #[test]
     fn test_string() {

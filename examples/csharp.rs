@@ -6,14 +6,14 @@ use genco::{quote, Csharp, Tokens};
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    let console = using("System", "Console");
-    let file = using("System.IO", "File");
-    let stream = using("System.IO", "Stream");
-    let soap_formatter = using(
+    let console = &using("System", "Console");
+    let file = &using("System.IO", "File");
+    let stream = &using("System.IO", "Stream");
+    let soap_formatter = &using(
         "System.Runtime.Serialization.Formatters.Soap",
         "SoapFormatter",
     );
-    let simple_object = local("TestSimpleObject");
+    let simple_object = &local("TestSimpleObject");
 
     // Note: Comments have to be escaped as raw expressions, since they are
     // filtered out from procedural macros.

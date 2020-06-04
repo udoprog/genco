@@ -17,3 +17,4 @@ genco-macros = {path = "genco-macros", version = "=0.5.0-alpha.6"}
 
 [dev-dependencies]
 anyhow = "1.0.31"
+rand = "0.7.3"

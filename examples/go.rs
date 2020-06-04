@@ -1,12 +1,12 @@
 #![feature(proc_macro_hygiene)]
 
 use genco::go::{imported, Config, Go};
-use genco::{quote, FormatterConfig, Quoted as _};
+use genco::{quote, Ext as _, FormatterConfig};
 
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    let println = imported("fmt", "Println");
+    let println = &imported("fmt", "Println");
 
     let day = "tuesday";
     let name = "George";

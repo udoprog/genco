@@ -1,6 +1,6 @@
 //! Specialization for JavaScript code generation.
 
-use crate::{Cons, Formatter, Lang, LangItem, Quoted};
+use crate::{Cons, Ext as _, Formatter, Lang, LangItem};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
@@ -203,7 +203,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::{imported, local, Tokens};
-    use crate::Quoted;
+    use crate::Ext as _;
 
     #[test]
     fn test_function() {

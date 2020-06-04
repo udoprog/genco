@@ -185,7 +185,7 @@ mod tokens;
 pub use self::cons::Cons;
 pub use self::element::Element;
 pub use self::erased_element::ErasedElement;
-pub use self::ext::Quoted;
+pub use self::ext::{Ext, TokenizeIter};
 pub use self::format_tokens::FormatTokens;
 pub use self::formatter::{Formatter, FormatterConfig, VecWriter};
 pub use self::lang::*;

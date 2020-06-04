@@ -7,8 +7,11 @@ use std::rc::Rc;
 
 /// Tokens container specialization for Rust.
 pub type Tokens<'el> = crate::Tokens<'el, Rust>;
+/// Language box specialization for Rust.
+pub type LangBox<'el> = crate::LangBox<'el, Rust>;
 
 impl_lang_item!(Type, Rust);
+impl_plain_variadic_args!(Args, Type);
 
 static SEP: &'static str = "::";
 
@@ -106,9 +109,9 @@ impl Name {
     }
 
     /// Add generic arguments to the given type.
-    pub fn with_arguments(self, arguments: Vec<Type>) -> Name {
+    pub fn with_arguments(self, args: impl Args) -> Name {
         Name {
-            arguments: arguments,
+            arguments: args.into_args(),
             ..self
         }
     }
@@ -180,9 +183,9 @@ impl Type {
     }
 
     /// Add generic arguments to the given type.
-    pub fn with_arguments(self, arguments: Vec<Type>) -> Type {
+    pub fn with_arguments(self, args: impl Args) -> Type {
         Type {
-            name: self.name.with_arguments(arguments),
+            name: self.name.with_arguments(args),
             ..self
         }
     }
@@ -341,7 +344,7 @@ where
 mod tests {
     use super::{imported, local};
     use crate as genco;
-    use crate::{quote, Quoted, Rust, Tokens};
+    use crate::{quote, Ext as _, Rust, Tokens};
 
     #[test]
     fn test_string() {
@@ -378,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_imported_with_arguments() {
-        let dbg = imported("std::fmt", "Debug").with_arguments(vec![local("T"), local("U")]);
+        let dbg = imported("std::fmt", "Debug").with_arguments((local("T"), local("U")));
         let mut toks: Tokens<Rust> = Tokens::new();
         toks.push(quote!(#dbg));
 

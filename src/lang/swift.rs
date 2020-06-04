@@ -236,7 +236,7 @@ where
 mod tests {
     use super::{array, imported, local, map, Tokens};
     use crate as genco;
-    use crate::{quote, Quoted};
+    use crate::{quote, Ext as _};
 
     #[test]
     fn test_string() {

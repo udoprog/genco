@@ -1,2 +1,2 @@
 pub use crate::quote;
-pub use crate::Quoted as _;
+pub use crate::Ext as _;

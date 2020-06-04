@@ -1,6 +1,6 @@
 #![feature(proc_macro_hygiene)]
 
-use genco::{quote, Quoted, Rust, Tokens};
+use genco::{quote, Ext as _, Rust, Tokens};
 
 #[test]
 fn test_option() {

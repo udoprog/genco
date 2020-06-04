@@ -121,7 +121,7 @@ impl QuoteParser<'_> {
                 },
                 Item::Expression(_, expr) => {
                     item_buffer.flush(&mut tokens);
-                    tokens.extend(quote::quote_spanned!(expr.span() => #receiver.append(Clone::clone(&#expr));));
+                    tokens.extend(quote::quote_spanned!(expr.span() => #receiver.append(#expr);));
                 }
                 Item::Register(_, expr) => {
                     registers.push(quote::quote_spanned!(expr.span() => #receiver.register(#expr)));

@@ -439,7 +439,7 @@ impl Java {
                 continue;
             }
 
-            out.push(quote!(import #(package)#(SEP)#(name);));
+            out.push(quote!(import #(package.clone())#(SEP)#(name.clone());));
             config
                 .imported
                 .insert(name.to_string(), package.to_string());
@@ -527,7 +527,7 @@ pub fn optional<'el, I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> 
 mod tests {
     use super::*;
     use crate as genco;
-    use crate::{quote, Java, Quoted, Tokens};
+    use crate::{quote, Ext as _, Java, Tokens};
 
     #[test]
     fn test_string() {

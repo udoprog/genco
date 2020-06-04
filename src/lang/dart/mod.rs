@@ -222,7 +222,7 @@ pub struct Dart(());
 impl Dart {
     /// Resolve all imports.
     fn imports<'el>(input: &Tokens<'el>, _: &mut Config) -> Tokens<'el> {
-        use crate::Quoted as _;
+        use crate::Ext as _;
         use std::collections::BTreeSet;
 
         let mut modules = BTreeSet::new();
@@ -320,7 +320,7 @@ pub fn local<N: Into<Cons<'static>>>(name: N) -> Local {
 mod tests {
     use super::*;
     use crate as genco;
-    use crate::{quote, Quoted};
+    use crate::{quote, Ext as _};
 
     #[test]
     fn test_builtin() {

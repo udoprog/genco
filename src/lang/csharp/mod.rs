@@ -606,7 +606,7 @@ pub fn optional<I: Into<TypeBox>>(value: I) -> Optional {
 mod tests {
     use super::*;
     use crate as genco;
-    use crate::{quote, Csharp, Quoted, Tokens};
+    use crate::{quote, Csharp, Ext as _, Tokens};
 
     #[test]
     fn test_string() {

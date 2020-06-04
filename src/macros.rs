@@ -198,17 +198,6 @@ macro_rules! impl_lang_item {
     };
 }
 
-macro_rules! impl_args {
-    ($args:ty, $ty:ident, $type_box:ident, $($ident:ident => $var:ident),*) => {
-        impl<$($ident,)*> $args for ($($ident,)*) where $($ident: 'static + $ty,)* {
-            fn into_args(self) -> Vec<$type_box> {
-                let ($($var,)*) = self;
-                vec![$($type_box::new($var),)*]
-            }
-        }
-    }
-}
-
 macro_rules! impl_variadic_type_args {
     ($args:ident, $ty:ident, $type_box:ident) => {
         /// Helper trait for things that can be turned into generic arguments.
@@ -226,11 +215,54 @@ macro_rules! impl_variadic_type_args {
             }
         }
 
-        impl_args!($args, $ty, $type_box, A => a);
-        impl_args!($args, $ty, $type_box, A => a, B => b);
-        impl_args!($args, $ty, $type_box, A => a, B => b, C => c);
-        impl_args!($args, $ty, $type_box, A => a, B => b, C => c, D => d);
-        impl_args!($args, $ty, $type_box, A => a, B => b, C => c, D => d, E => e);
+        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a);
+        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b);
+        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b, C => c);
+        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b, C => c, D => d);
+        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b, C => c, D => d, E => e);
+    };
+
+    (@args $args:ty, $ty:ident, $type_box:ident, $($ident:ident => $var:ident),*) => {
+        impl<$($ident,)*> $args for ($($ident,)*) where $($ident: 'static + $ty,)* {
+            fn into_args(self) -> Vec<$type_box> {
+                let ($($var,)*) = self;
+                vec![$($type_box::new($var),)*]
+            }
+        }
+    };
+}
+
+macro_rules! impl_plain_variadic_args {
+    ($args:ident, $ty:ident) => {
+        /// Helper trait for things that can be turned into generic arguments.
+        pub trait $args {
+            /// Convert the given type into a collection of arguments.
+            fn into_args(self) -> Vec<$ty>;
+        }
+
+        impl<T> $args for T
+        where
+            T: Into<$ty>,
+        {
+            fn into_args(self) -> Vec<$ty> {
+                vec![self.into()]
+            }
+        }
+
+        impl_plain_variadic_args!(@args $args, $ty, A => a);
+        impl_plain_variadic_args!(@args $args, $ty, A => a, B => b);
+        impl_plain_variadic_args!(@args $args, $ty, A => a, B => b, C => c);
+        impl_plain_variadic_args!(@args $args, $ty, A => a, B => b, C => c, D => d);
+        impl_plain_variadic_args!(@args $args, $ty, A => a, B => b, C => c, D => d, E => e);
+    };
+
+    (@args $args:ty, $ty:ident, $($ident:ident => $var:ident),*) => {
+        impl<$($ident,)*> $args for ($($ident,)*) where $($ident: Into<$ty>,)* {
+            fn into_args(self) -> Vec<$ty> {
+                let ($($var,)*) = self;
+                vec![$($var.into(),)*]
+            }
+        }
     };
 }
 
@@ -316,7 +348,7 @@ macro_rules! impl_type_basics {
 
 #[cfg(test)]
 mod tests {
-    use crate::{JavaScript, Quoted, Tokens};
+    use crate::{Ext as _, JavaScript, Tokens};
 
     #[test]
     fn test_quoted() {

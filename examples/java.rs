@@ -6,9 +6,9 @@ use genco::{quote, FormatterConfig};
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    let car = imported("se.tedro", "Car");
-    let list = imported("java.util", "List");
-    let array_list = imported("java.util", "ArrayList");
+    let car = &imported("se.tedro", "Car");
+    let list = &imported("java.util", "List");
+    let array_list = &imported("java.util", "ArrayList");
 
     let tokens = quote! {
         public class HelloWorld {
