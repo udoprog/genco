@@ -1,19 +1,14 @@
-#![feature(proc_macro_hygiene)]
+use genco::prelude::*;
 
-use genco::csharp::{local, using};
-use genco::{quote, Csharp, Tokens};
-
-use anyhow::Result;
-
-fn main() -> Result<()> {
-    let console = &using("System", "Console");
-    let file = &using("System.IO", "File");
-    let stream = &using("System.IO", "Stream");
-    let soap_formatter = &using(
+fn main() -> anyhow::Result<()> {
+    let console = &csharp::using("System", "Console");
+    let file = &csharp::using("System.IO", "File");
+    let stream = &csharp::using("System.IO", "Stream");
+    let soap_formatter = &csharp::using(
         "System.Runtime.Serialization.Formatters.Soap",
         "SoapFormatter",
     );
-    let simple_object = &local("TestSimpleObject");
+    let simple_object = &csharp::local("TestSimpleObject");
 
     // Note: Comments have to be escaped as raw expressions, since they are
     // filtered out from procedural macros.

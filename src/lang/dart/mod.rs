@@ -142,8 +142,6 @@ impl Type {
     /// # Examples
     ///
     /// ```rust
-    /// #![feature(proc_macro_hygiene)]
-    ///
     /// use genco::prelude::*;
     /// use genco::dart::*;
     ///

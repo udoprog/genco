@@ -1,12 +1,7 @@
-#![feature(proc_macro_hygiene)]
+use genco::prelude::*;
 
-use genco::go::{imported, Config, Go};
-use genco::{quote, Ext as _, FormatterConfig};
-
-use anyhow::Result;
-
-fn main() -> Result<()> {
-    let println = &imported("fmt", "Println");
+fn main() -> anyhow::Result<()> {
+    let println = &go::imported("fmt", "Println");
 
     let day = "tuesday";
     let name = "George";
@@ -26,7 +21,7 @@ fn main() -> Result<()> {
 
     tokens.to_io_writer_with(
         std::io::stdout().lock(),
-        Config::default().with_package("main"),
+        go::Config::default().with_package("main"),
         FormatterConfig::from_lang::<Go>(),
     )?;
 

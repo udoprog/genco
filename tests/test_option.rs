@@ -1,6 +1,4 @@
-#![feature(proc_macro_hygiene)]
-
-use genco::{quote, Ext as _, Rust, Tokens};
+use genco::prelude::*;
 
 #[test]
 fn test_option() {

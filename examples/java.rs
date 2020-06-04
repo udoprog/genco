@@ -1,14 +1,10 @@
-#![feature(proc_macro_hygiene)]
-
-use genco::java::{imported, Config, Java};
-use genco::{quote, FormatterConfig};
-
 use anyhow::Result;
+use genco::prelude::*;
 
 fn main() -> Result<()> {
-    let car = &imported("se.tedro", "Car");
-    let list = &imported("java.util", "List");
-    let array_list = &imported("java.util", "ArrayList");
+    let car = &java::imported("se.tedro", "Car");
+    let list = &java::imported("java.util", "List");
+    let array_list = &java::imported("java.util", "ArrayList");
 
     let tokens = quote! {
         public class HelloWorld {
@@ -27,7 +23,7 @@ fn main() -> Result<()> {
 
     tokens.to_io_writer_with(
         std::io::stdout().lock(),
-        Config::default().with_package("se.tedro"),
+        java::Config::default().with_package("se.tedro"),
         FormatterConfig::from_lang::<Java>().with_newline("\n\r"),
     )?;
 

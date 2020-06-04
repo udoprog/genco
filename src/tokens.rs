@@ -145,7 +145,6 @@ where
     /// [register]: Tokens::register
     ///
     /// ```rust
-    /// #![feature(proc_macro_hygiene)]
     ///
     /// use genco::rust::{imported, Config};
     /// use genco::quote;

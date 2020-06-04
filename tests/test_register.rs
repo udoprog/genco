@@ -1,11 +1,8 @@
-#![feature(proc_macro_hygiene)]
-
-use genco::rust::imported;
-use genco::{quote, Rust, Tokens};
+use genco::prelude::*;
 
 #[test]
 fn test_register() {
-    let import = imported("std::iter", "FromIterator").alias("_");
+    let import = rust::imported("std::iter", "FromIterator").alias("_");
 
     let tokens: Tokens<Rust> = quote! {
         #@import

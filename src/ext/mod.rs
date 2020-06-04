@@ -15,11 +15,9 @@ pub trait Ext {
     /// Example showcasing quoted strings when generating Rust.
     ///
     /// ```rust
-    /// #![feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
-    /// use genco::rust::imported;
     ///
-    /// let map = imported("std::collections", "HashMap").qualified();
+    /// let map = rust::imported("std::collections", "HashMap").qualified();
     ///
     /// let tokens = genco::quote! {
     ///     let mut m = #map::<u32, &str>::new();

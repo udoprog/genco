@@ -5,8 +5,14 @@
 
 GenCo is an even simpler code generator for Rust, written for use in [reproto].
 
-Note: We currently depend on `#![feature(proc_macro_hygiene)]`, which is set to
-be stabilized in Rust 1.45.
+We depend on (Yet to be released) 1.45 and some of its `proc_macro_hygiene`
+stabilizations. Until then, you must build with the `beta` branch.
+
+For example:
+
+```
+cargo +beta run --example rust
+```
 
 The workhorse of GenCo is the [quote!] macro. While tokens can be constructed
 manually, [quote!] makes this process much easier.
@@ -41,8 +47,6 @@ cargo run --example go
 The following is the included example Rust program.
 
 ```rust
-#![feature(proc_macro_hygiene)]
-
 use genco::rust::{imported, Config};
 use genco::{quote, FormatterConfig, Rust};
 use rand::Rng;
@@ -102,8 +106,6 @@ there are between them.
 So:
 
 ```rust
-#![feature(proc_macro_hygiene)]
-
 let _: genco::Tokens<genco::Rust> = genco::quote!(fn   test() {});
 ```
 
@@ -118,8 +120,6 @@ fn test() {}
 So:
 
 ```rust
-#![feature(proc_macro_hygiene)]
-
 let _: genco::Tokens<genco::Rust> = genco::quote! {
     fn test() {
         println!("Hello...");
@@ -149,8 +149,6 @@ level shallower.
 So:
 
 ```rust
-#![feature(proc_macro_hygiene)]
-
 let _: genco::Tokens<genco::Rust> = genco::quote! {
   fn test() {
       println!("Hello...");

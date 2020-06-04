@@ -2,8 +2,14 @@
 //!
 //! GenCo is an even simpler code generator for Rust, written for use in [reproto].
 //!
-//! Note: We currently depend on `#![feature(proc_macro_hygiene)]`, which is set to
-//! be stabilized in Rust 1.45.
+//! We depend on (Yet to be released) 1.45 and some of its `proc_macro_hygiene`
+//! stabilizations. Until then, you must build with the `beta` branch.
+//!
+//! For example:
+//!
+//! ```
+//! cargo +beta run --example rust
+//! ```
 //!
 //! The workhorse of GenCo is the [quote!] macro. While tokens can be constructed
 //! manually, [quote!] makes this process much easier.
@@ -38,10 +44,7 @@
 //! The following is the included example Rust program.
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
-//! use genco::rust::{imported, Config};
-//! use genco::{quote, FormatterConfig, Rust};
+//! use genco::prelude::*;
 //! use rand::Rng;
 //!
 //! use std::fmt;
@@ -49,13 +52,13 @@
 //! fn main() -> fmt::Result {
 //!     // Import the LittleEndian item, without referencing it through the last
 //!     // module component it is part of.
-//!     let little_endian = imported("byteorder", "LittleEndian").qualified();
-//!     let big_endian = imported("byteorder", "BigEndian");
+//!     let little_endian = rust::imported("byteorder", "LittleEndian").qualified();
+//!     let big_endian = rust::imported("byteorder", "BigEndian");
 //!
 //!     // This is a trait, so only import it into the scope (unless we intent to
 //!     // implement it).
-//!     let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
-//!     let read_bytes_ext = imported("byteorder", "ReadBytesExt").alias("_");
+//!     let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
+//!     let read_bytes_ext = rust::imported("byteorder", "ReadBytesExt").alias("_");
 //!
 //!     // Iterators can be tokenized using `tokenize_iter`, as long as they contain
 //!     // something which can be converted into a stream of tokens.
@@ -80,7 +83,7 @@
 //!
 //!     tokens.to_io_writer_with(
 //!         std::io::stdout().lock(),
-//!         Config::default(),
+//!         rust::Config::default(),
 //!         FormatterConfig::from_lang::<Rust>().with_indentation(2),
 //!     )?;
 //!
@@ -99,8 +102,6 @@
 //! So:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
 //! let _: genco::Tokens<genco::Rust> = genco::quote!(fn   test() {});
 //! ```
 //!
@@ -115,8 +116,6 @@
 //! So:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
 //! let _: genco::Tokens<genco::Rust> = genco::quote! {
 //!     fn test() {
 //!         println!("Hello...");
@@ -146,8 +145,6 @@
 //! So:
 //!
 //! ```rust
-//! #![feature(proc_macro_hygiene)]
-//!
 //! let _: genco::Tokens<genco::Rust> = genco::quote! {
 //!   fn test() {
 //!       println!("Hello...");
@@ -175,7 +172,6 @@
 //! [quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
 
 #![deny(missing_docs)]
-#![feature(proc_macro_hygiene)]
 // Note: Replace internal use of macros `push!`, `nested!` with `quote!`.
 #![allow(deprecated)]
 

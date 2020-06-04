@@ -44,7 +44,6 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let tokens: Tokens<Rust> = quote!(#[test]);
@@ -57,7 +56,6 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// Bigger example:
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// // Import the LittleEndian item, without referencing it through the last
@@ -144,7 +142,6 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// do the following instead:
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let mut tokens = Tokens::<Rust>::new();
@@ -164,7 +161,6 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let mut tokens = Tokens::<Rust>::new();
@@ -179,7 +175,6 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 ///
 /// use genco::{quote_in, Rust, Tokens};
 ///

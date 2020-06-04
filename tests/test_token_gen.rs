@@ -1,6 +1,4 @@
-#![feature(proc_macro_hygiene)]
-
-use genco::{quote, quote_in, rust, Rust, Tokens};
+use genco::prelude::*;
 
 #[test]
 fn test_token_gen() {

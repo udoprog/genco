@@ -1,7 +1,4 @@
-#![feature(proc_macro_hygiene)]
-
-use genco::rust::{imported, Config};
-use genco::{quote, FormatterConfig, Rust};
+use genco::prelude::*;
 use rand::Rng;
 
 use std::fmt;
@@ -9,13 +6,13 @@ use std::fmt;
 fn main() -> fmt::Result {
     // Import the LittleEndian item, without referencing it through the last
     // module component it is part of.
-    let little_endian = imported("byteorder", "LittleEndian").qualified();
-    let big_endian = imported("byteorder", "BigEndian");
+    let little_endian = rust::imported("byteorder", "LittleEndian").qualified();
+    let big_endian = rust::imported("byteorder", "BigEndian");
 
     // This is a trait, so only import it into the scope (unless we intent to
     // implement it).
-    let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
-    let read_bytes_ext = imported("byteorder", "ReadBytesExt").alias("_");
+    let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
+    let read_bytes_ext = rust::imported("byteorder", "ReadBytesExt").alias("_");
 
     // Iterators can be tokenized using `tokenize_iter`, as long as they contain
     // something which can be converted into a stream of tokens.
@@ -39,7 +36,7 @@ fn main() -> fmt::Result {
 
     tokens.to_io_writer_with(
         std::io::stdout().lock(),
-        Config::default(),
+        rust::Config::default(),
         FormatterConfig::from_lang::<Rust>().with_indentation(2),
     )?;
 
