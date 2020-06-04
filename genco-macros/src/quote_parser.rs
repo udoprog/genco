@@ -295,7 +295,10 @@ fn parse_inner(mut queue: impl FnMut(Item), input: ParseStream) -> Result<()> {
             continue;
         }
 
-        if input.peek(Token![#]) {
+        let start_expression =
+            input.peek2(token::Brace) || input.peek2(token::Paren) || input.peek2(Ident);
+
+        if input.peek(Token![#]) && start_expression {
             let hash = input.parse::<Token![#]>()?;
             queue(parse_expression(hash.span, input)?);
             continue;
