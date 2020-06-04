@@ -1,4 +1,4 @@
-use proc_macro2::{Span, LineColumn};
+use proc_macro2::{LineColumn, Span};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Cursor {

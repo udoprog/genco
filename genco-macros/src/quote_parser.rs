@@ -1,9 +1,9 @@
-use proc_macro2::{Delimiter, TokenStream, TokenTree, Group, Span, Punct, Spacing};
+use proc_macro2::{Delimiter, Group, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::collections::VecDeque;
 use std::iter::FromIterator as _;
-use syn::parse::{Parser as _, ParseStream};
-use syn::{Token, Ident, Result, LitStr};
+use syn::parse::{ParseStream, Parser as _};
 use syn::token;
+use syn::{Ident, LitStr, Result, Token};
 
 use crate::{Cursor, ItemBuffer};
 /// Items to process from the queue.
@@ -13,7 +13,7 @@ pub(crate) enum Item {
     Expression(Cursor, TokenTree),
     Register(Cursor, TokenTree),
     DelimiterClose(Cursor, Delimiter),
-    Repeat(Cursor, TokenTree, TokenTree),
+    Repeat(Cursor, TokenTree, Option<TokenTree>),
 }
 
 impl Item {
@@ -27,7 +27,6 @@ impl Item {
         }
     }
 }
-
 
 pub(crate) struct QuoteParser<'a> {
     pub(crate) receiver: &'a Ident,
@@ -49,10 +48,7 @@ impl QuoteParser<'_> {
 
         let mut item_buffer = ItemBuffer::new(receiver);
 
-        parse_expression(
-            |item| queue.push_back(item),
-            input,
-        )?;
+        parse_expression(|item| queue.push_back(item), input)?;
 
         while let Some(item) = queue.pop_front() {
             let next = item.cursor();
@@ -94,10 +90,7 @@ impl QuoteParser<'_> {
             match item {
                 Item::Tree(_, tt) => match tt {
                     TokenTree::Group(group) => {
-                        parse_tree_iterator(
-                            |item| queued.push(item),
-                            group.stream().into_iter(),
-                        )?;
+                        parse_tree_iterator(|item| queued.push(item), group.stream().into_iter())?;
 
                         match group.delimiter() {
                             Delimiter::Parenthesis => item_buffer.push('('),
@@ -128,20 +121,28 @@ impl QuoteParser<'_> {
                 Item::Repeat(_, inner, separator) => {
                     item_buffer.flush(&mut tokens);
 
-                    let separator = LitStr::new(&separator.to_string(), separator.span());
+                    if let Some(separator) = separator {
+                        let separator = LitStr::new(&separator.to_string(), separator.span());
 
-                    tokens.extend(quote::quote! {{
-                        let mut iter = std::iter::IntoIterator::into_iter(#inner).peekable();
+                        tokens.extend(quote::quote! {{
+                            let mut iter = std::iter::IntoIterator::into_iter(#inner).peekable();
 
-                        while let Some(element) = iter.next() {
-                            #receiver.append(element);
+                            while let Some(element) = iter.next() {
+                                #receiver.append(element);
 
-                            if iter.peek().is_some() {
-                                #receiver.append(#separator);
-                                #receiver.spacing();
+                                if iter.peek().is_some() {
+                                    #receiver.append(#separator);
+                                    #receiver.spacing();
+                                }
                             }
-                        }
-                    }});
+                        }});
+                    } else {
+                        tokens.extend(quote::quote! {{
+                            for element in #inner {
+                                #receiver.append(element);
+                            }
+                        }});
+                    }
                 }
                 Item::Register(_, expr) => {
                     registers.push(quote::quote_spanned!(expr.span() => #receiver.register(#expr)));
@@ -170,20 +171,20 @@ impl QuoteParser<'_> {
 }
 
 /// Process expressions in the token stream.
-fn parse_tree_iterator(
-    queue: impl FnMut(Item),
-    it: impl Iterator<Item = TokenTree>,
-) -> Result<()> {
-    let parser = |input: ParseStream| {
-        parse_expression(queue, input)
-    };
+fn parse_tree_iterator(queue: impl FnMut(Item), it: impl Iterator<Item = TokenTree>) -> Result<()> {
+    let parser = |input: ParseStream| parse_expression(queue, input);
 
     let stream = TokenStream::from_iter(it);
     parser.parse2(stream)?;
     Ok(())
 }
 
-fn parse_group(start: Span, input: ParseStream, repeated: bool, factory: fn(Cursor, TokenTree) -> Item) -> Result<Item> {
+fn parse_group(
+    start: Span,
+    input: ParseStream,
+    can_repeat: bool,
+    factory: fn(Cursor, TokenTree) -> Item,
+) -> Result<Item> {
     let (cursor, inner) = if input.peek(token::Paren) {
         let content;
         let delim = syn::parenthesized!(content in input);
@@ -199,27 +200,37 @@ fn parse_group(start: Span, input: ParseStream, repeated: bool, factory: fn(Curs
         (cursor, TokenTree::Ident(ident))
     };
 
-    if !input.peek2(Token![*]) || !repeated {
-        return Ok(factory(cursor, inner));
+    if can_repeat {
+        if input.peek2(Token![*]) {
+            let separator = input.parse::<TokenTree>()?;
+            let star = input.parse::<Token![*]>()?;
+            let cursor = cursor.with_end(star.span.end());
+            return Ok(Item::Repeat(cursor, inner, Some(separator)));
+        }
+
+        if input.peek(Token![*]) {
+            let star = input.parse::<Token![*]>()?;
+            let cursor = cursor.with_end(star.span.end());
+            return Ok(Item::Repeat(cursor, inner, None));
+        }
     }
 
-    let separator = input.parse::<TokenTree>()?;
-    let star = input.parse::<Token![*]>()?;
-    let cursor = cursor.with_end(star.span.end());
-    Ok(Item::Repeat(cursor, inner, separator))
+    Ok(factory(cursor, inner))
 }
 
-fn parse_expression(
-    mut queue: impl FnMut(Item),
-    input: ParseStream,
-) -> Result<()> {
+fn parse_expression(mut queue: impl FnMut(Item), input: ParseStream) -> Result<()> {
     syn::custom_punctuation!(Register, #@);
     syn::custom_punctuation!(Escape, ##);
 
     while !input.is_empty() {
         if input.peek(Register) {
             let register = input.parse::<Register>()?;
-            queue(parse_group(register.spans[0], input, false, Item::Register)?);
+            queue(parse_group(
+                register.spans[0],
+                input,
+                false,
+                Item::Register,
+            )?);
             continue;
         }
 
