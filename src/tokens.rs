@@ -183,10 +183,10 @@ where
     ///
     /// # Examples
     ///
-    /// The `register` functionality is available through the [`quote`] macro
-    /// by using the [register] extension.
+    /// The `register` functionality is available through the [quote!] macro
+    /// by using the [register] function.
     ///
-    /// [register]: Ext::register
+    /// [register]: Tokens::register
     ///
     /// ```rust
     /// #![feature(proc_macro_hygiene)]
@@ -201,7 +201,7 @@ where
     /// assert_eq!("use byteorder::WriteBytesExt as _;\n\n", tokens.to_file_string().unwrap());
     /// ```
     ///
-    /// [`quote`]: crate::quote
+    /// [quote!]: genco_derive@quote!
     pub fn register<T>(&mut self, tokens: T)
     where
         T: RegisterTokens<'el, L>,

@@ -19,7 +19,7 @@ fn main() -> fmt::Result {
 
     // Iterators can be tokenized using `tokenize_iter`, as long as they contain
     // something which can be converted into a stream of tokens.
-    let numbers = (0..10).map(|_| quote!(#(rand::thread_rng().gen::<i16>())));
+    let numbers = (0..10).map(|_| rand::thread_rng().gen::<i16>());
 
     let tokens = quote! {
         // Markup used for imports without an immediate use.

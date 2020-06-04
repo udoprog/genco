@@ -5,8 +5,8 @@
 //! Note: We currently depend on `#![feature(proc_macro_hygiene)]`, which is set to
 //! be stabilized in Rust 1.45.
 //!
-//! The workhorse of GenCo is the [`quote!`] macro. While tokens can be constructed
-//! manually, [`quote!`] makes this process much easier.
+//! The workhorse of GenCo is the [quote!] macro. While tokens can be constructed
+//! manually, [quote!] makes this process much easier.
 //!
 //! GenCo only minimally deals with language-specific syntax, but primarily deals
 //! with solving the following:
@@ -18,7 +18,7 @@
 //!
 //! ## Examples
 //!
-//! The following are language specific examples for GenCo using the [`quote!`]
+//! The following are language specific examples for GenCo using the [quote!]
 //! macro.
 //!
 //! * [Rust Example]
@@ -171,8 +171,8 @@
 //! [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 //! [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
 //! [Go Example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
-//! [`quote!`]: https://github.com/udoprog/genco/blob/master/tests/test_quote.rs
 //! [`<stmt>.quoted()`]: https://docs.rs/genco/latest/genco/trait.Quoted.html
+//! [quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
 
 #![deny(missing_docs)]
 #![feature(proc_macro_hygiene)]

@@ -20,21 +20,22 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// * Elements are interpolated using `#`, so to include the variable `test`,
 ///   you could write `#test`. Returned elements must implement
-///   [`FormatTokens`].
-/// * Inline statements can be evaluated using `#(<stmt>)`, or `#{<stmt>}`,
-///   or `#[<stmt>]`. In effect, anything that counts as a _group_ in Rust.
-///   For example: `#("test".quoted())` can be used to quote a string.
-/// * The [`register`] functionality of [`Tokens`] is available by prefixing an
-///   expression with `@` as `@<stmt>`.
-///   For example: `@only_imports`.
+///   [FormatTokens].
 /// * `#` can be escaped by repeating it twice in case it's needed in
 ///   the target language. So `##` would produce a single `#`.
+/// * Inline statements can be evaluated using `#(<stmt>)`. They can also be
+///   suffixed with `<stmt>,*` to treat the statement as an iterator, and add
+///   the specified separator (`,` here) between each element.
+///   Example: `#("test".quoted())` can be used to quote a string.
+/// * The [register] functionality of [Tokens] is available by prefixing an
+///   expression with `#@` as `#@<stmt>`.
+///   Example: `#@only_imports` will [register] the variable `only_imports`.
 /// * Expressions can be repeated. It is then expected that they evaluate to an
 ///   iterator. Expressions are repeated by adding the `<token>*` suffix. The
 ///   <token> will then be used as a separator between each element, and a
 ///   spacing will be added after it.
-///   For example: `#(var),*` will treat `var` as an iterator and add `,` between
-///   each element.
+///   Example: `#(var),*` will treat `var` as an iterator and add `,` and a
+///   spacing between each element.
 ///
 /// # Examples
 ///
@@ -54,19 +55,20 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
 ///
 /// let tokens: Tokens<Rust> = quote! {
-///     @write_bytes_ext
+///     #@write_bytes_ext
 ///
 ///     let mut wtr = vec![];
 ///     wtr.write_u16::<#little_endian>(517).unwrap();
 ///     wtr.write_u16::<#big_endian>(768).unwrap();
-///     assert_eq!(wtr, vec![5, 2, 3, 0]);
+///     assert_eq!(wtr, vec![#(0..10),*]);
 /// };
 ///
 /// println!("{}", tokens.to_file_string().unwrap());
 /// ```
 ///
-/// [`FormatTokens`]: https://docs.rs/genco/latest/genco/trait.FormatTokens.html
-/// [`register`]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.register
+/// [FormatTokens]: https://docs.rs/genco/latest/genco/trait.FormatTokens.html
+/// [register]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.register
+/// [Tokens]: https://docs.rs/genco/latest/genco/struct.Tokens.html
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let toks = Ident::new("__toks", Span::call_site());
@@ -89,7 +91,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     gen.into()
 }
 
-/// Same as [quote], except that it allows for quoting directly to a token
+/// Same as [quote!], except that it allows for quoting directly to a token
 /// stream.
 ///
 /// # Examples
@@ -104,7 +106,6 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// quote_in!(tokens => fn hello() -> u32 { 42 });
 ///
 /// assert_eq!(vec!["fn hello() -> u32 { 42 }", ""], tokens.to_file_vec().unwrap());
-
 #[proc_macro]
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let quote_in_parser::QuoteInParser;
