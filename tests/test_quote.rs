@@ -55,3 +55,9 @@ fn test_tight_quote() {
 
     assert_eq!("foobarbaz", tokens.to_string().unwrap());
 }
+
+#[test]
+fn test_escape() {
+    let tokens: Tokens<Rust> = quote!(#### ## #### #### ## ## ##[test]);
+    assert_eq!("## # ## ## # # #[test]", tokens.to_string().unwrap());
+}

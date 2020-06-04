@@ -222,7 +222,7 @@ pub struct Dart(());
 impl Dart {
     /// Resolve all imports.
     fn imports<'el>(input: &Tokens<'el>, _: &mut Config) -> Tokens<'el> {
-        use crate::quoted::Quoted;
+        use crate::Quoted as _;
         use std::collections::BTreeSet;
 
         let mut modules = BTreeSet::new();

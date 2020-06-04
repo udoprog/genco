@@ -14,9 +14,11 @@ fn main() -> fmt::Result {
     // This is a trait, so only import it into the scope (unless we intent to
     // implement it).
     let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+    let read_bytes_ext = imported("byteorder", "ReadBytesExt").alias("_");
 
     let tokens = quote! {
-        @write_bytes_ext
+        #@((write_bytes_ext, &read_bytes_ext))
+
         fn test() {
             let mut wtr = vec![];
             wtr.write_u16::<#little_endian>(517).unwrap();

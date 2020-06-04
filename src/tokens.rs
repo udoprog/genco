@@ -10,7 +10,7 @@
 
 use crate::formatter::{FmtWriter, IoWriter};
 use crate::{
-    Element, FormatTokens, Formatter, FormatterConfig, Lang, LangBox, LangItem, VecWriter,
+    Element, FormatTokens, Formatter, FormatterConfig, Lang, LangItem, RegisterTokens, VecWriter,
 };
 use std::collections::LinkedList;
 use std::fmt;
@@ -183,8 +183,10 @@ where
     ///
     /// # Examples
     ///
-    /// The `register` functionality is available through the [`quote`] macro as
-    /// `@<stmt>`.
+    /// The `register` functionality is available through the [`quote`] macro
+    /// by using the [register] extension.
+    ///
+    /// [register]: Ext::register
     ///
     /// ```rust
     /// #![feature(proc_macro_hygiene)]
@@ -194,14 +196,17 @@ where
     ///
     /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
     ///
-    /// let tokens = quote!(@write_bytes_ext);
+    /// let tokens = quote!(#@(write_bytes_ext));
     ///
     /// assert_eq!("use byteorder::WriteBytesExt as _;\n\n", tokens.to_file_string().unwrap());
     /// ```
     ///
     /// [`quote`]: crate::quote
-    pub fn register(&mut self, custom: impl Into<LangBox<'el, L>>) {
-        self.elements.push(Element::Registered(custom.into()));
+    pub fn register<T>(&mut self, tokens: T)
+    where
+        T: RegisterTokens<'el, L>,
+    {
+        tokens.register_tokens(self);
     }
 
     /// Check if tokens contain no elements.

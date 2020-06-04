@@ -4,7 +4,7 @@ use genco::{quote, Rust, Tokens};
 
 #[test]
 fn test_quote_simple_expression() {
-    let tokens: Tokens<Rust> = quote!(fn #"test"());
+    let tokens: Tokens<Rust> = quote!(fn #("test")());
     assert_eq!("fn test()", tokens.to_string().unwrap());
 
     let expr: Tokens<Rust> = quote!(test);

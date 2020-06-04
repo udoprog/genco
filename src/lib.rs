@@ -166,28 +166,30 @@
 // Note: Replace internal use of macros `push!`, `nested!` with `quote!`.
 #![allow(deprecated)]
 
-pub use genco_macros::quote;
+pub use genco_macros::{quote, quote_in};
 
 #[macro_use]
 mod macros;
 mod cons;
 mod element;
 mod erased_element;
+mod ext;
 mod format_tokens;
 mod formatter;
 mod lang;
 /// Prelude to import.
 pub mod prelude;
-mod quoted;
+mod register_tokens;
 mod tokens;
 
 pub use self::cons::Cons;
 pub use self::element::Element;
 pub use self::erased_element::ErasedElement;
+pub use self::ext::Quoted;
 pub use self::format_tokens::FormatTokens;
 pub use self::formatter::{Formatter, FormatterConfig, VecWriter};
 pub use self::lang::*;
-pub use self::quoted::Quoted;
+pub use self::register_tokens::RegisterTokens;
 pub use self::tokens::Tokens;
 
 #[cfg(test)]

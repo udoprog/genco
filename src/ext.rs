@@ -1,4 +1,4 @@
-use crate::{cons::Cons, ErasedElement};
+use crate::{Cons, ErasedElement};
 use std::rc::Rc;
 
 /// Trait to provide string quoting through `<stmt>.quoted()`.
@@ -37,8 +37,8 @@ pub trait Quoted<'el> {
     fn quoted(self) -> ErasedElement<'el>;
 }
 
-impl<'el> Quoted<'el> for String {
-    fn quoted(self) -> ErasedElement<'el> {
+impl Quoted<'static> for String {
+    fn quoted(self) -> ErasedElement<'static> {
         ErasedElement::Quoted(Cons::Rc(Rc::new(self)))
     }
 }
@@ -49,8 +49,8 @@ impl<'el> Quoted<'el> for &'el str {
     }
 }
 
-impl<'el> Quoted<'el> for Rc<String> {
-    fn quoted(self) -> ErasedElement<'el> {
+impl Quoted<'static> for Rc<String> {
+    fn quoted(self) -> ErasedElement<'static> {
         ErasedElement::Quoted(Cons::Rc(self))
     }
 }
