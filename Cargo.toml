@@ -1,6 +1,6 @@
 [package]
 name = "genco"
-version = "0.5.0-alpha.10"
+version = "0.5.0-alpha.11"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 license = "MIT/Apache-2.0"
 edition = "2018"
@@ -13,7 +13,7 @@ Genco, the even simpler code generator for Rust.
 """
 
 [dependencies]
-genco-macros = {path = "genco-macros", version = "=0.5.0-alpha.10"}
+genco-macros = {path = "genco-macros", version = "=0.5.0-alpha.11"}
 
 [dev-dependencies]
 anyhow = "1.0.31"
