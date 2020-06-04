@@ -2,6 +2,9 @@
 //!
 //! GenCo is an even simpler code generator for Rust, written for use in [reproto].
 //!
+//! Note: We currently depend on `#![feature(proc_macro_hygiene)]`, which is set to
+//! be stabilized in Rust 1.45.
+//!
 //! The workhorse of GenCo is the [`quote!`] macro. While tokens can be constructed
 //! manually, [`quote!`] makes this process much easier.
 //!
@@ -39,6 +42,7 @@
 //!
 //! use genco::rust::{imported, Config};
 //! use genco::{quote, FormatterConfig, Rust};
+//! use rand::Rng;
 //!
 //! use std::fmt;
 //!
@@ -51,14 +55,23 @@
 //!     // This is a trait, so only import it into the scope (unless we intent to
 //!     // implement it).
 //!     let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+//!     let read_bytes_ext = imported("byteorder", "ReadBytesExt").alias("_");
+//!
+//!     // Iterators can be tokenized using `tokenize_iter`, as long as they contain
+//!     // something which can be converted into a stream of tokens.
+//!     let numbers = (0..10)
+//!         .map(|_| quote!(#(rand::thread_rng().gen::<i16>())));
 //!
 //!     let tokens = quote! {
-//!         @write_bytes_ext
+//!         // Markup used for imports without an immediate use.
+//!         #@(write_bytes_ext)
+//!         #@(read_bytes_ext)
+//!
 //!         fn test() {
 //!             let mut wtr = vec![];
 //!             wtr.write_u16::<#little_endian>(517).unwrap();
 //!             wtr.write_u16::<#big_endian>(768).unwrap();
-//!             assert_eq!(wtr, vec![5, 2, 3, 0]);
+//!             assert_eq!(wtr, vec![#numbers,*]);
 //!         }
 //!     };
 //!

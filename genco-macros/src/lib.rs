@@ -29,6 +29,12 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///   For example: `@only_imports`.
 /// * `#` can be escaped by repeating it twice in case it's needed in
 ///   the target language. So `##` would produce a single `#`.
+/// * Expressions can be repeated. It is then expected that they evaluate to an
+///   iterator. Expressions are repeated by adding the `<token>*` suffix. The
+///   <token> will then be used as a separator between each element, and a
+///   spacing will be added after it.
+///   For example: `#(var),*` will treat `var` as an iterator and add `,` between
+///   each element.
 ///
 /// # Examples
 ///
@@ -95,11 +101,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// let mut tokens = Tokens::<Rust>::new();
 ///
-/// quote_in! {
-///     tokens => {
-///         fn hello() -> u32 { 42 }
-///     }
-/// }
+/// quote_in!(tokens => fn hello() -> u32 { 42 });
 ///
 /// assert_eq!(vec!["fn hello() -> u32 { 42 }", ""], tokens.to_file_vec().unwrap());
 

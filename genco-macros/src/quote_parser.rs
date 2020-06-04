@@ -2,7 +2,7 @@ use proc_macro2::{Delimiter, TokenStream, TokenTree, Group, Span, Punct, Spacing
 use std::collections::VecDeque;
 use std::iter::FromIterator as _;
 use syn::parse::{Parser as _, ParseStream};
-use syn::{Token, Ident, Result};
+use syn::{Token, Ident, Result, LitStr};
 use syn::token;
 
 use crate::{Cursor, ItemBuffer};
@@ -13,6 +13,7 @@ pub(crate) enum Item {
     Expression(Cursor, TokenTree),
     Register(Cursor, TokenTree),
     DelimiterClose(Cursor, Delimiter),
+    Repeat(Cursor, TokenTree, TokenTree),
 }
 
 impl Item {
@@ -22,6 +23,7 @@ impl Item {
             Self::Expression(cursor, ..) => *cursor,
             Self::Register(cursor, ..) => *cursor,
             Self::DelimiterClose(cursor, ..) => *cursor,
+            Self::Repeat(cursor, ..) => *cursor,
         }
     }
 }
@@ -123,6 +125,24 @@ impl QuoteParser<'_> {
                     item_buffer.flush(&mut tokens);
                     tokens.extend(quote::quote_spanned!(expr.span() => #receiver.append(#expr);));
                 }
+                Item::Repeat(_, inner, separator) => {
+                    item_buffer.flush(&mut tokens);
+
+                    let separator = LitStr::new(&separator.to_string(), separator.span());
+
+                    tokens.extend(quote::quote! {{
+                        let mut iter = std::iter::IntoIterator::into_iter(#inner).peekable();
+
+                        while let Some(element) = iter.next() {
+                            #receiver.append(element);
+
+                            if iter.peek().is_some() {
+                                #receiver.append(#separator);
+                                #receiver.spacing();
+                            }
+                        }
+                    }});
+                }
                 Item::Register(_, expr) => {
                     registers.push(quote::quote_spanned!(expr.span() => #receiver.register(#expr)));
                     // Reset cursor, so that registers don't count as items to be offset from.
@@ -163,8 +183,8 @@ fn parse_tree_iterator(
     Ok(())
 }
 
-fn parse_group(start: Span, input: ParseStream) -> Result<(Cursor, TokenTree)> {
-    if input.peek(token::Paren) {
+fn parse_group(start: Span, input: ParseStream, repeated: bool, factory: fn(Cursor, TokenTree) -> Item) -> Result<Item> {
+    let (cursor, inner) = if input.peek(token::Paren) {
         let content;
         let delim = syn::parenthesized!(content in input);
 
@@ -172,12 +192,21 @@ fn parse_group(start: Span, input: ParseStream) -> Result<(Cursor, TokenTree)> {
         group.set_span(delim.span);
 
         let cursor = Cursor::join(start, delim.span);
-        Ok((cursor, TokenTree::Group(group)))
+        (cursor, TokenTree::Group(group))
     } else {
         let ident = input.parse::<Ident>()?;
         let cursor = Cursor::join(start, ident.span());
-        Ok((cursor, TokenTree::Ident(ident)))
+        (cursor, TokenTree::Ident(ident))
+    };
+
+    if !input.peek2(Token![*]) || !repeated {
+        return Ok(factory(cursor, inner));
     }
+
+    let separator = input.parse::<TokenTree>()?;
+    let star = input.parse::<Token![*]>()?;
+    let cursor = cursor.with_end(star.span.end());
+    Ok(Item::Repeat(cursor, inner, separator))
 }
 
 fn parse_expression(
@@ -190,8 +219,7 @@ fn parse_expression(
     while !input.is_empty() {
         if input.peek(Register) {
             let register = input.parse::<Register>()?;
-            let (cursor, tt) = parse_group(register.spans[0], input)?;
-            queue(Item::Register(cursor, tt));
+            queue(parse_group(register.spans[0], input, false, Item::Register)?);
             continue;
         }
 
@@ -207,9 +235,7 @@ fn parse_expression(
 
         if input.peek(Token![#]) {
             let hash = input.parse::<Token![#]>()?;
-
-            let (cursor, tt) = parse_group(hash.span, input)?;
-            queue(Item::Expression(cursor, tt));
+            queue(parse_group(hash.span, input, true, Item::Expression)?);
             continue;
         }
 

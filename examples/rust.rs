@@ -1,7 +1,7 @@
 #![feature(proc_macro_hygiene)]
 
 use genco::rust::{imported, Config};
-use genco::{quote, Ext, FormatterConfig, Rust};
+use genco::{quote, FormatterConfig, Rust};
 use rand::Rng;
 
 use std::fmt;
@@ -19,19 +19,18 @@ fn main() -> fmt::Result {
 
     // Iterators can be tokenized using `tokenize_iter`, as long as they contain
     // something which can be converted into a stream of tokens.
-    let numbers = (0..10)
-        .map(|_| quote!(#(rand::thread_rng().gen::<i16>())#(", ")))
-        .chain(Some(quote!(#(rand::thread_rng().gen::<i16>()))))
-        .tokenize_iter();
+    let numbers = (0..10).map(|_| quote!(#(rand::thread_rng().gen::<i16>())));
 
     let tokens = quote! {
-        #@((write_bytes_ext, &read_bytes_ext))
+        // Markup used for imports without an immediate use.
+        #@(write_bytes_ext)
+        #@(read_bytes_ext)
 
         fn test() {
             let mut wtr = vec![];
             wtr.write_u16::<#little_endian>(517).unwrap();
             wtr.write_u16::<#big_endian>(768).unwrap();
-            assert_eq!(wtr, vec![#numbers]);
+            assert_eq!(wtr, vec![#numbers,*]);
         }
     };
 
