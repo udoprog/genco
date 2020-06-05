@@ -372,7 +372,8 @@ impl LangItem<Rust> for Type {
 impl Rust {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
         use crate as genco;
-        use crate::{quote, quote_in};
+        use crate::quote_in;
+        use std::collections::btree_set;
 
         let mut modules = BTreeMap::<&ItemStr, Imported>::new();
 
@@ -404,79 +405,58 @@ impl Rust {
             }
         }
 
-        if modules.is_empty() {
-            return;
-        }
+        let mut has_any = false;
 
-        for (name, module) in modules {
-            let Imported {
-                self_aliases,
-                self_import,
-                names,
-            } = module;
+        for (m, module) in modules {
+            let mut render = module.iter();
 
-            let mut output = Vec::new();
+            if let Some(first) = render.next() {
+                has_any = true;
+                out.push();
 
-            if self_import {
-                output.push(quote!(self));
-            }
+                // render as a group if there's more than one thing being
+                // imported.
+                if let Some(second) = render.next() {
+                    quote_in! { out =>
+                        use #m::{#{ *o =>
+                            first.render(o);
+                            quote_in!(o => , #{*o => second.render(o)});
 
-            for alias in &self_aliases {
-                output.push(quote!(self as #(*alias)));
-            }
-
-            for (name, alias) in names {
-                if let Some(alias) = alias {
-                    output.push(quote!(#name as #alias));
+                            for item in render {
+                                quote_in!(o => , #{*o => item.render(o)});
+                            }
+                        }};
+                    };
                 } else {
-                    output.push(quote!(#name));
-                }
-            }
-
-            let mut output = output.into_iter().peekable();
-
-            out.push();
-            out.append("use");
-            out.spacing();
-            out.append(name);
-
-            if let Some(item) = output.next() {
-                if output.peek().is_none() {
-                    if self_import {
-                        out.append(";");
-                        continue;
+                    match first {
+                        RenderItem::SelfImport => {
+                            quote_in!(out => use #m;);
+                        }
+                        RenderItem::SelfAlias { alias } => {
+                            quote_in!(out => use #m as #alias;);
+                        }
+                        RenderItem::Name {
+                            name,
+                            alias: Some(alias),
+                        } => {
+                            quote_in!(out => use #m::#name as #alias;);
+                        }
+                        RenderItem::Name { name, alias: None } => {
+                            quote_in!(out => use #m::#name;);
+                        }
                     }
-
-                    let mut it = self_aliases.into_iter();
-
-                    if let (Some(first), None) = (it.next(), it.next()) {
-                        out.spacing();
-                        quote_in!(out => as #first;);
-                        continue;
-                    }
-
-                    quote_in!(out => ::#item;);
-                    continue;
                 }
-
-                out.append("::{");
-                out.append(item);
-
-                for item in output {
-                    quote_in!(out => , #item);
-                }
-
-                out.append("};");
-            } else {
-                out.append(";");
             }
         }
 
-        out.push_line();
+        if has_any {
+            out.push_line();
+        }
+
         return;
 
         /// An imported module.
-        #[derive(Default)]
+        #[derive(Debug, Default)]
         struct Imported<'a> {
             /// If we need the module (e.g. through an alias).
             self_import: bool,
@@ -484,6 +464,76 @@ impl Rust {
             self_aliases: BTreeSet<&'a ItemStr>,
             /// Set of imported names.
             names: BTreeSet<(&'a ItemStr, Option<&'a ItemStr>)>,
+        }
+
+        impl<'a> Imported<'a> {
+            fn iter(self) -> ImportedIter<'a> {
+                ImportedIter {
+                    self_import: self.self_import,
+                    self_aliases: self.self_aliases.into_iter(),
+                    names: self.names.into_iter(),
+                }
+            }
+        }
+
+        struct ImportedIter<'a> {
+            self_import: bool,
+            self_aliases: btree_set::IntoIter<&'a ItemStr>,
+            names: btree_set::IntoIter<(&'a ItemStr, Option<&'a ItemStr>)>,
+        }
+
+        impl<'a> Iterator for ImportedIter<'a> {
+            type Item = RenderItem<'a>;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                if std::mem::take(&mut self.self_import) {
+                    return Some(RenderItem::SelfImport);
+                }
+
+                if let Some(alias) = self.self_aliases.next() {
+                    return Some(RenderItem::SelfAlias { alias });
+                }
+
+                if let Some((name, alias)) = self.names.next() {
+                    return Some(RenderItem::Name { name, alias });
+                }
+
+                None
+            }
+        }
+
+        #[derive(Clone, Copy)]
+        enum RenderItem<'a> {
+            SelfImport,
+            SelfAlias {
+                alias: &'a ItemStr,
+            },
+            Name {
+                name: &'a ItemStr,
+                alias: Option<&'a ItemStr>,
+            },
+        }
+
+        impl RenderItem<'_> {
+            fn render(self, out: &mut Tokens) {
+                match self {
+                    Self::SelfImport => {
+                        quote_in!(out => self);
+                    }
+                    Self::SelfAlias { alias } => {
+                        quote_in!(out => self as #alias);
+                    }
+                    Self::Name {
+                        name,
+                        alias: Some(alias),
+                    } => {
+                        quote_in!(out => #name as #alias);
+                    }
+                    Self::Name { name, alias: None } => {
+                        quote_in!(out => #name);
+                    }
+                }
+            }
         }
     }
 }
