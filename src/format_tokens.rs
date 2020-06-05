@@ -161,6 +161,15 @@ where
     }
 }
 
+/// Unit implementation of format tokens. Does nothing.
+impl<L> FormatTokens<L> for ()
+where
+    L: Lang,
+{
+    #[inline]
+    fn format_tokens(self, _: &mut Tokens<L>) {}
+}
+
 macro_rules! impl_display {
     ($($ty:ty),*) => {
         $(

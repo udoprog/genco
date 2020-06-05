@@ -278,24 +278,21 @@ fn parse_register(start: Span, input: ParseStream) -> Result<Item> {
 
 fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
     if input.peek(token::Brace) {
-        let content;
-        let outer_span = syn::braced!(content in input);
+        let scope;
+        let outer_span = syn::braced!(scope in input);
 
-        let receiver_borrowed = if content.peek(Token![*]) {
-            content.parse::<Token![*]>()?;
+        let receiver_borrowed = if scope.peek(Token![*]) {
+            scope.parse::<Token![*]>()?;
             true
         } else {
             false
         };
 
-        let var = content.parse::<Ident>()?;
-        content.parse::<Token![=>]>()?;
-
-        let scope;
-        let delim = syn::braced!(scope in content);
+        let var = scope.parse::<Ident>()?;
+        scope.parse::<Token![=>]>()?;
 
         let mut group = Group::new(Delimiter::None, scope.parse()?);
-        group.set_span(delim.span);
+        group.set_span(scope.span());
 
         let cursor = Cursor::join(start, outer_span.span);
 
