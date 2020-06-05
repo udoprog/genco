@@ -34,6 +34,12 @@ impl Deref for ItemStr {
     }
 }
 
+impl From<Box<str>> for ItemStr {
+    fn from(value: Box<str>) -> Self {
+        Self::Box(value)
+    }
+}
+
 impl<'a> From<&'a ItemStr> for ItemStr {
     fn from(value: &'a ItemStr) -> Self {
         value.clone()
