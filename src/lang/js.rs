@@ -45,24 +45,66 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
 
-impl_lang_item!(Type, JavaScript);
+impl_type_basics!(JavaScript, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Import, ImportDefault, Local});
 
-static SEP: &'static str = ".";
-static PATH_SEP: &'static str = "/";
+/// Trait implemented by all types.
+pub trait TypeTrait: 'static + fmt::Debug + LangItem<JavaScript> {
+    /// Coerce trait into an enum that can be used for type-specific operations.
+    fn as_enum(&self) -> TypeEnum<'_>;
+}
 
 /// An imported item in JavaScript.
+///
+/// Created using the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type {
+pub struct Import {
     /// Module of the imported name.
-    module: Option<ItemStr>,
+    module: ItemStr,
     /// Name imported.
     name: ItemStr,
-    /// Alias of module.
+    /// Alias of an imported item.
+    ///
+    /// If this is set, you'll get an import like:
+    ///
+    /// ```text
+    /// import {<name> as <alias>} from <module>
+    /// ```
     alias: Option<ItemStr>,
 }
 
-impl Type {
-    /// Alias the given type.
+impl Import {
+    /// Alias of an imported item.
+    ///
+    /// If this is set, you'll get an import like:
+    ///
+    /// ```text
+    /// import {<name> as <alias>} from <module>
+    /// ```
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// #![feature(proc_macro_hygiene)]
+    /// use genco::prelude::*;
+    ///
+    /// let a = js::import("collections", "vec");
+    /// let b = js::import("collections", "vec").alias("list");
+    ///
+    /// let toks = quote! {
+    ///     #a
+    ///     #b
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import {vec, vec as list} from \"collections\";",
+    ///         "",
+    ///         "vec",
+    ///         "list",
+    ///     ],
+    ///     toks.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn alias<N: Into<ItemStr>>(self, alias: N) -> Self {
         Self {
             alias: Some(alias.into()),
@@ -71,25 +113,77 @@ impl Type {
     }
 }
 
-impl fmt::Display for Type {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(alias) = &self.alias {
-            fmt.write_str(alias)?;
-            fmt.write_str(SEP)?;
-        }
-
-        fmt.write_str(self.name.as_ref())?;
-        Ok(())
+impl TypeTrait for Import {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Import(self)
     }
 }
 
-impl LangItem<JavaScript> for Type {
+impl LangItem<JavaScript> for Import {
     fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
-        write!(out, "{}", self)
+        if let Some(alias) = &self.alias {
+            out.write_str(alias)?;
+        } else {
+            out.write_str(&self.name)?;
+        }
+
+        Ok(())
     }
 
-    fn as_import(&self) -> Option<&Self> {
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
+    }
+}
+
+/// The default imported item.
+///
+/// Created using the [import_default()] function.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct ImportDefault {
+    /// Module of the imported name.
+    module: ItemStr,
+    /// Name imported.
+    name: ItemStr,
+}
+
+impl TypeTrait for ImportDefault {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::ImportDefault(self)
+    }
+}
+
+impl LangItem<JavaScript> for ImportDefault {
+    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        out.write_str(&self.name)
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        Some(self)
+    }
+}
+
+/// A local name.
+///
+/// Created using the [local()] function.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Local {
+    /// The local name.
+    name: ItemStr,
+}
+
+impl TypeTrait for Local {
+    fn as_enum(&self) -> TypeEnum<'_> {
+        TypeEnum::Local(self)
+    }
+}
+
+impl LangItem<JavaScript> for Local {
+    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        out.write_str(&self.name)
+    }
+
+    fn as_import(&self) -> Option<&dyn TypeTrait> {
+        None
     }
 }
 
@@ -97,83 +191,72 @@ impl LangItem<JavaScript> for Type {
 pub struct JavaScript(());
 
 impl JavaScript {
-    /// Convert a module into a path.
-    fn module_to_path(path: &str) -> String {
-        let parts: Vec<&str> = path.split(SEP).collect();
-        format!("{}.js", parts.join(PATH_SEP))
-    }
-
     /// Translate imports into the necessary tokens.
-    fn imports(tokens: &Tokens) -> Option<Tokens> {
-        use crate::ext::QuotedExt as _;
+    fn imports(tokens: &Tokens, output: &mut Tokens) {
+        use crate as genco;
+        use crate::prelude::*;
 
-        let mut sets = BTreeMap::new();
-        let mut wildcard = BTreeSet::new();
+        let mut modules = BTreeMap::<&ItemStr, Module<'_>>::new();
 
         for import in tokens.walk_imports() {
-            match (&import.module, &import.alias) {
-                (&Some(ref module), &None) => {
-                    sets.entry(module.clone())
-                        .or_insert_with(Tokens::new)
-                        .append(import.name.clone());
+            match import.as_enum() {
+                TypeEnum::Import(this) => {
+                    let module = modules.entry(&this.module).or_default();
+
+                    module.set.insert(match &this.alias {
+                        None => ImportedElement::Plain(&this.name),
+                        Some(alias) => ImportedElement::Aliased(&this.name, alias),
+                    });
                 }
-                (&Some(ref module), &Some(ref alias)) => {
-                    wildcard.insert((module.clone(), alias.clone()));
+                TypeEnum::ImportDefault(this) => {
+                    let module = modules.entry(&this.module).or_default();
+                    module.default_import = Some(&this.name);
                 }
-                _ => {}
+                _ => (),
             }
         }
 
-        if wildcard.is_empty() {
-            return None;
+        if modules.is_empty() {
+            return;
         }
 
-        let mut out = Tokens::new();
+        for (name, module) in modules {
+            let names = module.set.into_iter().map(|import| match import {
+                ImportedElement::Plain(name) => quote!(#name),
+                ImportedElement::Aliased(name, alias) => quote!(#name as #alias),
+            });
 
-        for (module, names) in sets {
-            let mut s = Tokens::new();
-
-            s.append("import {");
-
-            let mut it = names.into_iter();
-
-            if let Some(name) = it.next() {
-                s.append(name);
-            }
-
-            for name in it {
-                s.append(", ");
-                s.append(name);
-            }
-
-            s.append("} from ");
-            s.append(Self::module_to_path(&*module).quoted());
-            s.append(";");
-
-            out.append(s);
-            out.push();
+            output.push();
+            quote_in! { &mut *output =>
+                import #{tokens => {
+                    if let Some(default) = module.default_import {
+                        tokens.append(ItemStr::from(default));
+                        tokens.append(",");
+                        tokens.spacing();
+                    }
+                }}{#names,*} from #(name.quoted());
+            };
         }
 
-        for (module, alias) in wildcard {
-            let mut s = Tokens::new();
+        output.push_line();
 
-            s.append("import * as ");
-            s.append(alias);
-            s.append(" from ");
-            s.append(Self::module_to_path(&*module).quoted());
-            s.append(";");
-
-            out.append(s);
-            out.push();
+        #[derive(Default)]
+        struct Module<'a> {
+            default_import: Option<&'a ItemStr>,
+            set: BTreeSet<ImportedElement<'a>>,
         }
 
-        Some(out)
+        #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+        enum ImportedElement<'a> {
+            Plain(&'a ItemStr),
+            Aliased(&'a ItemStr, &'a ItemStr),
+        }
     }
 }
 
 impl Lang for JavaScript {
     type Config = ();
-    type Import = Type;
+    type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
         out.write_char('"')?;
@@ -204,18 +287,13 @@ impl Lang for JavaScript {
         level: usize,
     ) -> fmt::Result {
         let mut toks = Tokens::new();
-
-        if let Some(imports) = Self::imports(&tokens) {
-            toks.append(imports);
-            toks.push_line();
-        }
-
-        toks.append(tokens);
+        Self::imports(&tokens, &mut toks);
+        toks.extend(tokens);
         toks.format(out, config, level)
     }
 }
 
-/// Setup an imported element.
+/// Import an element from a module
 ///
 /// # Examples
 ///
@@ -223,31 +301,76 @@ impl Lang for JavaScript {
 /// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
+/// let a = js::import("collections", "vec");
+/// let b = js::import("collections", "vec").alias("list");
+///
 /// let toks = quote! {
-///     #(js::imported("collections", "vec"))
-///     #(js::imported("collections", "vec").alias("list"))
+///     #a
+///     #b
 /// };
 ///
 /// assert_eq!(
 ///     vec![
-///         "import {vec} from \"collections.js\";",
-///         "import * as list from \"collections.js\";",
+///         "import {vec, vec as list} from \"collections\";",
 ///         "",
 ///         "vec",
-///         "list.vec",
+///         "list",
 ///     ],
 ///     toks.to_file_vec().unwrap()
 /// );
 /// ```
-pub fn imported<M, N>(module: M, name: N) -> Type
+pub fn import<M, N>(module: M, name: N) -> Import
 where
     M: Into<ItemStr>,
     N: Into<ItemStr>,
 {
-    Type {
-        module: Some(module.into()),
+    Import {
+        module: module.into(),
         name: name.into(),
         alias: None,
+    }
+}
+
+/// Import the default element from the specified module.
+///
+/// Note that the default element may only be aliased once, so multiple aliases
+/// will cause an error.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let a = js::import_default("collections", "defaultVec");
+/// let b = js::import("collections", "vec");
+/// let c = js::import("collections", "vec").alias("list");
+///
+/// let toks = quote! {
+///     #a
+///     #b
+///     #c
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "import defaultVec, {vec, vec as list} from \"collections\";",
+///         "",
+///         "defaultVec",
+///         "vec",
+///         "list",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
+pub fn import_default<M, N>(module: M, name: N) -> ImportDefault
+where
+    M: Into<ItemStr>,
+    N: Into<ItemStr>,
+{
+    ImportDefault {
+        module: module.into(),
+        name: name.into(),
     }
 }
 
@@ -262,13 +385,9 @@ where
 /// let toks = quote!(#(js::local("MyType")));
 /// assert_eq!(vec!["MyType"], toks.to_file_vec().unwrap());
 /// ```
-pub fn local<N>(name: N) -> Type
+pub fn local<N>(name: N) -> Local
 where
     N: Into<ItemStr>,
 {
-    Type {
-        module: None,
-        name: name.into(),
-        alias: None,
-    }
+    Local { name: name.into() }
 }

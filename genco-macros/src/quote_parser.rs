@@ -59,7 +59,7 @@ impl QuoteParser<'_> {
             let next = item.cursor();
 
             if let Some(cursor) = cursor {
-                if cursor.start.line != next.start.line {
+                if cursor.end.line != next.start.line {
                     item_buffer.flush(&mut tokens);
 
                     debug_assert!(next.start.line > cursor.start.line);
@@ -228,7 +228,7 @@ fn parse_register(start: Span, input: ParseStream) -> Result<Item> {
 fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
     if input.peek(token::Brace) {
         let content;
-        syn::braced!(content in input);
+        let outer_span = syn::braced!(content in input);
 
         let var = content.parse::<Ident>()?;
         content.parse::<Token![=>]>()?;
@@ -239,7 +239,7 @@ fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
         let mut group = Group::new(Delimiter::None, scope.parse()?);
         group.set_span(delim.span);
 
-        let cursor = Cursor::join(start, delim.span);
+        let cursor = Cursor::join(start, outer_span.span);
         return Ok(Item::Scope(cursor, var, TokenTree::Group(group)));
     }
 

@@ -4,7 +4,7 @@ use genco::prelude::*;
 fn test_quote() {
     let test = "one".quoted();
 
-    let tokens: Tokens<Rust> = quote! {
+    let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
             println!("{}", #(test));
 
@@ -17,7 +17,7 @@ fn test_quote() {
         tokens.to_string().unwrap()
     );
 
-    let tokens: Tokens<Rust> = quote! {
+    let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
             println!("{}", #("two".quoted()));
 
@@ -30,7 +30,7 @@ fn test_quote() {
         tokens.to_string().unwrap()
     );
 
-    let tokens: Tokens<Rust> = quote! {
+    let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
             println!("{}", ##("two".quoted()));
 
@@ -49,20 +49,20 @@ fn test_tight_quote() {
     let foo = "foo";
     let bar = "bar";
     let baz = "baz";
-    let tokens: Tokens<Rust> = quote!(#(foo)#(bar)#(baz));
+    let tokens: rust::Tokens = quote!(#(foo)#(bar)#(baz));
 
     assert_eq!("foobarbaz", tokens.to_string().unwrap());
 }
 
 #[test]
 fn test_escape() {
-    let tokens: Tokens<Rust> = quote!(#### ## #### #### ## ## ##[test]);
+    let tokens: rust::Tokens = quote!(#### ## #### #### ## ## ##[test]);
     assert_eq!("## # ## ## # # #[test]", tokens.to_string().unwrap());
 }
 
 #[test]
 fn test_scope() {
-    let tokens: Tokens<Rust> = quote! {
+    let tokens: rust::Tokens = quote! {
         // Nested factory.
         #{tokens => {
             quote_in!(tokens => fn test() -> u32 { 42 });
@@ -70,4 +70,35 @@ fn test_scope() {
     };
 
     assert_eq!("fn test() -> u32 { 42 }", tokens.to_string().unwrap());
+}
+
+#[test]
+fn test_tricky_continuation() {
+    use genco::{Item, ItemStr};
+    use Item::*;
+    use ItemStr::*;
+
+    let mut output = rust::Tokens::new();
+    let output = &mut output;
+
+    let bar = genco::ItemStr::Static("bar");
+
+    quote_in! { &mut *output =>
+        foo, #{output => {
+            output.append(&bar);
+            output.append(Static(","));
+            output.spacing();
+        }}baz
+    };
+
+    let expected: Vec<Item<Rust>> = vec![
+        Literal(Static("foo,")),
+        Spacing,
+        Literal(Static("bar")),
+        Literal(Static(",")),
+        Spacing,
+        Literal(Static("baz")),
+    ];
+
+    assert_eq!(format!("{:?}", expected), format!("{:?}", output));
 }
