@@ -52,7 +52,7 @@ impl QuoteParser<'_> {
 
         let mut registers = Vec::new();
 
-        let mut tokens = Vec::new();
+        let mut output = TokenStream::new();
 
         // Keeping track of the span of the last token processed so we can
         // determine when to insert spacing or indentation.
@@ -77,7 +77,7 @@ impl QuoteParser<'_> {
 
             // Insert spacing if appropriate.
             handle_spacing(
-                &mut tokens,
+                &mut output,
                 receiver,
                 &next,
                 cursor.as_ref(),
@@ -117,16 +117,16 @@ impl QuoteParser<'_> {
                     }
                 },
                 Item::Expression(_, expr) => {
-                    item_buffer.flush(&mut tokens);
-                    tokens.extend(quote::quote_spanned!(expr.span() => #receiver.append(#expr);));
+                    item_buffer.flush(&mut output);
+                    output.extend(quote::quote_spanned!(expr.span() => #receiver.append(#expr);));
                 }
                 Item::Repeat(_, inner, separator) => {
-                    item_buffer.flush(&mut tokens);
+                    item_buffer.flush(&mut output);
 
                     if let Some(separator) = separator {
                         let separator = LitStr::new(&separator.to_string(), separator.span());
 
-                        tokens.extend(quote::quote! {{
+                        output.extend(quote::quote! {{
                             let mut iter = std::iter::IntoIterator::into_iter(#inner).peekable();
 
                             while let Some(element) = iter.next() {
@@ -139,7 +139,7 @@ impl QuoteParser<'_> {
                             }
                         }});
                     } else {
-                        tokens.extend(quote::quote! {{
+                        output.extend(quote::quote! {{
                             for element in #inner {
                                 #receiver.append(element);
                             }
@@ -147,19 +147,19 @@ impl QuoteParser<'_> {
                     }
                 }
                 Item::Scope(_, var, group) => {
-                    item_buffer.flush(&mut tokens);
+                    item_buffer.flush(&mut output);
 
                     // If the receiver is borrowed, we need to reborrow to
                     // satisfy the borrow checker in case it's in a loop.
                     if self.receiver_borrowed {
-                        tokens.extend(quote::quote! {
+                        output.extend(quote::quote! {
                             {
                                 let #var = &mut *#receiver;
                                 #group
                             }
                         });
                     } else {
-                        tokens.extend(quote::quote! {
+                        output.extend(quote::quote! {
                             {
                                 let #var = &mut #receiver;
                                 #group
@@ -182,20 +182,18 @@ impl QuoteParser<'_> {
             }
         }
 
-        item_buffer.flush(&mut tokens);
-
-        let tokens = TokenStream::from_iter(tokens);
+        item_buffer.flush(&mut output);
 
         Ok(quote::quote! {
             #(#registers;)*
-            #tokens
+            #output
         })
     }
 }
 
 /// Insert indentation and spacing if appropriate in the output token stream.
 fn handle_spacing(
-    output: &mut Vec<TokenTree>,
+    output: &mut TokenStream,
     receiver: &Ident,
     next: &Cursor,
     cursor: Option<&Cursor>,

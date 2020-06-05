@@ -46,10 +46,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
-/// let tokens: Tokens<Rust> = quote!(#[test]);
+/// let tokens: rust::Tokens = quote!(#[test]);
 /// assert_eq!("#[test]", tokens.to_string().unwrap());
 ///
-/// let tokens: Tokens<Rust> = quote!(#{t => { quote_in!(t => #[test]) }});
+/// let tokens: rust::Tokens = quote!(#{t => { quote_in!(t => #[test]) }});
 /// assert_eq!("#[test]", tokens.to_string().unwrap());
 /// ```
 ///
@@ -67,7 +67,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// // implement it).
 /// let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
 ///
-/// let tokens: Tokens<Rust> = quote! {
+/// let tokens: rust::Tokens = quote! {
 ///     #@write_bytes_ext
 ///
 ///     let mut wtr = vec![];
@@ -164,7 +164,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// ```rust
 /// use genco::prelude::*;
 ///
-/// let mut tokens = Tokens::<Rust>::new();
+/// let mut tokens = rust::Tokens::new();
 ///
 /// quote_in! { tokens =>
 ///     fn foo() -> u32 {
@@ -177,13 +177,13 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// ```rust
 ///
-/// use genco::{quote_in, Rust, Tokens};
+/// use genco::prelude::*;
 ///
-/// let mut tokens = Tokens::<Rust>::new();
+/// let mut tokens = rust::Tokens::new();
 ///
 /// quote_in!(tokens => fn hello() -> u32 { 42 });
 ///
-/// assert_eq!(vec!["fn hello() -> u32 { 42 }", ""], tokens.to_file_vec().unwrap());
+/// assert_eq!(vec!["fn hello() -> u32 { 42 }"], tokens.to_file_vec().unwrap());
 #[proc_macro]
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let quote_in_parser::QuoteInParser;

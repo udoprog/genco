@@ -1,4 +1,4 @@
-use proc_macro2::{Span, TokenTree};
+use proc_macro2::{Span, TokenStream};
 use syn::{Ident, LitStr};
 
 pub(crate) struct ItemBuffer<'a> {
@@ -26,7 +26,7 @@ impl<'a> ItemBuffer<'a> {
     }
 
     /// Flush the line buffer if necessary.
-    pub(crate) fn flush(&mut self, tokens: &mut Vec<TokenTree>) {
+    pub(crate) fn flush(&mut self, tokens: &mut TokenStream) {
         if !self.buffer.is_empty() {
             let receiver = self.receiver;
             let s = LitStr::new(&self.buffer, Span::call_site());
