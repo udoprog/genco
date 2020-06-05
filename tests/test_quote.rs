@@ -71,37 +71,3 @@ fn test_scope() {
 
     assert_eq!("fn test() -> u32 { 42 }", tokens.to_string().unwrap());
 }
-
-#[test]
-fn test_tricky_continuation() {
-    use genco::{Item, ItemStr};
-    use Item::*;
-    use ItemStr::*;
-
-    let mut output = rust::Tokens::new();
-    // let output = &mut output;
-
-    let bar = genco::ItemStr::Static("bar");
-
-    quote_in! {
-        &mut output => foo, #{*output => {
-            output.append(&bar);
-            output.append(Static(","));
-            output.spacing();
-        }}baz
-        biz
-    };
-
-    let expected: Vec<Item<Rust>> = vec![
-        Literal(Static("foo,")),
-        Spacing,
-        Literal(Static("bar")),
-        Literal(Static(",")),
-        Spacing,
-        Literal(Static("baz")),
-        Push,
-        Literal(Static("biz")),
-    ];
-
-    assert_eq!(format!("{:?}", expected), format!("{:?}", output));
-}

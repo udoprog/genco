@@ -18,7 +18,7 @@ pub(crate) enum Item {
     /// variable.
     Scope {
         cursor: Cursor,
-        var: Ident,
+        binding: Ident,
         group: TokenTree,
         receiver_borrowed: bool,
     },
@@ -61,11 +61,7 @@ impl QuoteParser<'_> {
         let mut cursor = None::<Cursor>;
 
         // Used to determine the indentation state of a token.
-        let mut last_column = self
-            .span_start
-            .take()
-            .unwrap_or_else(|| input.span().start())
-            .column;
+        let mut last_column = input.span().start().column;
 
         let mut queued = Vec::new();
         let mut queue = VecDeque::new();
@@ -75,7 +71,32 @@ impl QuoteParser<'_> {
         parse_inner(|item| queue.push_back(item), input)?;
 
         while let Some(item) = queue.pop_front() {
-            let next = item.cursor();
+            let mut next = item.cursor();
+
+            // So we encountered the first ever token, while we have a spanned
+            // start like `quote_in! { out => foo }`, `foo` is now `next`.
+            //
+            // What we want to do is treat the beginning out `out` as the
+            // indentation position, so we adjust the token.
+            //
+            // But we also want to avoid situations like this:
+            //
+            // ```
+            // quote_in! { out =>
+            //     foo
+            //     bar
+            // }
+            // ```
+            //
+            // If we would treat `out` as the start, `foo` would be seen as
+            // unindented. So check if the first encountered token is on the
+            // same line as the binding `out` or not before adjusting them!
+            if let Some(span_start) = self.span_start.take() {
+                if next.start.line == span_start.line {
+                    last_column = span_start.column;
+                    next = next.with_start(span_start);
+                }
+            }
 
             // Insert spacing if appropriate.
             handle_spacing(
@@ -149,7 +170,7 @@ impl QuoteParser<'_> {
                     }
                 }
                 Item::Scope {
-                    var,
+                    binding,
                     group,
                     receiver_borrowed,
                     ..
@@ -159,16 +180,21 @@ impl QuoteParser<'_> {
                     // If the receiver is borrowed, we need to reborrow to
                     // satisfy the borrow checker in case it's in a loop.
                     if receiver_borrowed {
+                        let binding = quote::quote_spanned!(binding.span() => let #binding = &mut *#receiver;);
+
                         output.extend(quote::quote! {
                             {
-                                let #var = &mut *#receiver;
+                                #binding
                                 #group
                             }
                         });
                     } else {
+                        let binding =
+                            quote::quote_spanned!(binding.span() => let #binding = &mut #receiver;);
+
                         output.extend(quote::quote! {
                             {
-                                let #var = &mut #receiver;
+                                #binding
                                 #group
                             }
                         });
@@ -288,7 +314,7 @@ fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
             false
         };
 
-        let var = scope.parse::<Ident>()?;
+        let binding = scope.parse::<Ident>()?;
         scope.parse::<Token![=>]>()?;
 
         let mut group = Group::new(Delimiter::None, scope.parse()?);
@@ -298,7 +324,7 @@ fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
 
         return Ok(Item::Scope {
             cursor,
-            var,
+            binding,
             group: TokenTree::Group(group),
             receiver_borrowed,
         });

@@ -15,7 +15,12 @@ impl Cursor {
         }
     }
 
-    /// Modify the end of a cursor.
+    /// Modify the start of the cursor.
+    pub(crate) fn with_start(self, start: LineColumn) -> Self {
+        Self { start, ..self }
+    }
+
+    /// Modify the end of the cursor.
     pub(crate) fn with_end(self, end: LineColumn) -> Self {
         Self { end, ..self }
     }
