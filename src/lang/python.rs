@@ -103,13 +103,11 @@ impl Python {
     fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
-        for custom in tokens.walk_custom() {
-            if let Some(import) = custom.as_import() {
-                let Type { module, alias, .. } = import;
+        for import in tokens.walk_imports() {
+            let Type { module, alias, .. } = import;
 
-                if let Some(ref module) = *module {
-                    modules.insert((module.clone(), alias.clone()));
-                }
+            if let Some(ref module) = *module {
+                modules.insert((module.clone(), alias.clone()));
             }
         }
 

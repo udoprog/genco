@@ -12,16 +12,14 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-mod modifier;
-mod utils;
+mod block_comment;
 
 use crate as genco;
 use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 
-pub use self::modifier::Modifier;
-pub use self::utils::BlockComment;
+pub use self::block_comment::BlockComment;
 
 /// Tokens container specialization for C#.
 pub type Tokens = crate::Tokens<Csharp>;
@@ -125,6 +123,62 @@ pub const UINT64: Simple = Simple {
 
 /// The `void` type.
 pub const VOID: Void = Void(());
+
+impl_modifier! {
+    /// A Csharp modifier.
+    ///
+    /// A vector of modifiers have a custom implementation, allowing them to be
+    /// formatted with a spacing between them in the language-recommended order.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use csharp::Modifier::*;
+    ///
+    /// let toks: csharp::Tokens = quote!(#(vec![Async, Static, Public]));
+    ///
+    /// assert_eq!("public async static", toks.to_string().unwrap());
+    /// ```
+    pub enum Modifier<Csharp> {
+        /// The `public` modifier.
+        Public => "public",
+        /// The `private` modifier.
+        Private => "private",
+        /// The `internal` modifier.
+        Internal => "internal",
+        /// The `protected` modifier.
+        Protected => "protected",
+        /// The `abstract` modifier.
+        Abstract => "abstract",
+        /// The `async` modifier.
+        Async => "async",
+        /// The `const` modifier.
+        Const => "const",
+        /// The `event` modifier.
+        Event => "event",
+        /// The `extern` modifier.
+        Extern => "extern",
+        /// The `new` modifier.
+        New => "new",
+        /// The `override` modifier.
+        Override => "override",
+        /// The `partial` modifier.
+        Partial => "partial",
+        /// The `readonly` modifier.
+        Readonly => "readonly",
+        /// The `sealed` modifier.
+        Sealed => "sealed",
+        /// The `static` modifier.
+        Static => "static",
+        /// The `unsafe` modifier.
+        Unsafe => "unsafe",
+        /// The `virtual` modifier.
+        Virtual => "virtual",
+        /// The `volatile` modifier.
+        Volatile => "volatile",
+    }
+}
 
 /// Config data for Csharp formatting.
 #[derive(Debug, Default)]
@@ -481,10 +535,8 @@ impl Csharp {
     fn imports(tokens: &Tokens, output: &mut Tokens, config: &mut Config) {
         let mut modules = BTreeSet::new();
 
-        for custom in tokens.walk_custom() {
-            if let Some(import) = custom.as_import() {
-                import.type_imports(&mut modules);
-            }
+        for import in tokens.walk_imports() {
+            import.type_imports(&mut modules);
         }
 
         if modules.is_empty() {
@@ -664,4 +716,36 @@ pub fn optional<I: Into<TypeBox>>(value: I) -> Optional {
     Optional {
         inner: value.into(),
     }
+}
+
+/// Format a doc comment where each line is preceeded by `///`.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// use std::iter;
+///
+/// let toks = quote! {
+///     #(csharp::block_comment(vec!["Foo"]))
+///     #(csharp::block_comment(iter::empty::<&str>()))
+///     #(csharp::block_comment(vec!["Bar"]))
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "/// Foo",
+///         "/// Bar",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
+pub fn block_comment<T>(comment: T) -> BlockComment<T>
+where
+    T: IntoIterator,
+    T::Item: Into<ItemStr>,
+{
+    BlockComment(comment)
 }

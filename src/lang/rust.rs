@@ -211,7 +211,7 @@ pub struct Type {
 }
 
 impl Type {
-    fn walk_custom(&self, modules: &mut BTreeSet<(ItemStr, Option<ItemStr>)>) {
+    fn walk_imports(&self, modules: &mut BTreeSet<(ItemStr, Option<ItemStr>)>) {
         if let Some(module) = self.module.as_ref() {
             if self.qualified || self.alias.is_some() {
                 let module = ItemStr::from(format!("{}::{}", module, self.name.name.as_ref()));
@@ -222,7 +222,7 @@ impl Type {
         }
 
         for arg in &self.name.arguments {
-            arg.walk_custom(modules);
+            arg.walk_imports(modules);
         }
     }
 
@@ -303,10 +303,8 @@ impl Rust {
     fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
-        for custom in tokens.walk_custom() {
-            if let Some(import) = custom.as_import() {
-                import.walk_custom(&mut modules);
-            }
+        for import in tokens.walk_imports() {
+            import.walk_imports(&mut modules);
         }
 
         if modules.is_empty() {

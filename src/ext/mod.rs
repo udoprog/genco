@@ -1,3 +1,5 @@
+//! Extension traits provided by GenCo.
+
 use crate::ItemStr;
 
 mod quoted;
@@ -5,7 +7,7 @@ mod quoted;
 pub use self::quoted::Quoted;
 
 /// Tokenizer for various types.
-pub trait Ext {
+pub trait QuotedExt {
     /// Trait to provide string quoting through `<stmt>.quoted()`.
     ///
     /// This is used to generated quoted strings, in the language of choice.
@@ -43,4 +45,4 @@ pub trait Ext {
     }
 }
 
-impl<T> Ext for T {}
+impl<T> QuotedExt for T where T: Into<ItemStr> {}

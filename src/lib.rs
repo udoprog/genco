@@ -168,7 +168,7 @@
 //! [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 //! [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
 //! [Go Example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
-//! [`<stmt>.quoted()`]: https://docs.rs/genco/latest/genco/trait.Quoted.html
+//! [`<stmt>.quoted()`]: crate::ext::QuotedExt::quoted
 //! [quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
 
 #![deny(missing_docs)]
@@ -179,7 +179,7 @@ pub use genco_macros::{quote, quote_in};
 
 #[macro_use]
 mod macros;
-mod ext;
+pub mod ext;
 mod format_tokens;
 mod formatter;
 mod item;
@@ -190,7 +190,7 @@ pub mod prelude;
 mod register_tokens;
 mod tokens;
 
-pub use self::ext::Ext;
+pub use self::ext::Quoted;
 pub use self::format_tokens::FormatTokens;
 pub use self::formatter::{Formatter, FormatterConfig, VecWriter};
 pub use self::item::Item;

@@ -133,10 +133,8 @@ impl Swift {
     fn imports(tokens: &Tokens) -> Option<Tokens> {
         let mut modules = BTreeSet::new();
 
-        for custom in tokens.walk_custom() {
-            if let Some(import) = custom.as_import() {
-                import.type_imports(&mut modules);
-            }
+        for import in tokens.walk_imports() {
+            import.type_imports(&mut modules);
         }
 
         if modules.is_empty() {

@@ -394,3 +394,53 @@ macro_rules! impl_type_basics {
         impl_variadic_type_args!($args, $trait, $type_box);
     }
 }
+
+macro_rules! impl_modifier {
+    ($(#[$meta:meta])* pub enum $name:ident<$lang:ty> {
+        $(
+            $(#[$variant_meta:meta])*
+            $variant:ident => $value:expr,
+        )*
+    }) => {
+        $(#[$meta])*
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub enum $name {
+            $(
+                $(#[$variant_meta])*
+                $variant,
+            )*
+        }
+
+        impl $name {
+            /// Get the name of the modifier.
+            pub fn name(&self) -> &'static str {
+                match self {
+                    $(Self::$variant => $value,)*
+                }
+            }
+        }
+
+        impl crate::FormatTokens<$lang> for $name {
+            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
+                tokens.append(self.name());
+            }
+        }
+
+        impl crate::FormatTokens<$lang> for Vec<$name> {
+            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
+                use std::collections::BTreeSet;
+
+                let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
+
+                if let Some(modifier) = it.next() {
+                    modifier.format_tokens(tokens);
+                }
+
+                for modifier in it {
+                    tokens.spacing();
+                    modifier.format_tokens(tokens);
+                }
+            }
+        }
+    }
+}

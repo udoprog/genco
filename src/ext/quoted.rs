@@ -1,5 +1,8 @@
 use crate::{FormatTokens, Item, ItemStr, Lang, Tokens};
 
+/// Struct containing a type that is quoted.
+///
+/// This is constructed with the [quoted][super::QuotedExt::quoted] function.
 #[derive(Clone, Copy)]
 pub struct Quoted<T> {
     inner: T,

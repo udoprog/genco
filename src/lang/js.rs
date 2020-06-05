@@ -38,7 +38,7 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-use crate::{Ext as _, Formatter, ItemStr, Lang, LangItem};
+use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
@@ -105,22 +105,22 @@ impl JavaScript {
 
     /// Translate imports into the necessary tokens.
     fn imports(tokens: &Tokens) -> Option<Tokens> {
+        use crate::ext::QuotedExt as _;
+
         let mut sets = BTreeMap::new();
         let mut wildcard = BTreeSet::new();
 
-        for custom in tokens.walk_custom() {
-            if let Some(custom) = custom.as_import() {
-                match (&custom.module, &custom.alias) {
-                    (&Some(ref module), &None) => {
-                        sets.entry(module.clone())
-                            .or_insert_with(Tokens::new)
-                            .append(custom.name.clone());
-                    }
-                    (&Some(ref module), &Some(ref alias)) => {
-                        wildcard.insert((module.clone(), alias.clone()));
-                    }
-                    _ => {}
+        for import in tokens.walk_imports() {
+            match (&import.module, &import.alias) {
+                (&Some(ref module), &None) => {
+                    sets.entry(module.clone())
+                        .or_insert_with(Tokens::new)
+                        .append(import.name.clone());
                 }
+                (&Some(ref module), &Some(ref alias)) => {
+                    wildcard.insert((module.clone(), alias.clone()));
+                }
+                _ => {}
             }
         }
 

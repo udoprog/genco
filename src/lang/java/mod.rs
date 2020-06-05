@@ -12,11 +12,9 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-mod modifier;
-mod utils;
+mod block_comment;
 
-pub use self::modifier::Modifier;
-pub use self::utils::BlockComment;
+pub use self::block_comment::BlockComment;
 
 use crate as genco;
 use crate::{quote, quote_in, Formatter, ItemStr, Lang, LangItem};
@@ -130,6 +128,42 @@ impl Default for Config {
             package: Default::default(),
             imported: Default::default(),
         }
+    }
+}
+
+impl_modifier! {
+    /// A Java modifier.
+    ///
+    /// A vector of modifiers have a custom implementation, allowing them to be
+    /// formatted with a spacing between them in the language-recommended order.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use java::Modifier::*;
+    ///
+    /// let toks: java::Tokens = quote!(#(vec![Public, Final, Static]));
+    ///
+    /// assert_eq!("public static final", toks.to_string().unwrap());
+    /// ```
+    pub enum Modifier<Java> {
+        /// The `default` modifier.
+        Default => "default",
+        /// The `public` modifier.
+        Public => "public",
+        /// The `protected` modifier.
+        Protected => "protected",
+        /// The `private` modifier.
+        Private => "private",
+        /// The `abstract` modifier.
+        Abstract => "abstract",
+        /// The `static` modifier.
+        Static => "static",
+        /// The `final` modifier.
+        Final => "final",
+        /// The `native` modifier.
+        Native => "native",
     }
 }
 
@@ -426,10 +460,8 @@ impl Java {
 
         let file_package = config.package.as_ref().map(|p| p.as_ref());
 
-        for custom in tokens.walk_custom() {
-            if let Some(ty) = custom.as_import() {
-                ty.type_imports(&mut modules);
-            }
+        for import in tokens.walk_imports() {
+            import.type_imports(&mut modules);
         }
 
         if modules.is_empty() {
@@ -570,4 +602,41 @@ pub fn optional<I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> Optio
         value: value.into(),
         field: field.into(),
     }
+}
+
+/// Format a doc comment where each line is preceeded by `///`.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// use std::iter;
+///
+/// let toks = quote! {
+///     #(java::block_comment(vec!["first line", "second line"]))
+///     #(java::block_comment(iter::empty::<&str>()))
+///     #(java::block_comment(vec!["third line"]))
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "/**",
+///         " * first line",
+///         " * second line",
+///         " */",
+///         "/**",
+///         " * third line",
+///         " */",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
+pub fn block_comment<T>(comment: T) -> BlockComment<T>
+where
+    T: IntoIterator,
+    T::Item: Into<ItemStr>,
+{
+    BlockComment(comment)
 }

@@ -9,21 +9,26 @@ pub enum Item<L>
 where
     L: Lang,
 {
-    /// A refcounted member.
-    Rc(Rc<Item<L>>),
-    /// A borrowed string.
+    /// A literal item.
+    /// Is added as a raw string to the stream of tokens.
     Literal(ItemStr),
-    /// A borrowed quoted string.
+    /// A quoted string.
+    ///
+    /// The string content is quoted with the language-specific [quoting method].
+    /// [quoting method]: Lang::quote_string
     Quoted(ItemStr),
-    /// Language-specific boxed items.
+    /// A language-specific boxed item.
     LangBox(LangBox<L>),
-    /// A custom element that is not rendered.
+    /// A language-specific boxed item that is not rendered.
     Registered(LangBox<L>),
-    /// Push a new line, unless the current line is empty.
+    /// Push a new line unless the current line is empty.
     Push,
     /// Unconditionally push a line.
     Line,
-    /// Spacing between language items.
+    /// Spacing between language items. Typically a single space.
+    ///
+    /// Multiple spacings in sequence are collapsed into one.
+    /// A spacing does nothing if at the beginning of a line.
     Spacing,
     /// Indent one step.
     Indent,
@@ -41,9 +46,6 @@ where
 
         match *self {
             Registered(_) => {}
-            Rc(ref element) => {
-                element.format(out, config, level)?;
-            }
             Literal(ref literal) => {
                 out.write_str(literal.as_ref())?;
             }
@@ -83,7 +85,6 @@ where
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Rc(element) => write!(fmt, "Rc({:?})", element),
             Self::Literal(s) => write!(fmt, "Literal({:?})", s),
             Self::Quoted(s) => write!(fmt, "Quoted({:?})", s),
             Self::LangBox(item) => write!(fmt, "LangBox({:?})", item),
@@ -147,7 +148,7 @@ where
     L: Lang,
 {
     fn from(value: Rc<Item<L>>) -> Self {
-        Item::Rc(value)
+        (*value).clone()
     }
 }
 
@@ -157,7 +158,6 @@ where
 {
     fn clone(&self) -> Self {
         match self {
-            Self::Rc(element) => Self::Rc(element.clone()),
             Self::Literal(literal) => Self::Literal(literal.clone()),
             Self::Quoted(quoted) => Self::Quoted(quoted.clone()),
             Self::LangBox(lang) => Self::LangBox(lang.clone()),

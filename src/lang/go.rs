@@ -39,7 +39,7 @@
 //! ```
 
 use crate as genco;
-use crate::{quote_in, Ext as _, Formatter, ItemStr, Lang, LangItem};
+use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -204,12 +204,12 @@ pub struct Go(());
 
 impl Go {
     fn imports(tokens: &Tokens) -> Option<Tokens> {
+        use crate::ext::QuotedExt as _;
+
         let mut modules = BTreeSet::new();
 
-        for custom in tokens.walk_custom() {
-            if let Some(import) = custom.as_import() {
-                import.type_imports(&mut modules);
-            }
+        for import in tokens.walk_imports() {
+            import.type_imports(&mut modules);
         }
 
         if modules.is_empty() {

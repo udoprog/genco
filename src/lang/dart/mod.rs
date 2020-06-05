@@ -13,13 +13,11 @@
 //! ```
 
 mod doc_comment;
-mod modifier;
 
 pub use self::doc_comment::DocComment;
-pub use self::modifier::Modifier;
 
 use crate as genco;
-use crate::{quote_in, Ext as _, Formatter, ItemStr, Lang, LangItem};
+use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Dart.
@@ -52,6 +50,30 @@ pub const DOUBLE: BuiltIn = BuiltIn { name: "double" };
 
 /// Boolean built-in type.
 pub const BOOL: BuiltIn = BuiltIn { name: "bool" };
+
+impl_modifier! {
+    /// A Dart modifier.
+    ///
+    /// A vector of modifiers have a custom implementation, allowing them to be
+    /// formatted with a spacing between them in the language-recommended order.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use dart::Modifier::*;
+    ///
+    /// let toks: dart::Tokens = quote!(#(vec![Final, Async]));
+    ///
+    /// assert_eq!("async final", toks.to_string().unwrap());
+    /// ```
+    pub enum Modifier<Dart> {
+        /// The `async` modifier.
+        Async => "async",
+        /// The `final` modifier.
+        Final => "final",
+    }
+}
 
 /// Config data for Dart formatting.
 #[derive(Debug, Default)]
@@ -256,18 +278,17 @@ pub struct Dart(());
 impl Dart {
     /// Resolve all imports.
     fn imports(input: &Tokens, output: &mut Tokens, _: &mut Config) {
+        use crate::ext::QuotedExt as _;
         use std::collections::BTreeSet;
 
         let mut modules = BTreeSet::new();
 
-        for custom in input.walk_custom() {
-            if let Some(ty) = custom.as_import() {
-                if &*ty.path == DART_CORE {
-                    continue;
-                }
-
-                modules.insert((ty.path.clone(), ty.alias.clone()));
+        for import in input.walk_imports() {
+            if &*import.path == DART_CORE {
+                continue;
             }
+
+            modules.insert((import.path.clone(), import.alias.clone()));
         }
 
         if modules.is_empty() {

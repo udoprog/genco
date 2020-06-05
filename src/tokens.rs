@@ -12,7 +12,6 @@ use crate::formatter::{FmtWriter, IoWriter};
 use crate::{
     FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens, VecWriter,
 };
-use std::collections::LinkedList;
 use std::fmt;
 use std::io;
 use std::iter::FromIterator;
@@ -66,10 +65,10 @@ where
     }
 
     /// Walk over all elements.
-    pub fn walk_custom(&self) -> WalkCustom<'_, L> {
-        let mut queue = LinkedList::new();
-        queue.extend(self.elements.iter());
-        WalkCustom { queue: queue }
+    pub fn walk_imports(&self) -> WalkImports<'_, L> {
+        WalkImports {
+            queue: self.elements.iter(),
+        }
     }
 
     /// Add an registered custom element that is _not_ rendered.
@@ -111,14 +110,24 @@ where
 
     /// Add a single spacing to the token stream.
     pub fn spacing(&mut self) {
+        // A spacing is already present.
+        match self.elements.last() {
+            Some(Item::Spacing) => return,
+            // Spacing at the beginning of a stream does nothing.
+            None => return,
+            _ => (),
+        }
+
         self.elements.push(Item::Spacing);
     }
 
     /// Add a single push spacing operation.
     pub fn push(&mut self) {
-        // Already a push in the stream. Another one will do nothing.
-        if let Some(Item::Push) = self.elements.last() {
-            return;
+        // Already a push or an empty line in the stream.
+        // Another one will do nothing.
+        match self.elements.last() {
+            Some(Item::Push) | Some(Item::Line) => return,
+            _ => (),
         }
 
         self.elements.push(Item::Push);
@@ -356,33 +365,36 @@ where
     }
 }
 
-pub struct WalkCustom<'a, L>
+/// An iterator over language-specific imported elements.
+///
+/// Constructed using the [Tokens::walk_imports] method.
+pub struct WalkImports<'a, L>
 where
     L: Lang,
 {
-    queue: LinkedList<&'a Item<L>>,
+    queue: std::slice::Iter<'a, Item<L>>,
 }
 
-impl<'a, L> Iterator for WalkCustom<'a, L>
+impl<'a, L> Iterator for WalkImports<'a, L>
 where
     L: Lang,
 {
-    type Item = &'a dyn LangItem<L>;
+    type Item = &'a L::Import;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // read until custom element is encountered.
-        while let Some(next) = self.queue.pop_front() {
-            match next {
-                Item::Rc(element) => {
-                    self.queue.push_back(element.as_ref());
-                }
-                Item::LangBox(item) => return Some(&*item),
-                Item::Registered(item) => return Some(&*item),
-                _ => {}
+        while let Some(next) = self.queue.next() {
+            let import = match next {
+                Item::LangBox(item) => item.as_import(),
+                Item::Registered(item) => item.as_import(),
+                _ => continue,
+            };
+
+            if let Some(import) = import {
+                return Some(import);
             }
         }
 
-        Option::None
+        None
     }
 }
 
@@ -426,11 +438,7 @@ mod tests {
             #(String::from("nope"))
         };
 
-        let output: Vec<_> = toks
-            .walk_custom()
-            .flat_map(|import| import.as_import())
-            .cloned()
-            .collect();
+        let output: Vec<_> = toks.walk_imports().cloned().collect();
 
         let expected = vec![Import(1), Import(2)];
 
