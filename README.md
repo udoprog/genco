@@ -56,8 +56,8 @@ use std::fmt;
 fn main() -> fmt::Result {
     // Import the LittleEndian item, without referencing it through the last
     // module component it is part of.
-    let little_endian = imported("byteorder", "LittleEndian").qualified();
-    let big_endian = imported("byteorder", "BigEndian");
+    let little_endian = imported("byteorder", "LittleEndian");
+    let big_endian = imported("byteorder", "BigEndian").prefixed();
 
     // This is a trait, so only import it into the scope (unless we intent to
     // implement it).

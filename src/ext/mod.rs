@@ -23,7 +23,7 @@ pub trait QuotedExt {
     /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
-    /// let map = rust::imported("std::collections", "HashMap").qualified();
+    /// let map = rust::imported("std::collections", "HashMap");
     ///
     /// let tokens = quote! {
     ///     let mut m = #map::<u32, &str>::new();
@@ -80,7 +80,7 @@ pub trait DisplayExt {
     ///     }
     /// }
     ///
-    /// let map = rust::imported("std::collections", "HashMap").qualified();
+    /// let map = rust::imported("std::collections", "HashMap");
     ///
     /// let foo = Foo(());
     ///
