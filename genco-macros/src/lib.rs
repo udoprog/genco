@@ -88,7 +88,8 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let parser = quote_parser::QuoteParser {
         receiver: &toks,
-        borrowed: false,
+        span_start: None,
+        receiver_borrowed: false,
     };
 
     let parser = move |stream: ParseStream| parser.parse(stream);

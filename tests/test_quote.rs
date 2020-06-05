@@ -83,12 +83,13 @@ fn test_tricky_continuation() {
 
     let bar = genco::ItemStr::Static("bar");
 
-    quote_in! { &mut *output =>
-        foo, #{output => {
+    quote_in! {
+        &mut *output => foo, #{output => {
             output.append(&bar);
             output.append(Static(","));
             output.spacing();
         }}baz
+        biz
     };
 
     let expected: Vec<Item<Rust>> = vec![
@@ -98,6 +99,8 @@ fn test_tricky_continuation() {
         Literal(Static(",")),
         Spacing,
         Literal(Static("baz")),
+        Push,
+        Literal(Static("biz")),
     ];
 
     assert_eq!(format!("{:?}", expected), format!("{:?}", output));

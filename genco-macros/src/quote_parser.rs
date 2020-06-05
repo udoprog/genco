@@ -1,4 +1,4 @@
-use proc_macro2::{Delimiter, Group, Punct, Spacing, Span, TokenStream, TokenTree};
+use proc_macro2::{Delimiter, Group, LineColumn, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::collections::VecDeque;
 use std::iter::FromIterator as _;
 use syn::parse::{ParseStream, Parser as _};
@@ -33,20 +33,37 @@ impl Item {
 }
 
 pub(crate) struct QuoteParser<'a> {
+    /// Used to set the receiver identifier which is being modified by this
+    /// macro.
     pub(crate) receiver: &'a Ident,
-    pub(crate) borrowed: bool,
+    /// Indicate if the receiver is borrowed or not. If it is borrowed, we must
+    /// reborrow when evaluating sub-scopes.
+    pub(crate) receiver_borrowed: bool,
+    /// Use to modify the initial line/column in case something was processed
+    /// before the input was handed off to the quote parser.
+    ///
+    /// See [QuoteInParser].
+    pub(crate) span_start: Option<LineColumn>,
 }
 
 impl QuoteParser<'_> {
-    pub(crate) fn parse(self, input: ParseStream) -> Result<TokenStream> {
+    pub(crate) fn parse(mut self, input: ParseStream) -> Result<TokenStream> {
         let receiver = self.receiver;
 
         let mut registers = Vec::new();
 
         let mut tokens = Vec::new();
 
+        // Keeping track of the span of the last token processed so we can
+        // determine when to insert spacing or indentation.
         let mut cursor = None::<Cursor>;
-        let mut last_column = input.span().start().column;
+
+        // Used to determine the indentation state of a token.
+        let mut last_column = self
+            .span_start
+            .take()
+            .unwrap_or_else(|| input.span().start())
+            .column;
 
         let mut queued = Vec::new();
         let mut queue = VecDeque::new();
@@ -58,39 +75,18 @@ impl QuoteParser<'_> {
         while let Some(item) = queue.pop_front() {
             let next = item.cursor();
 
-            if let Some(cursor) = cursor {
-                if cursor.end.line != next.start.line {
-                    item_buffer.flush(&mut tokens);
-
-                    debug_assert!(next.start.line > cursor.start.line);
-
-                    let line_spaced = if next.start.line - cursor.end.line > 1 {
-                        tokens.extend(quote::quote!(#receiver.push_line();));
-                        true
-                    } else {
-                        false
-                    };
-
-                    if last_column < next.start.column {
-                        tokens.extend(quote::quote!(#receiver.indent();));
-                    } else if last_column > next.start.column {
-                        tokens.extend(quote::quote!(#receiver.unindent();));
-                    } else if !line_spaced {
-                        tokens.extend(quote::quote!(#receiver.push();));
-                    }
-
-                    last_column = next.start.column;
-                } else {
-                    // Same line, but next item doesn't match.
-                    if cursor.end.column < next.start.column && last_column != next.start.column {
-                        item_buffer.flush(&mut tokens);
-                        tokens.extend(quote::quote!(#receiver.spacing();));
-                    }
-                }
-            }
+            // Insert spacing if appropriate.
+            handle_spacing(
+                &mut tokens,
+                receiver,
+                &next,
+                cursor.as_ref(),
+                &mut last_column,
+                &mut item_buffer,
+            );
 
             // Assign the current cursor to the next item.
-            // This can then be used to make future indentation decisions.
+            // This will then be used to make future indentation decisions.
             cursor = Some(next);
 
             match item {
@@ -155,7 +151,7 @@ impl QuoteParser<'_> {
 
                     // If the receiver is borrowed, we need to reborrow to
                     // satisfy the borrow checker in case it's in a loop.
-                    if self.borrowed {
+                    if self.receiver_borrowed {
                         tokens.extend(quote::quote! {
                             {
                                 let #var = &mut *#receiver;
@@ -195,6 +191,56 @@ impl QuoteParser<'_> {
             #tokens
         })
     }
+}
+
+/// Insert indentation and spacing if appropriate in the output token stream.
+fn handle_spacing(
+    output: &mut Vec<TokenTree>,
+    receiver: &Ident,
+    next: &Cursor,
+    cursor: Option<&Cursor>,
+    last_column: &mut usize,
+    item_buffer: &mut ItemBuffer,
+) {
+    // Do nothing unless we have a cursor.
+    let cursor = match cursor {
+        Some(cursor) => cursor,
+        None => return,
+    };
+
+    // Insert spacing if we are on the same line, but column has changed.
+    if cursor.end.line == next.start.line {
+        // Same line, but next item doesn't match.
+        if cursor.end.column < next.start.column && *last_column != next.start.column {
+            item_buffer.flush(output);
+            output.extend(quote::quote!(#receiver.spacing();));
+        }
+
+        return;
+    }
+
+    // Line changed. Determine whether to indent, unindent, or hard break the
+    // line.
+    item_buffer.flush(output);
+
+    debug_assert!(next.start.line > cursor.start.line);
+
+    let line_spaced = if next.start.line - cursor.end.line > 1 {
+        output.extend(quote::quote!(#receiver.push_line();));
+        true
+    } else {
+        false
+    };
+
+    if *last_column < next.start.column {
+        output.extend(quote::quote!(#receiver.indent();));
+    } else if *last_column > next.start.column {
+        output.extend(quote::quote!(#receiver.unindent();));
+    } else if !line_spaced {
+        output.extend(quote::quote!(#receiver.push();));
+    }
+
+    *last_column = next.start.column;
 }
 
 /// Process expressions in the token stream.

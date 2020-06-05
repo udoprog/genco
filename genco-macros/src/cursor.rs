@@ -17,10 +17,7 @@ impl Cursor {
 
     /// Modify the end of a cursor.
     pub(crate) fn with_end(self, end: LineColumn) -> Self {
-        Self {
-            start: self.start,
-            end,
-        }
+        Self { end, ..self }
     }
 
     /// Calculate the start character for the span.
