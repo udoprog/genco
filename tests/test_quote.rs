@@ -79,12 +79,12 @@ fn test_tricky_continuation() {
     use ItemStr::*;
 
     let mut output = rust::Tokens::new();
-    let output = &mut output;
+    // let output = &mut output;
 
     let bar = genco::ItemStr::Static("bar");
 
     quote_in! {
-        &mut *output => foo, #{output => {
+        &mut output => foo, #{*output => {
             output.append(&bar);
             output.append(Static(","));
             output.spacing();

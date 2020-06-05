@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::iter::FromIterator as _;
 use syn::parse::{ParseStream, Parser as _};
 use syn::token;
-use syn::{Ident, LitStr, Result, Token};
+use syn::{Expr, Ident, LitStr, Result, Token};
 
 use crate::{Cursor, ItemBuffer};
 /// Items to process from the queue.
@@ -16,7 +16,12 @@ pub(crate) enum Item {
     Repeat(Cursor, TokenTree, Option<TokenTree>),
     /// A local scope which exposes the tokens being built as the specified
     /// variable.
-    Scope(Cursor, Ident, TokenTree),
+    Scope {
+        cursor: Cursor,
+        var: Ident,
+        group: TokenTree,
+        receiver_borrowed: bool,
+    },
 }
 
 impl Item {
@@ -27,7 +32,7 @@ impl Item {
             Self::Register(cursor, ..) => *cursor,
             Self::DelimiterClose(cursor, ..) => *cursor,
             Self::Repeat(cursor, ..) => *cursor,
-            Self::Scope(cursor, ..) => *cursor,
+            Self::Scope { cursor, .. } => *cursor,
         }
     }
 }
@@ -35,10 +40,7 @@ impl Item {
 pub(crate) struct QuoteParser<'a> {
     /// Used to set the receiver identifier which is being modified by this
     /// macro.
-    pub(crate) receiver: &'a Ident,
-    /// Indicate if the receiver is borrowed or not. If it is borrowed, we must
-    /// reborrow when evaluating sub-scopes.
-    pub(crate) receiver_borrowed: bool,
+    pub(crate) receiver: &'a Expr,
     /// Use to modify the initial line/column in case something was processed
     /// before the input was handed off to the quote parser.
     ///
@@ -146,12 +148,17 @@ impl QuoteParser<'_> {
                         }});
                     }
                 }
-                Item::Scope(_, var, group) => {
+                Item::Scope {
+                    var,
+                    group,
+                    receiver_borrowed,
+                    ..
+                } => {
                     item_buffer.flush(&mut output);
 
                     // If the receiver is borrowed, we need to reborrow to
                     // satisfy the borrow checker in case it's in a loop.
-                    if self.receiver_borrowed {
+                    if receiver_borrowed {
                         output.extend(quote::quote! {
                             {
                                 let #var = &mut *#receiver;
@@ -194,7 +201,7 @@ impl QuoteParser<'_> {
 /// Insert indentation and spacing if appropriate in the output token stream.
 fn handle_spacing(
     output: &mut TokenStream,
-    receiver: &Ident,
+    receiver: &Expr,
     next: &Cursor,
     cursor: Option<&Cursor>,
     last_column: &mut usize,
@@ -274,6 +281,13 @@ fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
         let content;
         let outer_span = syn::braced!(content in input);
 
+        let receiver_borrowed = if content.peek(Token![*]) {
+            content.parse::<Token![*]>()?;
+            true
+        } else {
+            false
+        };
+
         let var = content.parse::<Ident>()?;
         content.parse::<Token![=>]>()?;
 
@@ -284,7 +298,13 @@ fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
         group.set_span(delim.span);
 
         let cursor = Cursor::join(start, outer_span.span);
-        return Ok(Item::Scope(cursor, var, TokenTree::Group(group)));
+
+        return Ok(Item::Scope {
+            cursor,
+            var,
+            group: TokenTree::Group(group),
+            receiver_borrowed,
+        });
     }
 
     let (cursor, inner) = if input.peek(token::Paren) {

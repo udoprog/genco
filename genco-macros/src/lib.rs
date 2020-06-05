@@ -4,7 +4,7 @@ extern crate proc_macro;
 
 use proc_macro2::Span;
 use syn::parse::{ParseStream, Parser as _};
-use syn::Ident;
+use syn::{Expr, Ident};
 
 mod cursor;
 mod item_buffer;
@@ -26,20 +26,26 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// * Inline statements can be evaluated using `#(<stmt>)`. They can also be
 ///   suffixed with `<stmt>,*` to treat the statement as an iterator, and add
 ///   the specified separator (`,` here) between each element.
-///   Example: `#("test".quoted())` can be used to quote a string.
+///   * Example: `#("test".quoted())` can be used to quote a string.
 /// * The [register] functionality of [Tokens] is available by prefixing an
 ///   expression with `#@` as `#@<stmt>`.
-///   Example: `#@only_imports` will [register] the variable `only_imports`.
+///   * Example: `#@only_imports` will [register] the variable `only_imports`.
 /// * Expressions can be repeated. It is then expected that they evaluate to an
 ///   iterator. Expressions are repeated by adding the `<token>*` suffix. The
 ///   <token> will then be used as a separator between each element, and a
 ///   spacing will be added after it.
-///   Example: `#(var),*` will treat `var` as an iterator and add `,` and a
-///   spacing between each element.
+///   * Example: `#var,*` will treat `var` as an iterator and add `,` and a
+///     spacing between each element.
+///   * Example with explicit iterator: `#(vec![1, 2, 3].into_iter()),*`.
 /// * Scoped expressions using `#{<binding> => { <block> }}`, giving mutable
 ///   and scoped access to the token stream being built. This can be used with
 ///   the [quote_in!] macro for improved flow control.
-///   Example: `quote!(#{tokens => { quote_in!(tokens => fn foo() {}) }})`.
+///   The `<binding>` is provided through a mutable borrow. If the `<binding>`
+///   already _is_ mutably borrowed you probably want to perform a reborrow.
+///   This can be done with `*<binding>`. See the borrowing seciton in
+///   [quote_in!] for more details.
+///   * Example: `quote!(#{tokens => /*  */})`.
+///   * Example with reborrowing: `quote_in!(&mut tokens => #{*tokens => { /*  */ }})`.
 ///
 /// # Examples
 ///
@@ -85,11 +91,11 @@ pub(crate) use self::item_buffer::ItemBuffer;
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let toks = Ident::new("__toks", Span::call_site());
+    let toks = Expr::Verbatim(quote::quote!(#toks));
 
     let parser = quote_parser::QuoteParser {
         receiver: &toks,
         span_start: None,
-        receiver_borrowed: false,
     };
 
     let parser = move |stream: ParseStream| parser.parse(stream);
@@ -112,11 +118,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// stream.
 ///
 /// You specify the destination stream as the first argument, followed by a `=>`
-/// and then the code to generate. To avoid taking ownership of the parameter
-/// argument you can use the syntax `&mut *<ident>`. This can prevent borrowing
-/// issues you encounter (see the `Borrowing` section below).
-///
-/// For example: `quote_in! { &mut *tokens => fn foo() {  } }`.
+/// and then the code to generate.
 ///
 /// Note that there is a potential issue with reborrowing
 ///
@@ -130,15 +132,13 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// ...
 /// 12 | /     quote_in! { tokens =>
 /// 13 | |         fn #name() -> u32 {
-/// 14 | |             #{tokens => {
-/// 15 | |                 tokens.append("42");
-/// 16 | |             }}
-/// 17 | |         }
-/// 18 | |     }
+/// 14 | |             #{tokens => tokens.append("42");}
+/// 15 | |         }
+/// 16 | |     }
 ///    | |_____^ cannot borrow as mutable
 /// ```
 ///
-/// This is because inner scoped like `#{tokens => { <block> }}` take ownership
+/// This is because inner scoped like `#{tokens => <code>}` take ownership
 /// of their variable by default. To have it perform a proper reborrow, you can
 /// do the following instead:
 ///
@@ -148,12 +148,10 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// let mut tokens = Tokens::<Rust>::new();
 /// let tokens = &mut tokens;
 ///
-/// for name in &["foo", "bar", "baz"] {
-///     quote_in! { &mut *tokens =>
-///         fn #(*name)() -> u32 {
-///             #{tokens => {
-///                 tokens.append("42");
-///             }}
+/// for name in vec!["foo", "bar", "baz"] {
+///     quote_in! { tokens =>
+///         fn #name() -> u32 {
+///             #{*tokens => tokens.append("42");}
 ///         }
 ///     }
 /// }

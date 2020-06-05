@@ -190,7 +190,7 @@ pub mod prelude;
 mod register_tokens;
 mod tokens;
 
-pub use self::ext::Quoted;
+pub use self::ext::{Quoted, QuotedExt};
 pub use self::format_tokens::FormatTokens;
 pub use self::formatter::{Formatter, FormatterConfig, VecWriter};
 pub use self::item::Item;

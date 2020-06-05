@@ -1,14 +1,14 @@
 use proc_macro2::{Span, TokenStream};
-use syn::{Ident, LitStr};
+use syn::{Expr, LitStr};
 
 pub(crate) struct ItemBuffer<'a> {
-    receiver: &'a Ident,
+    receiver: &'a Expr,
     buffer: String,
 }
 
 impl<'a> ItemBuffer<'a> {
     /// Construct a new line buffer.
-    pub(crate) fn new(receiver: &'a Ident) -> Self {
+    pub(crate) fn new(receiver: &'a Expr) -> Self {
         Self {
             receiver,
             buffer: String::new(),

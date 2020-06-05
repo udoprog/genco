@@ -227,8 +227,8 @@ impl JavaScript {
             });
 
             output.push();
-            quote_in! { &mut *output =>
-                import #{tokens => {
+            quote_in! { output =>
+                import #{ *tokens => {
                     if let Some(default) = module.default_import {
                         tokens.append(ItemStr::from(default));
                         tokens.append(",");
