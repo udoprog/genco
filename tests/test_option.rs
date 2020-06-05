@@ -3,9 +3,9 @@ use genco::prelude::*;
 #[test]
 fn test_option() {
     let test1 = Some(quote!(println!("{}", #("one".quoted()))));
-    let test2 = None::<Tokens<Rust>>;
+    let test2 = None::<rust::Tokens>;
 
-    let tokens: Tokens<Rust> = quote! {
+    let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
             #test1
             #test2
@@ -15,7 +15,13 @@ fn test_option() {
     };
 
     assert_eq!(
-        "fn test() -> u32 {\n    println!(\"{}\", \"one\")\n\n    42\n}\n",
-        tokens.to_file_string().unwrap()
+        vec![
+            "fn test() -> u32 {",
+            "    println!(\"{}\", \"one\")",
+            "",
+            "    42",
+            "}"
+        ],
+        tokens.to_file_vec().unwrap()
     );
 }

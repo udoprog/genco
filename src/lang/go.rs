@@ -1,4 +1,42 @@
 //! Specialization for Go code generation.
+//!
+//! # Examples
+//!
+//! Basic example:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: js::Tokens = quote! {
+//!     function foo(v) {
+//!         return v + ", World";
+//!     }
+//!
+//!     foo("Hello");
+//! };
+//!
+//! assert_eq!(
+//!     vec![
+//!         "function foo(v) {",
+//!         "    return v + \", World\";",
+//!         "}",
+//!         "",
+//!         "foo(\"Hello\");",
+//!     ],
+//!     toks.to_file_vec().unwrap()
+//! );
+//! ```
+//!
+//! String quoting in JavaScript:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: go::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
 use crate as genco;
 use crate::{quote_in, Ext as _, Formatter, ItemStr, Lang, LangItem};
@@ -237,6 +275,34 @@ impl Lang for Go {
 }
 
 /// Setup an imported element.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let ty = go::imported("foo", "Debug");
+///
+/// let toks = quote! {
+///     #ty
+/// };
+///
+/// assert_eq!(
+///     vec![
+///        "package foo",
+///        "",
+///        "import \"foo\"",
+///        "",
+///        "foo.Debug",
+///     ],
+///     toks.to_file_vec_with(
+///         go::Config::default().with_package("foo"),
+///         FormatterConfig::from_lang::<Go>()
+///     )
+///     .unwrap()
+/// );
+/// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
     M: Into<ItemStr>,
@@ -249,6 +315,16 @@ where
 }
 
 /// Setup a local element.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(go::local("MyType")));
+/// assert_eq!(vec!["MyType"], toks.to_file_vec().unwrap());
+/// ```
 pub fn local<N>(name: N) -> Type
 where
     N: Into<ItemStr>,
@@ -260,6 +336,34 @@ where
 }
 
 /// Setup a map.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let ty = go::map(go::imported("foo", "Debug"), go::INTERFACE);
+///
+/// let toks = quote! {
+///     #ty
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "package foo",
+///         "",
+///         "import \"foo\"",
+///         "",
+///         "map[foo.Debug]interface{}",
+///     ],
+///     toks.to_file_vec_with(
+///         go::Config::default().with_package("foo"),
+///         FormatterConfig::from_lang::<Go>()
+///     )
+///     .unwrap()
+/// );
+/// ```
 pub fn map<K, V>(key: K, value: V) -> Map
 where
     K: Into<TypeBox>,
@@ -272,88 +376,37 @@ where
 }
 
 /// Setup an array.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let import = go::array(go::imported("foo", "Debug"));
+///
+/// let toks = quote!(#import);
+///
+/// assert_eq!(
+///     vec![
+///         "package foo",
+///         "",
+///         "import \"foo\"",
+///         "",
+///         "[]foo.Debug",
+///     ],
+///     toks.to_file_vec_with(
+///         go::Config::default().with_package("foo"),
+///         FormatterConfig::from_lang::<Go>()
+///     )
+///     .unwrap()
+/// );
+/// ```
 pub fn array<I>(inner: I) -> Array
 where
     I: Into<TypeBox>,
 {
     Array {
         inner: inner.into(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{array, imported, map, Config, Go, Tokens, INTERFACE};
-    use crate as genco;
-    use crate::{quote, Ext as _, FormatterConfig};
-
-    #[test]
-    fn test_string() {
-        let mut toks = Tokens::new();
-        toks.append("hello \n world".quoted());
-        let res = toks.to_string_with(
-            Config::default().with_package("foo"),
-            FormatterConfig::from_lang::<Go>(),
-        );
-
-        assert_eq!(Ok("\"hello \\n world\""), res.as_ref().map(|s| s.as_str()));
-    }
-
-    #[test]
-    fn test_imported() {
-        let dbg = imported("foo", "Debug");
-        let mut toks = Tokens::new();
-        toks.push(quote!(#dbg));
-
-        assert_eq!(
-            vec!["package foo", "", "import \"foo\"", "", "foo.Debug", ""],
-            toks.to_file_vec_with(
-                Config::default().with_package("foo"),
-                FormatterConfig::from_lang::<Go>()
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_map() {
-        let keyed = map(imported("foo", "Debug"), INTERFACE);
-
-        let mut toks = Tokens::new();
-        toks.push(quote!(#keyed));
-
-        assert_eq!(
-            vec![
-                "package foo",
-                "",
-                "import \"foo\"",
-                "",
-                "map[foo.Debug]interface{}",
-                ""
-            ],
-            toks.to_file_vec_with(
-                Config::default().with_package("foo"),
-                FormatterConfig::from_lang::<Go>()
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_array() {
-        let keyed = array(imported("foo", "Debug"));
-
-        let mut toks = Tokens::new();
-        toks.push(quote!(#keyed));
-
-        assert_eq!(
-            Ok("package foo\n\nimport \"foo\"\n\n[]foo.Debug\n"),
-            toks.to_file_string_with(
-                Config::default().with_package("foo"),
-                FormatterConfig::from_lang::<Go>()
-            )
-            .as_ref()
-            .map(|s| s.as_str())
-        );
     }
 }

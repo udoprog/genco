@@ -5,6 +5,20 @@ use crate::{FormatTokens, Java};
 use std::collections::BTreeSet;
 
 /// A Java modifier.
+///
+/// A vector of modifiers have a custom implementation, allowing them to be
+/// formatted with a spacing between them in the language-recommended order.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use java::Modifier::*;
+///
+/// let toks: java::Tokens = quote!(#(vec![Public, Final, Static]));
+///
+/// assert_eq!("public static final", toks.to_string().unwrap());
+/// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Modifier {
     /// default
@@ -61,22 +75,5 @@ impl FormatTokens<Java> for Vec<Modifier> {
             tokens.spacing();
             modifier.format_tokens(tokens);
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Modifier;
-    use crate as genco;
-    use crate::{quote, Java, Tokens};
-
-    #[test]
-    fn test_vec() {
-        use self::Modifier::*;
-        let el: Tokens<Java> = quote!(#(vec![Public, Final, Static]));
-        assert_eq!(
-            Ok("public static final"),
-            el.to_string().as_ref().map(|s| s.as_str())
-        );
     }
 }

@@ -1,4 +1,16 @@
 //! Specialization for Csharp code generation.
+//!
+//! # Examples
+//!
+//! String quoting in Dart:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: csharp::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
 mod modifier;
 mod utils;
@@ -466,10 +478,8 @@ impl LangItem<Csharp> for Void {
 pub struct Csharp(());
 
 impl Csharp {
-    fn imports(tokens: &Tokens, config: &mut Config) -> Option<Tokens> {
+    fn imports(tokens: &Tokens, output: &mut Tokens, config: &mut Config) {
         let mut modules = BTreeSet::new();
-
-        let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
 
         for custom in tokens.walk_custom() {
             if let Some(import) = custom.as_import() {
@@ -478,14 +488,13 @@ impl Csharp {
         }
 
         if modules.is_empty() {
-            return None;
+            return;
         }
 
-        let mut out = Tokens::new();
         let mut imported = HashSet::new();
 
         for (namespace, name) in modules {
-            if Some(&*namespace) == file_namespace.as_deref() {
+            if Some(&*namespace) == config.namespace.as_deref() {
                 continue;
             }
 
@@ -498,8 +507,8 @@ impl Csharp {
             }
 
             if !imported.contains(&*namespace) {
-                quote_in!(out => using #(&namespace););
-                out.push();
+                quote_in!(output => using #(&namespace););
+                output.push();
                 imported.insert(namespace.to_string());
             }
 
@@ -508,7 +517,7 @@ impl Csharp {
                 .insert(name.to_string(), namespace.to_string());
         }
 
-        Some(out)
+        output.push_line();
     }
 }
 
@@ -548,12 +557,9 @@ impl Lang for Csharp {
     ) -> fmt::Result {
         let mut toks: Tokens = Tokens::new();
 
-        if let Some(imports) = Self::imports(&tokens, config) {
-            toks.append(imports);
-            toks.push();
-        }
+        Self::imports(&tokens, &mut toks, config);
 
-        if let Some(ref namespace) = config.namespace {
+        if let Some(namespace) = &config.namespace {
             quote_in! { toks =>
                 namespace #namespace {
                     #tokens
@@ -569,7 +575,38 @@ impl Lang for Csharp {
     }
 }
 
-/// Setup an imported element.
+/// Construct an imported type.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let a = csharp::using("Foo.Bar", "A");
+/// let b = csharp::using("Foo.Bar", "B");
+/// let ob = csharp::using("Foo.Baz", "B");
+/// let ob_a = ob.clone().with_arguments(a.clone());
+///
+/// let toks: Tokens<Csharp> = quote! {
+///     #a
+///     #b
+///     #ob
+///     #ob_a
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "using Foo.Bar;",
+///         "",
+///         "A",
+///         "B",
+///         "Foo.Baz.B",
+///         "Foo.Baz.B<A>",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn using<P: Into<ItemStr>, N: Into<ItemStr>>(namespace: P, name: N) -> Type {
     Type {
         namespace: Some(namespace.into()),
@@ -594,6 +631,28 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Type {
 }
 
 /// Setup an array type.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let ty = csharp::array(csharp::using("Foo.Bar", "A"));
+///
+/// let toks: Tokens<Csharp> = quote! {
+///     #ty
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "using Foo.Bar;",
+///         "",
+///         "A[]",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn array<I: Into<TypeBox>>(value: I) -> Array {
     Array {
         inner: value.into(),
@@ -604,35 +663,5 @@ pub fn array<I: Into<TypeBox>>(value: I) -> Array {
 pub fn optional<I: Into<TypeBox>>(value: I) -> Optional {
     Optional {
         inner: value.into(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate as genco;
-    use crate::{quote, Csharp, Ext as _, Tokens};
-
-    #[test]
-    fn test_string() {
-        let mut toks: Tokens<Csharp> = Tokens::new();
-        toks.append("hello \n world".quoted());
-        assert_eq!("\"hello \\n world\"", toks.to_string().unwrap().as_str());
-    }
-
-    #[ignore]
-    #[test]
-    fn test_using() {
-        let a = using("Foo.Bar", "A");
-        let b = using("Foo.Bar", "B");
-        let ob = using("Foo.Baz", "B");
-        let ob_a = ob.clone().with_arguments(a.clone());
-
-        let toks: Tokens<Csharp> = quote!(#a #b #ob #ob_a);
-
-        assert_eq!(
-            vec!["using Foo.Bar;", "", "A B Foo.Baz.B Foo.Baz.B<A>", ""],
-            toks.to_file_vec().unwrap()
-        );
     }
 }

@@ -3,7 +3,21 @@
 use crate::{Dart, FormatTokens, Tokens};
 use std::collections::BTreeSet;
 
-/// A Java modifier.
+/// A Dart modifier.
+///
+/// A vector of modifiers have a custom implementation, allowing them to be
+/// formatted with a spacing between them in the language-recommended order.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use dart::Modifier::*;
+///
+/// let toks: dart::Tokens = quote!(#(vec![Final, Async]));
+///
+/// assert_eq!("async final", toks.to_string().unwrap());
+/// ```
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Hash)]
 pub enum Modifier {
     /// async
@@ -36,22 +50,5 @@ impl FormatTokens<Dart> for Vec<Modifier> {
             tokens.spacing();
             tokens.append(modifier.name());
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Modifier;
-    use crate as genco;
-    use crate::dart::Tokens;
-    use crate::quote;
-
-    #[test]
-    fn test_vec() {
-        use self::Modifier::*;
-        let el: Tokens = quote!(#(vec![Async, Final]));
-        let s = el.to_string();
-        let out = s.as_ref().map(|s| s.as_str());
-        assert_eq!(Ok("async final"), out);
     }
 }

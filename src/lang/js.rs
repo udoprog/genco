@@ -1,4 +1,42 @@
 //! Specialization for JavaScript code generation.
+//!
+//! # Examples
+//!
+//! Basic example:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: js::Tokens = quote! {
+//!     function foo(v) {
+//!         return v + ", World";
+//!     }
+//!
+//!     foo("Hello");
+//! };
+//!
+//! assert_eq!(
+//!     vec![
+//!         "function foo(v) {",
+//!         "    return v + \", World\";",
+//!         "}",
+//!         "",
+//!         "foo(\"Hello\");",
+//!     ],
+//!     toks.to_file_vec().unwrap()
+//! );
+//! ```
+//!
+//! String quoting in JavaScript:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: js::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
 use crate::{Ext as _, Formatter, ItemStr, Lang, LangItem};
 use std::collections::{BTreeMap, BTreeSet};
@@ -178,6 +216,29 @@ impl Lang for JavaScript {
 }
 
 /// Setup an imported element.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote! {
+///     #(js::imported("collections", "vec"))
+///     #(js::imported("collections", "vec").alias("list"))
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "import {vec} from \"collections.js\";",
+///         "import * as list from \"collections.js\";",
+///         "",
+///         "vec",
+///         "list.vec",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
     M: Into<ItemStr>,
@@ -191,6 +252,16 @@ where
 }
 
 /// Setup a local element.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(js::local("MyType")));
+/// assert_eq!(vec!["MyType"], toks.to_file_vec().unwrap());
+/// ```
 pub fn local<N>(name: N) -> Type
 where
     N: Into<ItemStr>,
@@ -199,66 +270,5 @@ where
         module: None,
         name: name.into(),
         alias: None,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{imported, local, Tokens};
-    use crate as genco;
-    use crate::{quote, Ext as _};
-
-    #[test]
-    fn test_function() {
-        let file: Tokens = quote! {
-            function foo(v) {
-                return v + ", World";
-            }
-
-            foo("Hello");
-        };
-
-        assert_eq!(
-            vec![
-                "function foo(v) {",
-                "    return v + \", World\";",
-                "}",
-                "",
-                "foo(\"Hello\");",
-                ""
-            ],
-            file.to_file_vec().unwrap()
-        );
-    }
-
-    #[test]
-    fn test_string() {
-        let mut toks = Tokens::new();
-        toks.append("hello \n world".quoted());
-        assert_eq!(Ok(String::from("\"hello \\n world\"")), toks.to_string());
-    }
-
-    #[test]
-    fn test_imported() {
-        let mut toks = Tokens::new();
-        toks.push(toks!(imported("collections", "vec").alias("list")));
-        toks.push(toks!(imported("collections", "vec")));
-
-        assert_eq!(
-            Ok("import {vec} from \"collections.js\";\nimport * as list from \"collections.js\";\n\nlist.vec\nvec\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
-    }
-
-    #[test]
-    fn test_local() {
-        let dbg = local("vec");
-        let mut toks = Tokens::new();
-        toks.push(toks!(&dbg));
-
-        assert_eq!(
-            Ok("vec\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
     }
 }

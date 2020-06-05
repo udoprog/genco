@@ -1,4 +1,16 @@
 //! Specialization for Python code generation.
+//!
+//! # Examples
+//!
+//! String quoting in Python:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: python::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
@@ -171,6 +183,33 @@ impl Lang for Python {
 }
 
 /// Setup an imported element.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote! {
+///     #(python::imported("collections").name("named_tuple"))
+///     #(python::imported("collections"))
+///     #(python::imported("collections").alias("c").name("named_tuple"))
+///     #(python::imported("collections").alias("c"))
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "import collections",
+///         "import collections as c",
+///         "",
+///         "collections.named_tuple",
+///         "collections",
+///         "c.named_tuple",
+///         "c",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn imported<M>(module: M) -> Type
 where
     M: Into<ItemStr>,
@@ -183,6 +222,18 @@ where
 }
 
 /// Setup a local element.
+///
+/// Local elements do not generate an import statement when added to a file.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(python::local("dict")));
+/// assert_eq!(vec!["dict"], toks.to_file_vec().unwrap());
+/// ```
 pub fn local<N>(name: N) -> Type
 where
     N: Into<ItemStr>,
@@ -191,46 +242,5 @@ where
         module: None,
         alias: None,
         name: Some(name.into()),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{imported, local, Tokens};
-    use crate as genco;
-    use crate::{quote, Ext as _};
-
-    #[test]
-    fn test_string() {
-        let mut toks = Tokens::new();
-        toks.append("hello \n world".quoted());
-        assert_eq!("\"hello \\n world\"", toks.to_string().unwrap().as_str());
-    }
-
-    #[test]
-    fn test_imported() {
-        let mut toks = Tokens::new();
-        toks.push(quote![#(imported("collections").name("named_tuple"))]);
-        toks.push(quote![#(imported("collections"))]);
-        toks.push(quote![#(imported("collections")
-            .alias("c")
-            .name("named_tuple"))]);
-        toks.push(quote![#(imported("collections").alias("c"))]);
-
-        assert_eq!(
-            Ok("import collections\nimport collections as c\n\ncollections.named_tuple\ncollections\nc.named_tuple\nc\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
-    }
-
-    #[test]
-    fn test_local() {
-        let mut toks = Tokens::new();
-        toks.push(quote![#(local("dict"))]);
-
-        assert_eq!(
-            Ok("dict\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
     }
 }

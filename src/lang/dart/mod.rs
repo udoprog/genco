@@ -1,10 +1,22 @@
 //! Specialization for Dart code generation.
+//!
+//! # Examples
+//!
+//! String quoting in Dart:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: dart::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
+mod doc_comment;
 mod modifier;
-mod utils;
 
+pub use self::doc_comment::DocComment;
 pub use self::modifier::Modifier;
-pub use self::utils::DocComment;
 
 use crate as genco;
 use crate::{quote_in, Ext as _, Formatter, ItemStr, Lang, LangItem};
@@ -46,6 +58,17 @@ pub const BOOL: BuiltIn = BuiltIn { name: "bool" };
 pub struct Config {}
 
 /// built-in types.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// assert_eq!("int", quote!(#(dart::INT)).to_string().unwrap());
+/// assert_eq!("double", quote!(#(dart::DOUBLE)).to_string().unwrap());
+/// assert_eq!("bool", quote!(#(dart::BOOL)).to_string().unwrap());
+/// ```
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct BuiltIn {
     /// The built-in type.
@@ -143,12 +166,24 @@ impl Type {
     /// # Examples
     ///
     /// ```rust
+    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
-    /// use genco::dart::*;
     ///
-    /// let ty = imported("dart:collection", "Map").with_arguments((INT, VOID));
+    /// let import = dart::imported("dart:collection", "Map")
+    ///     .with_arguments((dart::INT, dart::VOID));
     ///
-    /// assert_eq!("import \"dart:collection\";\n\nMap<int, void>\n", quote!(#ty).to_file_string().unwrap());
+    /// let toks = quote! {
+    ///     #import
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import \"dart:collection\";",
+    ///         "",
+    ///         "Map<int, void>",
+    ///     ],
+    ///     toks.to_file_vec().unwrap()
+    /// );
     /// ```
     pub fn with_arguments(self, args: impl TypeArgs) -> Type {
         Self {
@@ -220,7 +255,7 @@ pub struct Dart(());
 
 impl Dart {
     /// Resolve all imports.
-    fn imports(input: &Tokens, _: &mut Config) -> Tokens {
+    fn imports(input: &Tokens, output: &mut Tokens, _: &mut Config) {
         use std::collections::BTreeSet;
 
         let mut modules = BTreeSet::new();
@@ -236,20 +271,20 @@ impl Dart {
         }
 
         if modules.is_empty() {
-            return Tokens::new();
+            return;
         }
-
-        let mut o = Tokens::new();
 
         for (name, alias) in modules {
             if let Some(alias) = alias {
-                quote_in!(o => import #(name.quoted()) as #alias;);
+                quote_in!(output => import #(name.quoted()) as #alias;);
             } else {
-                quote_in!(o => import #(name.quoted()););
+                quote_in!(output => import #(name.quoted()););
             }
+
+            output.push();
         }
 
-        return o;
+        output.push_line();
     }
 }
 
@@ -286,20 +321,45 @@ impl Lang for Dart {
         level: usize,
     ) -> fmt::Result {
         let mut toks: Tokens = Tokens::new();
-
-        let imports = Self::imports(&tokens, config);
-
-        if !imports.is_empty() {
-            toks.append(imports);
-            toks.push();
-        }
-
-        toks.append(tokens);
+        Self::imports(&tokens, &mut toks, config);
+        toks.extend(tokens);
         toks.format(out, config, level)
     }
 }
 
 /// Setup an imported element.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let a = dart::imported("package:http/http.dart", "A");
+/// let b = dart::imported("package:http/http.dart", "B");
+/// let c = dart::imported("package:http/http.dart", "C").alias("h2");
+/// let d = dart::imported("../http.dart", "D");
+///
+/// let toks = quote! {
+///     #a
+///     #b
+///     #c
+///     #d
+/// };
+///
+/// let expected = vec![
+///     "import \"../http.dart\";",
+///     "import \"package:http/http.dart\";",
+///     "import \"package:http/http.dart\" as h2;",
+///     "",
+///     "A",
+///     "B",
+///     "h2.C",
+///     "D",
+/// ];
+///
+/// assert_eq!(expected, toks.to_file_vec().unwrap());
+/// ```
 pub fn imported<P: Into<ItemStr>, N: Into<ItemStr>>(path: P, name: N) -> Type {
     Type {
         path: path.into(),
@@ -314,45 +374,34 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Local {
     Local { name: name.into() }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate as genco;
-    use crate::{quote, Ext as _};
-
-    #[test]
-    fn test_builtin() {
-        assert_eq!("int", quote!(#INT).to_string().unwrap());
-        assert_eq!("double", quote!(#DOUBLE).to_string().unwrap());
-        assert_eq!("bool", quote!(#BOOL).to_string().unwrap());
-        // assert!(!VOID.is_built_in());
-    }
-
-    #[test]
-    fn test_string() {
-        let mut toks = Tokens::new();
-        toks.append("hello \n world".quoted());
-        assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
-    }
-
-    #[test]
-    fn test_imported() {
-        let a = imported("package:http/http.dart", "A");
-        let b = imported("package:http/http.dart", "B");
-        let c = imported("package:http/http.dart", "C").alias("h2");
-        let d = imported("../http.dart", "D");
-
-        let toks = quote!(#a #b #c #d);
-
-        let expected = vec![
-            "import \"../http.dart\";",
-            "import \"package:http/http.dart\";",
-            "import \"package:http/http.dart\" as h2;",
-            "",
-            "A B h2.C D",
-            "",
-        ];
-
-        assert_eq!(expected, toks.to_file_vec().unwrap());
-    }
+/// Format a doc comment where each line is preceeded by `///`.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// use std::iter;
+///
+/// let toks = quote! {
+///     #(dart::doc_comment(vec!["Foo"]))
+///     #(dart::doc_comment(iter::empty::<&str>()))
+///     #(dart::doc_comment(vec!["Bar"]))
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "/// Foo",
+///         "/// Bar",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
+pub fn doc_comment<T>(comment: T) -> DocComment<T>
+where
+    T: IntoIterator,
+    T::Item: Into<ItemStr>,
+{
+    DocComment(comment)
 }

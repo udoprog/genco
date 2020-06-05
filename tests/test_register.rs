@@ -19,8 +19,7 @@ fn test_register() {
             "",
             "fn test() -> u32 {",
             "    42",
-            "}",
-            ""
+            "}"
         ],
         tokens.to_file_vec().unwrap()
     );

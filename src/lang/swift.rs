@@ -1,4 +1,16 @@
 //! Specialization for Swift code generation.
+//!
+//! # Examples
+//!
+//! String quoting in Swift:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: swift::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
@@ -189,6 +201,24 @@ impl Lang for Swift {
 }
 
 /// Setup an imported element.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(swift::imported("Foo", "Debug")));
+///
+/// assert_eq!(
+///     vec![
+///         "import Foo",
+///         "",
+///         "Debug",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
     M: Into<ItemStr>,
@@ -212,6 +242,24 @@ where
 }
 
 /// Setup a map.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(swift::map(swift::local("String"), swift::imported("Foo", "Debug"))));
+///
+/// assert_eq!(
+///     vec![
+///         "import Foo",
+///         "",
+///         "[String: Debug]",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn map<K, V>(key: K, value: V) -> Map
 where
     K: Into<TypeBox>,
@@ -224,57 +272,29 @@ where
 }
 
 /// Setup an array.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(swift::array(swift::imported("Foo", "Debug"))));
+///
+/// assert_eq!(
+///     vec![
+///         "import Foo",
+///         "",
+///         "[Debug]"
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn array<'a, I>(inner: I) -> Array
 where
     I: Into<TypeBox>,
 {
     Array {
         inner: inner.into(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{array, imported, local, map, Tokens};
-    use crate as genco;
-    use crate::{quote, Ext as _};
-
-    #[test]
-    fn test_string() {
-        let toks: Tokens = quote!(#("hello \n world".quoted()));
-        assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
-    }
-
-    #[test]
-    fn test_imported() {
-        let dbg = imported("Foo", "Debug");
-        let mut toks: Tokens = quote!(#dbg);
-
-        assert_eq!(
-            vec!["import Foo", "", "Debug", ""],
-            toks.to_file_vec().unwrap()
-        );
-    }
-
-    #[test]
-    fn test_array() {
-        let dbg = array(imported("Foo", "Debug"));
-        let mut toks: Tokens = quote!(#dbg);
-
-        assert_eq!(
-            vec!["import Foo", "", "[Debug]", ""],
-            toks.to_file_vec().unwrap()
-        );
-    }
-
-    #[test]
-    fn test_map() {
-        let dbg = map(local("String"), imported("Foo", "Debug"));
-        let mut toks: Tokens = quote!(#dbg);
-
-        assert_eq!(
-            vec!["import Foo", "", "[String: Debug]", ""],
-            toks.to_file_vec().unwrap()
-        );
     }
 }

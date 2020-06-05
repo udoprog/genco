@@ -7,7 +7,7 @@
 //!
 //! For example:
 //!
-//! ```
+//! ```bash
 //! cargo +beta run --example rust
 //! ```
 //!
@@ -198,19 +198,3 @@ pub use self::item_str::ItemStr;
 pub use self::lang::*;
 pub use self::register_tokens::RegisterTokens;
 pub use self::tokens::Tokens;
-
-#[cfg(test)]
-mod tests {
-    use crate::{Rust, Tokens};
-
-    #[test]
-    fn test_nested() {
-        let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push("fn foo() -> u32 {");
-        toks.nested("return 42;");
-        toks.push("}");
-
-        let output = toks.to_string().unwrap();
-        assert_eq!("fn foo() -> u32 {\n    return 42;\n}", output.as_str());
-    }
-}

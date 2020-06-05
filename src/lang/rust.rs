@@ -1,4 +1,36 @@
 //! Specialization for Rust code generation.
+//!
+//! # Examples
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: rust::Tokens = quote! {
+//!     fn foo() -> u32 {
+//!         42
+//!     }
+//! };
+//!
+//! assert_eq!(
+//!     vec![
+//!         "fn foo() -> u32 {",
+//!         "    42",
+//!         "}",
+//!     ],
+//!     toks.to_file_vec().unwrap()
+//! )
+//! ```
+//!
+//! String quoting in Rust:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: rust::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
@@ -109,6 +141,26 @@ impl Name {
     }
 
     /// Add generic arguments to the given type.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// #[feature(proc_macro_hygiene)]
+    /// use genco::prelude::*;
+    ///
+    /// let dbg = rust::imported("std::collections", "HashMap")
+    ///     .with_arguments((rust::local("T"), rust::local("U")));
+    /// let toks = quote!(#dbg);
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///        "use std::collections;",
+    ///        "",
+    ///        "collections::HashMap<T, U>",
+    ///     ],
+    ///     toks.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn with_arguments(self, args: impl Args) -> Name {
         Name {
             arguments: args.into_args(),
@@ -175,6 +227,24 @@ impl Type {
     }
 
     /// Alias the given type.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// #[feature(proc_macro_hygiene)]
+    /// use genco::prelude::*;
+    ///
+    /// let toks = quote!(#(rust::imported("std::fmt", "Debug")));
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "use std::fmt;",
+    ///         "",
+    ///         "fmt::Debug",
+    ///     ],
+    ///     toks.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn alias<A: Into<ItemStr>>(self, alias: A) -> Type {
         Type {
             alias: Some(alias.into()),
@@ -315,6 +385,24 @@ impl Lang for Rust {
 }
 
 /// Setup an imported element.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(rust::imported("std::fmt", "Debug")));
+///
+/// assert_eq!(
+///     vec![
+///         "use std::fmt;",
+///         "",
+///         "fmt::Debug",
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
     M: Into<ItemStr>,
@@ -329,6 +417,18 @@ where
 }
 
 /// Setup a local element.
+///
+/// Local elements do not generate an import statement when added to a file.
+///
+/// # Examples
+///
+/// ```rust
+/// #![feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let toks = quote!(#(rust::local("MyType")));
+/// assert_eq!(vec!["MyType"], toks.to_file_vec().unwrap());
+/// ```
 pub fn local<N>(name: N) -> Type
 where
     N: Into<ItemStr>,
@@ -338,57 +438,5 @@ where
         alias: None,
         name: Name::from(name.into()),
         qualified: false,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{imported, local};
-    use crate as genco;
-    use crate::{quote, Ext as _, Rust, Tokens};
-
-    #[test]
-    fn test_string() {
-        let mut toks: Tokens<Rust> = Tokens::new();
-        toks.append("hello \n world".quoted());
-        let res = toks.to_string();
-
-        assert_eq!(Ok("\"hello \\n world\""), res.as_ref().map(|s| s.as_str()));
-    }
-
-    #[test]
-    fn test_imported() {
-        let dbg = imported("std::fmt", "Debug");
-        let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push(quote!(#dbg));
-
-        assert_eq!(
-            Ok("use std::fmt;\n\nfmt::Debug\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
-    }
-
-    #[test]
-    fn test_imported_alias() {
-        let dbg = imported("std::fmt", "Debug");
-        let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push(quote!(#dbg));
-
-        assert_eq!(
-            Ok("use std::fmt;\n\nfmt::Debug\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
-    }
-
-    #[test]
-    fn test_imported_with_arguments() {
-        let dbg = imported("std::fmt", "Debug").with_arguments((local("T"), local("U")));
-        let mut toks: Tokens<Rust> = Tokens::new();
-        toks.push(quote!(#dbg));
-
-        assert_eq!(
-            Ok("use std::fmt;\n\nfmt::Debug<T, U>\n"),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
     }
 }

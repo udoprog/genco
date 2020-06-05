@@ -1,4 +1,16 @@
 //! Specialization for Java code generation.
+//!
+//! # Examples
+//!
+//! String quoting in Java:
+//!
+//! ```rust
+//! #[feature(proc_macro_hygiene)]
+//! use genco::prelude::*;
+//!
+//! let toks: java::Tokens = quote!(#("hello \n world".quoted()));
+//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! ```
 
 mod modifier;
 mod utils;
@@ -503,6 +515,41 @@ impl Lang for Java {
 }
 
 /// Setup an imported element.
+///
+/// # Examples
+///
+/// ```rust
+/// #[feature(proc_macro_hygiene)]
+/// use genco::prelude::*;
+///
+/// let integer = java::imported("java.lang", "Integer");
+/// let a = java::imported("java.io", "A");
+/// let b = java::imported("java.io", "B");
+/// let ob = java::imported("java.util", "B");
+/// let ob_a = ob.clone().with_arguments(a.clone());
+///
+/// let toks = quote! {
+///     #integer
+///     #a
+///     #b
+///     #ob
+///     #ob_a
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "import java.io.A;",
+///         "import java.io.B;",
+///         "",
+///         "Integer",
+///         "A",
+///         "B",
+///         "java.util.B",
+///         "java.util.B<A>"
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
+/// ```
 pub fn imported<P: Into<ItemStr>, N: Into<ItemStr>>(package: P, name: N) -> Type {
     Type {
         package: package.into(),
@@ -522,35 +569,5 @@ pub fn optional<I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> Optio
     Optional {
         value: value.into(),
         field: field.into(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate as genco;
-    use crate::{quote, Ext as _, Java, Tokens};
-
-    #[test]
-    fn test_string() {
-        let mut toks: Tokens<Java> = Tokens::new();
-        toks.append("hello \n world".quoted());
-        assert_eq!("\"hello \\n world\"", toks.to_string().unwrap().as_str());
-    }
-
-    #[test]
-    fn test_imported() {
-        let integer = imported("java.lang", "Integer");
-        let a = imported("java.io", "A");
-        let b = imported("java.io", "B");
-        let ob = imported("java.util", "B");
-        let ob_a = ob.clone().with_arguments(a.clone());
-
-        let toks = quote!(#integer #a #b #ob #ob_a);
-
-        assert_eq!(
-            Ok("import java.io.A;\nimport java.io.B;\n\nInteger A B java.util.B java.util.B<A>\n",),
-            toks.to_file_string().as_ref().map(|s| s.as_str())
-        );
     }
 }

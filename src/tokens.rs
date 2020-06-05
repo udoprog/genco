@@ -8,11 +8,9 @@
 //! toks.append("foo");
 //! ```
 
-use crate as genco;
 use crate::formatter::{FmtWriter, IoWriter};
 use crate::{
-    quote, quote_in, FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem,
-    RegisterTokens, VecWriter,
+    FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens, VecWriter,
 };
 use std::collections::LinkedList;
 use std::fmt;
@@ -23,7 +21,7 @@ use std::vec;
 
 /// A set of tokens.
 #[derive(Default)]
-pub struct Tokens<L>
+pub struct Tokens<L = ()>
 where
     L: Lang,
 {
@@ -206,7 +204,6 @@ impl<L: Lang> Tokens<L> {
         {
             let mut formatter = Formatter::new(&mut w, format_config);
             L::write_file(self, &mut formatter, &mut config, 0usize)?;
-            formatter.new_line_unless_empty()?;
         }
 
         Ok(w.into_writer())
@@ -241,7 +238,6 @@ impl<L: Lang> Tokens<L> {
         {
             let mut formatter = Formatter::new(&mut w, format_config);
             L::write_file(self, &mut formatter, &mut config, 0usize)?;
-            formatter.new_line_unless_empty()?;
         }
 
         Ok(w.into_vec())

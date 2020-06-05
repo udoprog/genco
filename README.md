@@ -10,7 +10,7 @@ stabilizations. Until then, you must build with the `beta` branch.
 
 For example:
 
-```
+```bash
 cargo +beta run --example rust
 ```
 

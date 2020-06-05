@@ -65,7 +65,7 @@ impl QuoteParser<'_> {
                     debug_assert!(next.start.line > cursor.start.line);
 
                     let line_spaced = if next.start.line - cursor.end.line > 1 {
-                        tokens.extend(quote::quote!(#receiver.line_spacing();));
+                        tokens.extend(quote::quote!(#receiver.push_line();));
                         true
                     } else {
                         false
@@ -76,7 +76,7 @@ impl QuoteParser<'_> {
                     } else if last_column > next.start.column {
                         tokens.extend(quote::quote!(#receiver.unindent();));
                     } else if !line_spaced {
-                        tokens.extend(quote::quote!(#receiver.push_line();));
+                        tokens.extend(quote::quote!(#receiver.push();));
                     }
 
                     last_column = next.start.column;

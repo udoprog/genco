@@ -4,9 +4,42 @@
 ///
 /// ## Examples
 ///
+/// ```rust
+/// # #![allow(deprecated)]
+/// use genco::prelude::*;
+/// use genco::toks;
+///
+/// let n1: Tokens = toks!("var v = ", "bar".quoted(), ";");
+/// ```
+///
 /// ```rust,ignore
 /// # #![allow(deprecated)]
-/// let n1: genco::Tokens<()> = toks!("var v = ", "bar".quoted(), ";");
+/// use genco::prelude::*;
+/// use genco::{push, nested};
+///
+/// let mut t = js::Tokens::new();
+///
+/// push!(t, |t| {
+///     push!(t, "function bar(a, b) {");
+///     nested!(t, |t| {
+///         push!(t, "var v = a + b;");
+///         push!(t, "return v;");
+///     });
+///     push!(t, "}");
+/// });
+///
+/// push!(t, "var foo = bar();");
+///
+/// let expected = vec![
+///     "function bar(a, b) {",
+///     "    var v = a + b;",
+///     "    return v;",
+///     "}",
+///     "var foo = bar();",
+///     "",
+/// ];
+///
+/// assert_eq!(expected, t.to_file_vec().unwrap());
 /// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
@@ -41,17 +74,21 @@ macro_rules! toks {
 /// push!(toks, "foo ", id);
 /// push!(toks, "bar ", id);
 ///
-/// let mut out = Vec::new();
-/// out.push("foo hello");
-/// out.push("bar hello");
-///
-/// assert_eq!(out.join("\n").as_str(), toks.to_string().unwrap().as_str());
+/// assert_eq!(
+///     vec![
+///         "foo hello",
+///         "bar hello",
+///         ""
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
 /// # }
 /// ```
 ///
 /// Pushing as a block:
 ///
 /// ```rust
+/// # #![allow(deprecated)]
 /// # #[macro_use] extern crate genco;
 /// # fn main() {
 /// use genco::{Tokens, Java, ItemStr};
@@ -65,31 +102,36 @@ macro_rules! toks {
 ///   push!(t, "bar ", id);
 /// });
 ///
-/// let mut out = Vec::new();
-/// out.push("foo hello");
-/// out.push("bar hello");
-///
-/// assert_eq!(out.join("\n").as_str(), toks.to_string().unwrap().as_str());
+/// assert_eq!(
+///     vec![
+///         "foo hello",
+///         "bar hello",
+///         ""
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
 /// # }
 /// ```
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! push {
-    ($dest:expr, |$t:ident| $code:block) => {
-        $dest.push({
+    ($dest:expr, |$t:ident| $code:block) => {{
+        $dest.append({
             let mut $t = $crate::Tokens::new();
             $code
             $t
-        })
-    };
+        });
+        $dest.push();
+    }};
 
-    ($dest:expr, $($x:expr),*) => {
-        $dest.push({
+    ($dest:expr, $($x:expr),*) => {{
+        $dest.append({
             let mut _t = $crate::Tokens::new();
             $(_t.append(Clone::clone(&$x));)*
             _t
-        })
-    };
+        });
+        $dest.push();
+    }};
 
     ($dest:expr, $($x:expr,)*) => {push!($dest, $($x),*)};
 }
@@ -113,12 +155,14 @@ macro_rules! push {
 /// nested!(toks, "foo ", id);
 /// nested!(toks, "bar ", id);
 ///
-/// let mut out = Vec::new();
-/// out.push("    foo hello");
-/// out.push("    bar hello");
-/// out.push("");
-///
-/// assert_eq!(out.join("\n").as_str(), toks.to_string().unwrap().as_str());
+/// assert_eq!(
+///     vec![
+///         "    foo hello",
+///         "    bar hello",
+///         ""
+///     ],
+///     toks.to_file_vec().unwrap()
+/// );
 /// # }
 /// ```
 ///
@@ -150,20 +194,24 @@ macro_rules! push {
 #[macro_export]
 #[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! nested {
-    ($dest:expr, |$t:ident| $code:block) => {
-        $dest.nested({
+    ($dest:expr, |$t:ident| $code:block) => {{
+        $dest.indent();
+        $dest.append({
             let mut $t = $crate::Tokens::new();
             $code
             $t
-        })
-    };
+        });
+        $dest.unindent();
+    }};
 
     ($dest:expr, $($x:expr),*) => {
-        $dest.nested({
+        $dest.indent();
+        $dest.append({
             let mut _t = $crate::Tokens::new();
             $(_t.append(Clone::clone(&$x));)*
             _t
-        })
+        });
+        $dest.unindent();
     };
 
     ($dest:expr, $($x:expr,)*) => {nested!($dest, $($x),*)};
@@ -344,42 +392,5 @@ macro_rules! impl_type_basics {
         )*
 
         impl_variadic_type_args!($args, $trait, $type_box);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{Ext as _, JavaScript, Tokens};
-
-    #[test]
-    fn test_quoted() {
-        let n1: Tokens<JavaScript> = toks!("var v = ", "bar".quoted(), ";");
-        assert_eq!("var v = \"bar\";", n1.to_string().unwrap().as_str());
-    }
-
-    #[test]
-    fn test_macros() {
-        let mut t = Tokens::<JavaScript>::new();
-
-        push!(t, |t| {
-            push!(t, "function bar(a, b) {");
-            nested!(t, |t| {
-                push!(t, "var v = a + b;");
-                push!(t, "return v;");
-            });
-            push!(t, "}");
-        });
-        push!(t, "var foo = bar();");
-
-        let expected = vec![
-            "function bar(a, b) {",
-            "    var v = a + b;",
-            "    return v;",
-            "}",
-            "var foo = bar();",
-            "",
-        ];
-
-        assert_eq!(expected, t.to_file_vec().unwrap());
     }
 }
