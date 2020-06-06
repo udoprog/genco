@@ -5,7 +5,6 @@
 //! Basic example:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: js::Tokens = quote! {
@@ -31,7 +30,6 @@
 //! String quoting in JavaScript:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: go::Tokens = quote!(#("hello \n world".quoted()));
@@ -279,7 +277,6 @@ impl Lang for Go {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let ty = go::imported("foo", "Debug");
@@ -319,7 +316,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote!(#(go::local("MyType")));
@@ -340,7 +336,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let ty = go::map(go::imported("foo", "Debug"), go::INTERFACE);
@@ -380,7 +375,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let import = go::array(go::imported("foo", "Debug"));

@@ -1,20 +1,18 @@
-//! ## GenCo
+//! ## genco
 //!
-//! GenCo is an even simpler code generator for Rust, written for use in [reproto].
+//! genco is an even simpler code generator for Rust, written for use in [reproto].
 //!
-//! We depend on (Yet to be released) 1.45 and some of its `proc_macro_hygiene`
-//! stabilizations. Until then, you must build with the `beta` branch.
-//!
-//! For example:
+//! We depend on `proc_macro_hygiene` stabilizations. Until then, you must build
+//! with the `nightly` branch.
 //!
 //! ```bash
-//! cargo +beta run --example rust
+//! cargo +nightly run --example rust
 //! ```
 //!
-//! The workhorse of GenCo is the [quote!] macro. While tokens can be constructed
+//! The workhorse of genco is the [quote!] macro. While tokens can be constructed
 //! manually, [quote!] makes this process much easier.
 //!
-//! GenCo only minimally deals with language-specific syntax, but primarily deals
+//! genco only minimally deals with language-specific syntax, but primarily deals
 //! with solving the following:
 //!
 //! * Generates and groups import statements.
@@ -24,7 +22,7 @@
 //!
 //! ## Examples
 //!
-//! The following are language specific examples for GenCo using the [quote!]
+//! The following are language specific examples for genco using the [quote!]
 //! macro.
 //!
 //! * [Rust Example]
@@ -166,8 +164,6 @@
 //! [quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
 
 #![deny(missing_docs)]
-// Note: Replace internal use of macros `push!`, `nested!` with `quote!`.
-#![feature(proc_macro_hygiene)]
 
 pub use genco_macros::{quote, quote_in};
 

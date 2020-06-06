@@ -1,23 +1,21 @@
-# GenCo
+# genco
 
 [![Build Status](https://github.com/udoprog/genco/workflows/Rust/badge.svg)](https://github.com/udoprog/genco/actions)
 [![crates.io](https://img.shields.io/crates/v/genco.svg?maxAge=2592000)](https://crates.io/crates/genco)
 
-GenCo is an even simpler code generator for Rust, written for use in [reproto].
+genco is an even simpler code generator for Rust, written for use in [reproto].
 
-We depend on (Yet to be released) 1.45 and some of its `proc_macro_hygiene`
-stabilizations. Until then, you must build with the `beta` branch.
-
-For example:
+We depend on `proc_macro_hygiene` stabilizations. Until then, you must build
+with the `nightly` branch.
 
 ```bash
-cargo +beta run --example rust
+cargo +nightly run --example rust
 ```
 
-The workhorse of GenCo is the [quote!] macro. While tokens can be constructed
+The workhorse of genco is the [quote!] macro. While tokens can be constructed
 manually, [quote!] makes this process much easier.
 
-GenCo only minimally deals with language-specific syntax, but primarily deals
+genco only minimally deals with language-specific syntax, but primarily deals
 with solving the following:
 
 * Generates and groups import statements.
@@ -27,7 +25,7 @@ with solving the following:
 
 ## Examples
 
-The following are language specific examples for GenCo using the [quote!]
+The following are language specific examples for genco using the [quote!]
 macro.
 
 * [Rust Example]

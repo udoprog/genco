@@ -5,7 +5,6 @@
 //! String quoting in Dart:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: csharp::Tokens = quote!(#("hello \n world".quoted()));
@@ -632,7 +631,6 @@ impl Lang for Csharp {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let a = csharp::using("Foo.Bar", "A");
@@ -687,7 +685,6 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Type {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let ty = csharp::array(csharp::using("Foo.Bar", "A"));
@@ -723,7 +720,6 @@ pub fn optional<I: Into<TypeBox>>(value: I) -> Optional {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// use std::iter;

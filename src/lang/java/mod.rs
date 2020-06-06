@@ -5,7 +5,6 @@
 //! String quoting in Java:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: java::Tokens = quote!(#("hello \n world".quoted()));
@@ -551,7 +550,6 @@ impl Lang for Java {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let integer = java::imported("java.lang", "Integer");
@@ -609,7 +607,6 @@ pub fn optional<I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> Optio
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// use std::iter;

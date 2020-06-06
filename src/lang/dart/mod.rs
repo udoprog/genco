@@ -5,7 +5,6 @@
 //! String quoting in Dart:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: dart::Tokens = quote!(#("hello \n world".quoted()));
@@ -84,7 +83,6 @@ pub struct Config {}
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// assert_eq!("int", quote!(#(dart::INT)).to_string().unwrap());
@@ -188,7 +186,6 @@ impl Type {
     /// # Examples
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let import = dart::imported("dart:collection", "Map")
@@ -353,7 +350,6 @@ impl Lang for Dart {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let a = dart::imported("package:http/http.dart", "A");
@@ -400,7 +396,6 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Local {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// use std::iter;

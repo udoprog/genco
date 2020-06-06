@@ -20,7 +20,6 @@ pub trait QuotedExt {
     /// Example showcasing quoted strings when generating Rust.
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let map = rust::imported("std::collections", "HashMap");
@@ -68,7 +67,6 @@ pub trait DisplayExt {
     /// Example showcasing quoted strings when generating Rust.
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     /// use std::fmt;
     ///

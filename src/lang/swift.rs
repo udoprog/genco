@@ -5,7 +5,6 @@
 //! String quoting in Swift:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: swift::Tokens = quote!(#("hello \n world".quoted()));
@@ -203,7 +202,6 @@ impl Lang for Swift {
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote!(#(swift::imported("Foo", "Debug")));
@@ -244,7 +242,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote!(#(swift::map(swift::local("String"), swift::imported("Foo", "Debug"))));
@@ -274,7 +271,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote!(#(swift::array(swift::imported("Foo", "Debug"))));

@@ -3,7 +3,6 @@
 //! # Examples
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: rust::Tokens = quote! {
@@ -25,7 +24,6 @@
 //! String quoting in Rust:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: rust::Tokens = quote!(#("hello \n world".quoted()));
@@ -234,7 +232,6 @@ impl Type {
     /// # Examples
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let ty = rust::imported("std::fmt", "Debug").alias("FmtDebug");
@@ -265,7 +262,6 @@ impl Type {
     /// # Examples
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let ty = rust::imported("std::fmt", "Debug").module_alias("other");
@@ -298,7 +294,6 @@ impl Type {
     /// # Examples
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let ty = rust::imported("std::fmt", "Debug").prefixed();
@@ -326,7 +321,6 @@ impl Type {
     /// # Examples
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let ty = rust::imported("std::collections", "HashMap")
@@ -345,7 +339,6 @@ impl Type {
     /// ```
     ///
     /// ```rust
-    /// #[feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let dbg = rust::imported("std::collections", "HashMap")
@@ -705,7 +698,6 @@ impl Lang for Rust {
 /// # Examples
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let a = rust::imported("std::fmt", "Debug").prefixed();
@@ -736,7 +728,6 @@ impl Lang for Rust {
 /// # Example with an alias
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let ty = rust::imported("std::fmt", "Debug").alias("FmtDebug");
@@ -758,7 +749,6 @@ impl Lang for Rust {
 /// # Example with a module alias
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let ty = rust::imported("std::fmt", "Debug").module_alias("fmt2");
@@ -780,7 +770,6 @@ impl Lang for Rust {
 /// # Example with multiple aliases
 ///
 /// ```rust
-/// #[feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let a = rust::imported("std::fmt", "Debug").alias("FmtDebug");
@@ -825,7 +814,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote!(#(rust::local("MyType")));

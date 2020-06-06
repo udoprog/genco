@@ -5,7 +5,6 @@
 //! Basic example:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: js::Tokens = quote! {
@@ -31,7 +30,6 @@
 //! String quoting in JavaScript:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: js::Tokens = quote!(#("hello \n world".quoted()));
@@ -84,7 +82,6 @@ impl Import {
     /// # Examples
     ///
     /// ```rust
-    /// #![feature(proc_macro_hygiene)]
     /// use genco::prelude::*;
     ///
     /// let a = js::import("collections", "vec");
@@ -320,7 +317,6 @@ impl Lang for JavaScript {
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let a = js::import("collections", "vec");
@@ -361,7 +357,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let a = js::import_default("collections", "defaultVec");
@@ -401,7 +396,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote!(#(js::local("MyType")));

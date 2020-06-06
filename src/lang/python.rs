@@ -5,7 +5,6 @@
 //! String quoting in Python:
 //!
 //! ```rust
-//! #[feature(proc_macro_hygiene)]
 //! use genco::prelude::*;
 //!
 //! let toks: python::Tokens = quote!(#("hello \n world".quoted()));
@@ -185,7 +184,6 @@ impl Lang for Python {
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote! {
@@ -226,7 +224,6 @@ where
 /// # Examples
 ///
 /// ```rust
-/// #![feature(proc_macro_hygiene)]
 /// use genco::prelude::*;
 ///
 /// let toks = quote!(#(python::local("dict")));
