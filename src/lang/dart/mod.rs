@@ -305,7 +305,7 @@ impl Dart {
             output.push();
         }
 
-        output.push_line();
+        output.line();
     }
 }
 

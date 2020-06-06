@@ -571,7 +571,7 @@ impl Rust {
         }
 
         if has_any {
-            out.push_line();
+            out.line();
         }
 
         return;

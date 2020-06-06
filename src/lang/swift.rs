@@ -190,7 +190,7 @@ impl Lang for Swift {
 
         if let Some(imports) = Self::imports(&tokens) {
             toks.append(imports);
-            toks.push_line();
+            toks.line();
         }
 
         toks.extend(tokens);

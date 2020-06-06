@@ -22,14 +22,14 @@ where
         tokens.push();
 
         for line in it {
-            tokens.spacing();
+            tokens.space();
             tokens.append(ItemStr::Static("*"));
-            tokens.spacing();
+            tokens.space();
             tokens.append(line.into());
             tokens.push();
         }
 
-        tokens.spacing();
+        tokens.space();
         tokens.append("*/");
     }
 }

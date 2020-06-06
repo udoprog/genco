@@ -14,10 +14,7 @@ impl QuoteInParser {
 
         input.parse::<Token![=>]>()?;
 
-        let parser = quote_parser::QuoteParser {
-            receiver: &expr,
-            span_start: Some(span_start.start()),
-        };
+        let parser = quote_parser::QuoteParser::new(&expr).with_span_start(span_start.start());
 
         parser.parse(input)
     }

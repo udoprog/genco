@@ -14,7 +14,7 @@ mod quote_parser;
 pub(crate) use self::cursor::Cursor;
 pub(crate) use self::item_buffer::ItemBuffer;
 
-/// Quotes the specified expression as a stream of tokens for use with genco.
+/// Language neutral, whitespace sensitive quasi-quoting for GenCo.
 ///
 /// # Simple Interpolation
 ///
@@ -47,9 +47,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// );
 /// ```
 ///
-/// Inline code can be evaluated using `#(<stmt>)`. Note that this is evaluated
-/// in the same scope as where the macro is invoked, so you can make use of
-/// keywords like `?` (try) when appropriate.
+/// Inline code can be evaluated using `#(<stmt>)`.
+///
+/// Note that this is evaluated in the same scope as where the macro is invoked,
+/// so you can make use of keywords like `?` (try) when appropriate.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -59,6 +60,90 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let tokens: genco::Tokens = quote!(hello #(world.to_uppercase()));
 ///
 /// assert_eq!("hello WORLD", tokens.to_string().unwrap());
+/// ```
+///
+/// # Esacping Whitespace
+///
+/// Because this macro is whitespace sensitive, it might sometimes be necessary
+/// to provide hints of where they should be inserted.
+///
+/// The macro trims any trailing and leading whitespace that it sees. So
+/// `quote!(Hello )` is the same as `quote!(Hello)`. To include a spacing at the
+/// end, we can use the special `#<space>` escape sequence: `quote!(Hello#<space>)`.
+///
+/// The available escape sequences are:
+///
+/// * `#<space>` for inserting a spacing between tokens. This corresponds to the
+///   [Tokens::spacing] function.
+/// * `#<push>` for inserting a push operation. Push operations makes sure that
+///   any following tokens are on their own dedicated line. This corresponds to
+///   the [Tokens::push] function.
+/// * `#<line>` for inserting a line operation. Line operations makes sure that
+///   any following tokens have an empty line separating them. This corresponds
+///   to the [Tokens::line] function.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let numbers = 3..=5;
+///
+/// let tokens: Tokens<()> = quote!(foo#<push>bar#<line>baz#<space>biz);
+///
+/// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string().unwrap());
+/// ```
+///
+/// [Tokens::spacing]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.spacing
+/// [Tokens::push]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.push
+/// [Tokens::line]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.line
+///
+/// # Repetitions
+///
+/// To repeat a pattern you can use `#(<bindings> in <expr> => <quoted>)`, where
+/// <expr> is an iterator.
+///
+/// `<quoted>` will be treated as a quoted expression, so anything which works
+/// during regular quoting will work here as well, with the addition that
+/// anything defined in `<bindings>` will be made available to the statement.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let numbers = 3..=5;
+///
+/// let tokens: Tokens<()> = quote! {
+///     Your numbers are: #(n in numbers => #n#<space>)
+/// };
+///
+/// assert_eq!("Your numbers are: 3 4 5 ", tokens.to_string().unwrap());
+/// ```
+///
+/// Note how we had to escape the tail spacing (`#<space>`) to have it included, and
+/// we also got a spacing at the end that we _probably_ don't want. To avoid
+/// this we can instead to a joined repetition.
+///
+/// # Joining Repetitions
+///
+/// It's a common need to join repetitions of tokens. To do this, you can
+/// add `join (<quoted>)` to the end of a repitition specification.
+///
+/// One difference with the `<quoted>` section with the regular [quote!] macro
+/// is that it is _whitespace sensitive_ at the tail of the expression.
+///
+/// So `(,)` would be different from `(, )`, which would have a spacing at the
+/// end.
+///
+/// With that in mind, let's redo the numbers example above.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let numbers = 3..=5;
+///
+/// let tokens: Tokens<()> = quote! {
+///     Your numbers are: #(n in numbers join (, ) => #n).
+/// };
+///
+/// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string().unwrap());
 /// ```
 ///
 /// # Scopes
@@ -80,7 +165,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     quote! {
 ///         Hello #surname#(toks => {
 ///             if let Some(lastname) = lastname {
-///                 toks.spacing();
+///                 toks.space();
 ///                 toks.append(lastname);
 ///             }
 ///         })
@@ -95,10 +180,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let toks = Ident::new("__toks", Span::call_site());
     let toks = Expr::Verbatim(quote::quote!(#toks));
 
-    let parser = quote_parser::QuoteParser {
-        receiver: &toks,
-        span_start: None,
-    };
+    let parser = quote_parser::QuoteParser::new(&toks);
 
     let parser = move |stream: ParseStream| parser.parse(stream);
 

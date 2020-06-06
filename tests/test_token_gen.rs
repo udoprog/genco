@@ -75,7 +75,7 @@ fn test_tricky_continuation() {
         &mut output => foo, #(*output => {
             output.append(&bar);
             output.append(Static(","));
-            output.spacing();
+            output.space();
         })baz
         biz
     };
@@ -84,10 +84,10 @@ fn test_tricky_continuation() {
         output,
         [
             Literal(Static("foo,")),
-            Spacing,
+            Space,
             Literal(Static("bar")),
             Literal(Static(",")),
-            Spacing,
+            Space,
             Literal(Static("baz")),
             Push,
             Literal(Static("biz")),
@@ -126,5 +126,75 @@ fn test_indentation() {
     assert_items_eq! {
         b,
         [Literal(Static("a")), Indent, Literal(Static("b")), Unindent, Literal(Static("c"))]
+    };
+}
+
+#[test]
+fn test_repeat() {
+    let mut output = rust::Tokens::new();
+
+    let a = 0..3;
+    let b = 3..6;
+
+    quote_in! {
+        &mut output => foo #((a, b) in a.zip(b) => #a #b)
+    };
+
+    assert_items_eq! {
+        output,
+        [
+            Literal(Static("foo")),
+            Space,
+            Literal("0".into()),
+            Space,
+            Literal("3".into()),
+            Literal("1".into()),
+            Space,
+            Literal("4".into()),
+            Literal("2".into()),
+            Space,
+            Literal("5".into())
+        ]
+    };
+}
+
+#[test]
+fn test_tight_quote() {
+    let output: rust::Tokens = quote! {
+        You are:#("fine")
+    };
+
+    assert_items_eq! {
+        output,
+        [
+            Literal(Static("You")),
+            Space,
+            Literal(Static("are:")),
+            Literal("fine".into()),
+        ]
+    };
+}
+
+#[test]
+fn test_tight_repitition() {
+    let output: rust::Tokens = quote! {
+        You are: #(v in 0..3 join (, ) => #v)
+    };
+
+    assert_items_eq! {
+        output,
+        [
+            Literal(Static("You")),
+            Space,
+            Literal(Static("are:")),
+            Space,
+            Literal("0".into()),
+            Literal(Static(",")),
+            Space,
+            Literal("1".into()),
+            Literal(Static(",")),
+            Space,
+            Literal("2".into()),
+        ]
     };
 }

@@ -229,7 +229,7 @@ impl JavaScript {
 
                         if !module.set.is_empty() {
                             tokens.append(",");
-                            tokens.spacing();
+                            tokens.space();
                         }
                     }
 
@@ -250,7 +250,7 @@ impl JavaScript {
 
                             if it.peek().is_some() {
                                 tokens.append(",");
-                                tokens.spacing();
+                                tokens.space();
                             }
                         }
 
@@ -260,7 +260,7 @@ impl JavaScript {
             };
         }
 
-        output.push_line();
+        output.line();
 
         #[derive(Default)]
         struct Module<'a> {

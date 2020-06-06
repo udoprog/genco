@@ -569,7 +569,7 @@ impl Csharp {
                 .insert(name.to_string(), namespace.to_string());
         }
 
-        output.push_line();
+        output.line();
     }
 }
 

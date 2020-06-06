@@ -25,11 +25,11 @@ where
     Push,
     /// Unconditionally push a line.
     Line,
-    /// Spacing between language items. Typically a single space.
+    /// Space between language items. Typically a single space.
     ///
     /// Multiple spacings in sequence are collapsed into one.
     /// A spacing does nothing if at the beginning of a line.
-    Spacing,
+    Space,
     /// Indent one step.
     Indent,
     /// Unindent one step.
@@ -62,7 +62,7 @@ where
             Line => {
                 out.new_line()?;
             }
-            Spacing => {
+            Space => {
                 out.write_str(" ")?;
             }
             Indent => {
@@ -91,7 +91,7 @@ where
             Self::Registered(item) => write!(fmt, "Registered({:?})", item),
             Self::Push => write!(fmt, "Push"),
             Self::Line => write!(fmt, "Line"),
-            Self::Spacing => write!(fmt, "Spacing"),
+            Self::Space => write!(fmt, "Space"),
             Self::Indent => write!(fmt, "Indent"),
             Self::Unindent => write!(fmt, "Unindent"),
         }
@@ -164,7 +164,7 @@ where
             Self::Registered(lang) => Self::Registered(lang.clone()),
             Self::Push => Self::Push,
             Self::Line => Self::Line,
-            Self::Spacing => Self::Spacing,
+            Self::Space => Self::Space,
             Self::Indent => Self::Indent,
             Self::Unindent => Self::Unindent,
         }

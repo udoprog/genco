@@ -14,7 +14,7 @@ where
         for line in self.0 {
             tokens.push();
             tokens.append(ItemStr::Static("///"));
-            tokens.spacing();
+            tokens.space();
             tokens.append(line.into());
         }
     }

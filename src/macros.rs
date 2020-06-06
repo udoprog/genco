@@ -437,7 +437,7 @@ macro_rules! impl_modifier {
                 }
 
                 for modifier in it {
-                    tokens.spacing();
+                    tokens.space();
                     modifier.format_tokens(tokens);
                 }
             }

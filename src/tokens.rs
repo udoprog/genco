@@ -109,16 +109,16 @@ where
     }
 
     /// Add a single spacing to the token stream.
-    pub fn spacing(&mut self) {
-        // A spacing is already present.
+    pub fn space(&mut self) {
+        // A space is already present.
         match self.elements.last() {
-            Some(Item::Spacing) => return,
-            // Spacing at the beginning of a stream does nothing.
+            Some(Item::Space) => return,
+            // Space at the beginning of a stream does nothing.
             None => return,
             _ => (),
         }
 
-        self.elements.push(Item::Spacing);
+        self.elements.push(Item::Space);
     }
 
     /// Add a single push spacing operation.
@@ -134,8 +134,8 @@ where
     }
 
     /// Assert that there's the necessary elements to create one empty line at
-    /// the top of the queue.
-    pub fn push_line(&mut self) {
+    /// the end of the stream.
+    pub fn line(&mut self) {
         let mut it = self.elements.iter().rev();
 
         let last = it.next();
@@ -155,6 +155,13 @@ where
             // do nothing.
             _ => (),
         }
+    }
+
+    /// Assert that there's the necessary elements to create one empty line at
+    /// the end of the stream.
+    #[deprecated = "use `line` function instead"]
+    pub fn push_line(&mut self) {
+        self.line();
     }
 
     /// Add a single indentation to the token stream.

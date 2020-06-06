@@ -533,12 +533,12 @@ impl Lang for Java {
 
         if let Some(ref package) = config.package {
             quote_in!(toks => package #package;);
-            toks.push_line();
+            toks.line();
         }
 
         if let Some(imports) = Self::imports(&tokens, config) {
             toks.append(imports);
-            toks.push_line();
+            toks.line();
         }
 
         toks.extend(tokens);
