@@ -223,7 +223,7 @@ impl JavaScript {
         for (name, module) in modules {
             output.push();
             quote_in! { output =>
-                import #{ *tokens => {
+                import #( *tokens => {
                     if let Some(default) = module.default_import {
                         tokens.append(ItemStr::from(default));
 
@@ -256,7 +256,7 @@ impl JavaScript {
 
                         tokens.append("}");
                     }
-                }} from #(name.quoted());
+                }) from #(name.quoted());
             };
         }
 

@@ -6,20 +6,25 @@ use syn::token;
 use syn::{Expr, Ident, Result, Token};
 
 use crate::{Cursor, ItemBuffer};
+
+/// An evaluated binding to the current token stream.
+#[derive(Debug)]
+struct Binding {
+    binding: Ident,
+    binding_borrowed: bool,
+}
+
 /// Items to process from the queue.
 #[derive(Debug)]
-pub(crate) enum Item {
+enum Item {
     Tree(Cursor, TokenTree),
-    Expression(Cursor, TokenTree),
     Register(Cursor, TokenTree),
     DelimiterClose(Cursor, Delimiter),
-    /// A local scope which exposes the tokens being built as the specified
-    /// variable.
-    Scope {
+    /// Something to be evaluated as rust.
+    Eval {
         cursor: Cursor,
-        binding: Ident,
-        group: TokenTree,
-        receiver_borrowed: bool,
+        binding: Option<Binding>,
+        stmt: TokenTree,
     },
 }
 
@@ -27,10 +32,9 @@ impl Item {
     pub(crate) fn cursor(&self) -> Cursor {
         match self {
             Self::Tree(cursor, ..) => *cursor,
-            Self::Expression(cursor, ..) => *cursor,
             Self::Register(cursor, ..) => *cursor,
             Self::DelimiterClose(cursor, ..) => *cursor,
-            Self::Scope { cursor, .. } => *cursor,
+            Self::Eval { cursor, .. } => *cursor,
         }
     }
 }
@@ -137,40 +141,45 @@ impl QuoteParser<'_> {
                         item_buffer.push_str(&other.to_string());
                     }
                 },
-                Item::Expression(_, expr) => {
-                    item_buffer.flush(&mut output);
-                    output.extend(quote::quote_spanned!(expr.span() => #receiver.append(#expr);));
-                }
-                Item::Scope {
-                    binding,
-                    group,
-                    receiver_borrowed,
+                Item::Eval {
+                    binding:
+                        Some(Binding {
+                            binding,
+                            binding_borrowed,
+                        }),
+                    stmt,
                     ..
                 } => {
                     item_buffer.flush(&mut output);
 
                     // If the receiver is borrowed, we need to reborrow to
                     // satisfy the borrow checker in case it's in a loop.
-                    if receiver_borrowed {
+                    if binding_borrowed {
                         let binding = quote::quote_spanned!(binding.span() => let #binding = &mut *#receiver;);
 
-                        output.extend(quote::quote! {
-                            {
-                                #binding
-                                #group
-                            }
-                        });
+                        output.extend(quote::quote! {{
+                            #binding
+                            #stmt
+                        }});
                     } else {
                         let binding =
                             quote::quote_spanned!(binding.span() => let #binding = &mut #receiver;);
 
-                        output.extend(quote::quote! {
-                            {
-                                #binding
-                                #group
-                            }
-                        });
+                        output.extend(quote::quote! {{
+                            #binding
+                            #stmt
+                        }});
                     }
+                }
+                Item::Eval {
+                    binding: None,
+                    stmt,
+                    ..
+                } => {
+                    item_buffer.flush(&mut output);
+                    output.extend(quote::quote! {
+                        #receiver.append(#stmt);
+                    });
                 }
                 Item::Register(_, expr) => {
                     registers.push(quote::quote_spanned!(expr.span() => #receiver.register(#expr)));
@@ -274,50 +283,55 @@ fn parse_register(start: Span, input: ParseStream) -> Result<Item> {
     Ok(Item::Register(cursor, inner))
 }
 
-fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
-    if input.peek(token::Brace) {
-        let scope;
-        let outer_span = syn::braced!(scope in input);
+fn parse_expression(input: ParseStream) -> Result<Item> {
+    let hash = input.parse::<Token![#]>()?;
+    let start = hash.span;
 
-        let receiver_borrowed = if scope.peek(Token![*]) {
-            scope.parse::<Token![*]>()?;
-            true
-        } else {
-            false
-        };
+    // Single identifier without quoting.
+    if !input.peek(token::Paren) {
+        let ident = input.parse::<Ident>()?;
+        let cursor = Cursor::join(start, ident.span());
 
-        let binding = scope.parse::<Ident>()?;
-        scope.parse::<Token![=>]>()?;
-
-        let mut group = Group::new(Delimiter::None, scope.parse()?);
-        group.set_span(scope.span());
-
-        let cursor = Cursor::join(start, outer_span.span);
-
-        return Ok(Item::Scope {
+        return Ok(Item::Eval {
             cursor,
-            binding,
-            group: TokenTree::Group(group),
-            receiver_borrowed,
+            binding: None,
+            stmt: TokenTree::Ident(ident),
         });
     }
 
-    let (cursor, inner) = if input.peek(token::Paren) {
-        let content;
-        let delim = syn::parenthesized!(content in input);
+    let scope;
+    let outer = syn::parenthesized!(scope in input);
 
-        let mut group = Group::new(Delimiter::None, content.parse()?);
-        group.set_span(delim.span);
-
-        let cursor = Cursor::join(start, delim.span);
-        (cursor, TokenTree::Group(group))
+    let binding_borrowed = if scope.peek(Token![*]) && scope.peek2(Ident) && scope.peek3(Token![=>])
+    {
+        scope.parse::<Token![*]>()?;
+        true
     } else {
-        let ident = input.parse::<Ident>()?;
-        let cursor = Cursor::join(start, ident.span());
-        (cursor, TokenTree::Ident(ident))
+        false
     };
 
-    Ok(Item::Expression(cursor, inner))
+    let binding = if binding_borrowed || scope.peek(Ident) && scope.peek2(Token![=>]) {
+        let binding = scope.parse::<Ident>()?;
+        scope.parse::<Token![=>]>()?;
+
+        Some(Binding {
+            binding,
+            binding_borrowed,
+        })
+    } else {
+        None
+    };
+
+    let mut stmt = Group::new(Delimiter::None, scope.parse()?);
+    stmt.set_span(scope.span());
+
+    let cursor = Cursor::join(start, outer.span);
+
+    Ok(Item::Eval {
+        cursor,
+        binding,
+        stmt: stmt.into(),
+    })
 }
 
 fn parse_inner(mut queue: impl FnMut(Item), input: ParseStream) -> Result<()> {
@@ -341,12 +355,10 @@ fn parse_inner(mut queue: impl FnMut(Item), input: ParseStream) -> Result<()> {
             continue;
         }
 
-        let start_expression =
-            input.peek2(token::Brace) || input.peek2(token::Paren) || input.peek2(Ident);
+        let start_expression = input.peek2(token::Paren) || input.peek2(Ident);
 
         if input.peek(Token![#]) && start_expression {
-            let hash = input.parse::<Token![#]>()?;
-            queue(parse_expression(hash.span, input)?);
+            queue(parse_expression(input)?);
             continue;
         }
 

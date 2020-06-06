@@ -45,6 +45,35 @@ pub type LangBox = crate::LangBox<Rust>;
 impl_lang_item!(Type, Rust);
 impl_plain_variadic_args!(Args, Type);
 
+/// The `()` (unit) type.
+pub const UNIT: Type = const_local("()");
+/// The `!` (never) type.
+pub const NEVER: Type = const_local("!");
+/// The `u8` type.
+pub const U8: Type = const_local("u8");
+/// The `u16` type.
+pub const U16: Type = const_local("u16");
+/// The `u32` type.
+pub const U32: Type = const_local("u32");
+/// The `u64` type.
+pub const U64: Type = const_local("u64");
+/// The `u128` type.
+pub const U128: Type = const_local("u128");
+/// The `i8` type.
+pub const I8: Type = const_local("i8");
+/// The `i16` type.
+pub const I16: Type = const_local("i16");
+/// The `i32` type.
+pub const I32: Type = const_local("i32");
+/// The `i64` type.
+pub const I64: Type = const_local("i64");
+/// The `i128` type.
+pub const I128: Type = const_local("i128");
+/// The `usize` type.
+pub const USIZE: Type = const_local("usize");
+/// The `isize` type.
+pub const ISIZE: Type = const_local("isize");
+
 static SEP: &'static str = "::";
 
 /// The inferred reference.
@@ -510,14 +539,14 @@ impl Rust {
                 // imported.
                 if let Some(second) = render.next() {
                     quote_in! { out =>
-                        use #m::{#{ *o =>
+                        use #m::{#( *o =>
                             first.render(o);
-                            quote_in!(o => , #{*o => second.render(o)});
+                            quote_in!(o => , #(*o => second.render(o)));
 
                             for item in render {
-                                quote_in!(o => , #{*o => item.render(o)});
+                                quote_in!(o => , #(*o => item.render(o)));
                             }
-                        }};
+                        )};
                     };
                 } else {
                     match first {
@@ -812,5 +841,24 @@ where
         name: name.into(),
         alias: None,
         arguments: vec![],
+    }
+}
+
+/// Helper function to construct a constant local type.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// const my_type: rust::Type = rust::const_local("MyType");
+/// ```
+pub const fn const_local(name: &'static str) -> Type {
+    Type {
+        module: Module::Local,
+        reference: None,
+        name: ItemStr::Static(name),
+        alias: None,
+        arguments: Vec::new(),
     }
 }

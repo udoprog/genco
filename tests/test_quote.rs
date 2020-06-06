@@ -64,9 +64,9 @@ fn test_escape() {
 fn test_scope() {
     let tokens: rust::Tokens = quote! {
         // Nested factory.
-        #{tokens => {
+        #(tokens => {
             quote_in!(tokens => fn test() -> u32 { 42 });
-        }}
+        })
     };
 
     assert_eq!("fn test() -> u32 { 42 }", tokens.to_string().unwrap());

@@ -16,78 +16,80 @@ pub(crate) use self::item_buffer::ItemBuffer;
 
 /// Quotes the specified expression as a stream of tokens for use with genco.
 ///
-/// # Mechanisms
+/// # Simple Interpolation
 ///
-/// * Elements are interpolated using `#`, so to include the variable `test`,
-///   you could write `#test`. Returned elements must implement
-///   [FormatTokens].
-/// * `#` can be escaped by repeating it twice in case it's needed in
-///   the target language. So `##` would produce a single `#`.
-/// * Inline statements can be evaluated using `#(<stmt>)`. They can also be
-///   suffixed with `<stmt>,*` to treat the statement as an iterator, and add
-///   the specified separator (`,` here) between each element.
-///   * Example: `#("test".quoted())` can be used to quote a string.
-/// * The [register] functionality of [Tokens] is available by prefixing an
-///   expression with `#@` as `#@<stmt>`.
-///   * Example: `#@only_imports` will [register] the variable `only_imports`.
-/// * Expressions can be repeated. It is then expected that they evaluate to an
-///   iterator. Expressions are repeated by adding the `<token>*` suffix. The
-///   <token> will then be used as a separator between each element, and a
-///   spacing will be added after it.
-///   * Example: `#var,*` will treat `var` as an iterator and add `,` and a
-///     spacing between each element.
-///   * Example with explicit iterator: `#(vec![1, 2, 3].into_iter()),*`.
-/// * Scoped expressions using `#{<binding> => { <block> }}`, giving mutable
-///   and scoped access to the token stream being built. This can be used with
-///   the [quote_in!] macro for improved flow control.
-///   The `<binding>` is provided through a mutable borrow. If the `<binding>`
-///   already _is_ mutably borrowed you probably want to perform a reborrow.
-///   This can be done with `*<binding>`. See the borrowing seciton in
-///   [quote_in!] for more details.
-///   * Example: `quote!(#{tokens => /*  */})`.
-///   * Example with reborrowing: `quote_in!(&mut tokens => #{*tokens => { /*  */ }})`.
+/// Elements are interpolated using `#`, so to include the variable `test`,
+/// you could write `#test`. Returned elements must implement [FormatTokens].
 ///
-/// # Examples
+/// `#` can be escaped by repeating it twice in case it's needed in the target
+/// language. So `##` would produce a single `#`.
 ///
 /// ```rust
 /// use genco::prelude::*;
 ///
-/// let tokens: rust::Tokens = quote!(#[test]);
-/// assert_eq!("#[test]", tokens.to_string().unwrap());
-///
-/// let tokens: rust::Tokens = quote!(#{t => { quote_in!(t => #[test]) }});
-/// assert_eq!("#[test]", tokens.to_string().unwrap());
-/// ```
-///
-/// Bigger example:
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// // Import the LittleEndian item, without referencing it through the last
-/// // module component it is part of.
-/// let little_endian = rust::imported("byteorder", "LittleEndian").qualified();
-/// let big_endian = rust::imported("byteorder", "BigEndian");
-///
-/// // This is a trait, so only import it into the scope (unless we intent to
-/// // implement it).
-/// let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
+/// let field_ty = rust::imported("std::collections", "HashMap").with_arguments((rust::U32, rust::U32));
 ///
 /// let tokens: rust::Tokens = quote! {
-///     #@write_bytes_ext
-///
-///     let mut wtr = vec![];
-///     wtr.write_u16::<#little_endian>(517).unwrap();
-///     wtr.write_u16::<#big_endian>(768).unwrap();
-///     assert_eq!(wtr, vec![#(0..10),*]);
+///     struct Quoted {
+///         field: #field_ty,
+///     }
 /// };
 ///
-/// println!("{}", tokens.to_file_string().unwrap());
+/// assert_eq!(
+///     vec![
+///         "use std::collections::HashMap;",
+///         "",
+///         "struct Quoted {",
+///         "    field: HashMap<u32, u32>,",
+///         "}",
+///     ],
+///     tokens.to_file_vec().unwrap(),
+/// );
 /// ```
 ///
-/// [FormatTokens]: https://docs.rs/genco/latest/genco/trait.FormatTokens.html
-/// [register]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.register
-/// [Tokens]: https://docs.rs/genco/latest/genco/struct.Tokens.html
+/// Inline code can be evaluated using `#(<stmt>)`. Note that this is evaluated
+/// in the same scope as where the macro is invoked, so you can make use of
+/// keywords like `?` (try) when appropriate.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let world = "world";
+///
+/// let tokens: genco::Tokens = quote!(hello #(world.to_uppercase()));
+///
+/// assert_eq!("hello WORLD", tokens.to_string().unwrap());
+/// ```
+///
+/// # Scopes
+///
+/// You can use `#(<binding> => <stmt>)` to gain mutable access to the current
+/// token stream. This is a great alternative if you want to do more complex
+/// logic during evaluation.
+///
+/// Note that this can cause borrowing issues if the underlying stream is
+/// already a mutable reference. To work around this you can specify
+/// `*<binding>` to cause it to reborrow.
+///
+/// For more information, see [quote_in!].
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// fn quote_greeting(surname: &str, lastname: Option<&str>) -> rust::Tokens {
+///     quote! {
+///         Hello #surname#(toks => {
+///             if let Some(lastname) = lastname {
+///                 toks.spacing();
+///                 toks.append(lastname);
+///             }
+///         })
+///     }
+/// }
+///
+/// assert_eq!("Hello John", quote_greeting("John", None).to_string().unwrap());
+/// assert_eq!("Hello John Doe", quote_greeting("John", Some("Doe")).to_string().unwrap());
+/// ```
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let toks = Ident::new("__toks", Span::call_site());
@@ -132,13 +134,13 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// ...
 /// 12 | /     quote_in! { tokens =>
 /// 13 | |         fn #name() -> u32 {
-/// 14 | |             #{tokens => tokens.append("42");}
+/// 14 | |             #(tokens => tokens.append("42");)
 /// 15 | |         }
 /// 16 | |     }
 ///    | |_____^ cannot borrow as mutable
 /// ```
 ///
-/// This is because inner scoped like `#{tokens => <code>}` take ownership
+/// This is because inner scoped like `#(tokens => <code>)` take ownership
 /// of their variable by default. To have it perform a proper reborrow, you can
 /// do the following instead:
 ///
@@ -151,7 +153,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// for name in vec!["foo", "bar", "baz"] {
 ///     quote_in! { tokens =>
 ///         fn #name() -> u32 {
-///             #{*tokens => tokens.append("42");}
+///             #(*tokens => tokens.append("42");)
 ///         }
 ///     }
 /// }
