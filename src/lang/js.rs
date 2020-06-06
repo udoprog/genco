@@ -221,20 +221,42 @@ impl JavaScript {
         }
 
         for (name, module) in modules {
-            let names = module.set.into_iter().map(|import| match import {
-                ImportedElement::Plain(name) => quote!(#name),
-                ImportedElement::Aliased(name, alias) => quote!(#name as #alias),
-            });
-
             output.push();
             quote_in! { output =>
                 import #{ *tokens => {
                     if let Some(default) = module.default_import {
                         tokens.append(ItemStr::from(default));
-                        tokens.append(",");
-                        tokens.spacing();
+
+                        if !module.set.is_empty() {
+                            tokens.append(",");
+                            tokens.spacing();
+                        }
                     }
-                }}{#names,*} from #(name.quoted());
+
+                    if !module.set.is_empty() {
+                        tokens.append("{");
+
+                        let mut it = module.set.iter().peekable();
+
+                        while let Some(el) = it.next() {
+                            match *el {
+                                ImportedElement::Plain(name) => {
+                                    tokens.append(name);
+                                },
+                                ImportedElement::Aliased(name, alias) => {
+                                    quote_in!(tokens => #name as #alias);
+                                }
+                            }
+
+                            if it.peek().is_some() {
+                                tokens.append(",");
+                                tokens.spacing();
+                            }
+                        }
+
+                        tokens.append("}");
+                    }
+                }} from #(name.quoted());
             };
         }
 

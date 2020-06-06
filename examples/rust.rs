@@ -1,5 +1,4 @@
 use genco::prelude::*;
-use rand::Rng;
 
 use std::fmt;
 
@@ -14,10 +13,6 @@ fn main() -> fmt::Result {
     let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
     let read_bytes_ext = rust::imported("byteorder", "ReadBytesExt").alias("_");
 
-    // Iterators can be tokenized using `tokenize_iter`, as long as they contain
-    // something which can be converted into a stream of tokens.
-    let numbers = (0..10).map(|_| rand::thread_rng().gen::<i16>());
-
     let tokens = quote! {
         // Markup used for imports without an immediate use.
         #@(write_bytes_ext)
@@ -27,7 +22,6 @@ fn main() -> fmt::Result {
             let mut wtr = vec![];
             wtr.write_u16::<#little_endian>(517).unwrap();
             wtr.write_u16::<#big_endian>(768).unwrap();
-            assert_eq!(wtr, vec![#numbers,*]);
         }
     };
 

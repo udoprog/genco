@@ -48,10 +48,10 @@ fn test_token_gen() {
 fn test_iterator_gen() {
     assert_items_eq! {
         quote! {
-            #((0..3).map(|v| quote! {
-                #(None::<()>)
-                #v
-            }))*
+            #{t => for n in 0..3 {
+                t.push();
+                t.append(n);
+            }}
         },
         [
             Push,

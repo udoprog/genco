@@ -92,22 +92,54 @@ impl From<&'static str> for Reference {
 
 /// Language configuration for Rust.
 #[derive(Debug)]
-pub struct Config {}
+pub struct Config {
+    default_import: Import,
+}
+
+impl Config {
+    /// Configure the default import policy to use.
+    ///
+    /// See [Import] for more details.
+    pub fn with_default_import(self, default_import: Import) -> Self {
+        Self {
+            default_import,
+            ..self
+        }
+    }
+}
 
 impl Default for Config {
     fn default() -> Self {
-        Config {}
+        Config {
+            default_import: Import::Direct,
+        }
     }
+}
+
+/// The import policy to use when generating import statements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Import {
+    /// Import names without a module prefix.
+    ///
+    /// so for `std::fmt::Debug` it would import `std::fmt::Debug`, and use
+    /// `Debug`.
+    Direct,
+    /// Import names with a module prefix.
+    ///
+    /// so for `std::fmt::Debug` it would import `std::fmt`, and use
+    /// `fmt::Debug`.
+    Prefixed,
 }
 
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 enum Module {
     /// Local type.
     Local,
-    /// Type imported directly from module.
-    Direct { module: ItemStr },
-    /// Prefixed with modules own name.
-    Prefixed { module: ItemStr },
+    /// Type imported directly from module with the specified policy.
+    Module {
+        import: Option<Import>,
+        module: ItemStr,
+    },
     /// Prefixed with an alias.
     Aliased { module: ItemStr, alias: ItemStr },
 }
@@ -115,14 +147,26 @@ enum Module {
 impl Module {
     /// Convert into an aliased import, or keep as same in case that's not
     /// feasible.
-    fn into_aliased<A>(self, alias: A) -> Self
+    fn into_module_aliased<A>(self, alias: A) -> Self
     where
         A: Into<ItemStr>,
     {
         match self {
-            Self::Direct { module } | Self::Prefixed { module } => Self::Aliased {
+            Self::Module { module, .. } => Self::Aliased {
                 module,
                 alias: alias.into(),
+            },
+            other => other,
+        }
+    }
+
+    /// Aliasing a type explicitly means you no longer want to import it by
+    /// module. Set the correct import here.
+    fn into_aliased(self) -> Self {
+        match self {
+            Self::Module { module, .. } => Self::Module {
+                import: Some(Import::Direct),
+                module,
             },
             other => other,
         }
@@ -131,7 +175,10 @@ impl Module {
     /// Convert into a prefixed, or keep as same in case that's not feasible.
     fn into_prefixed(self) -> Self {
         match self {
-            Self::Direct { module } => Self::Prefixed { module },
+            Self::Module { module, .. } => Self::Module {
+                module,
+                import: Some(Import::Prefixed),
+            },
             other => other,
         }
     }
@@ -176,6 +223,7 @@ impl Type {
     /// ```
     pub fn alias<A: Into<ItemStr>>(self, alias: A) -> Self {
         Self {
+            module: self.module.into_aliased(),
             alias: Some(alias.into()),
             ..self
         }
@@ -206,7 +254,7 @@ impl Type {
     /// ```
     pub fn module_alias<A: Into<ItemStr>>(self, alias: A) -> Type {
         Type {
-            module: self.module.into_aliased(alias),
+            module: self.module.into_module_aliased(alias),
             ..self
         }
     }
@@ -300,6 +348,26 @@ impl Type {
             ..self
         }
     }
+
+    /// Write the direct name of the type.
+    fn write_direct(&self, out: &mut Formatter) -> fmt::Result {
+        if let Some(alias) = &self.alias {
+            out.write_str(alias)
+        } else {
+            out.write_str(&self.name)
+        }
+    }
+
+    /// Write the prefixed name of the type.
+    fn write_prefixed(&self, out: &mut Formatter, module: &ItemStr) -> fmt::Result {
+        if let Some(module) = module.rsplit("::").next() {
+            out.write_str(module)?;
+            out.write_str(SEP)?;
+        }
+
+        out.write_str(&self.name)?;
+        Ok(())
+    }
 }
 
 impl LangItem<Rust> for Type {
@@ -321,21 +389,26 @@ impl LangItem<Rust> for Type {
         }
 
         match &self.module {
-            Module::Local | Module::Direct { .. } => {
-                if let Some(alias) = &self.alias {
-                    out.write_str(alias)?;
-                } else {
-                    out.write_str(&self.name)?;
-                }
+            Module::Local
+            | Module::Module {
+                import: Some(Import::Direct),
+                ..
+            } => {
+                self.write_direct(out)?;
             }
-            Module::Prefixed { module, .. } => {
-                if let Some(module) = module.rsplit("::").next() {
-                    out.write_str(module)?;
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(&self.name)?;
+            Module::Module {
+                import: Some(Import::Prefixed),
+                module,
+            } => {
+                self.write_prefixed(out, module)?;
             }
+            Module::Module {
+                import: None,
+                module,
+            } => match &config.default_import {
+                Import::Direct => self.write_direct(out)?,
+                Import::Prefixed => self.write_prefixed(out, module)?,
+            },
             Module::Aliased {
                 alias: ref module, ..
             } => {
@@ -370,7 +443,7 @@ impl LangItem<Rust> for Type {
 }
 
 impl Rust {
-    fn imports(out: &mut Tokens, tokens: &Tokens) {
+    fn imports(out: &mut Tokens, config: &mut Config, tokens: &Tokens) {
         use crate as genco;
         use crate::quote_in;
         use std::collections::btree_set;
@@ -386,14 +459,33 @@ impl Rust {
         while let Some(import) = queue.pop_front() {
             match &import.module {
                 Module::Local => continue,
-                Module::Direct { module } => {
+                Module::Module {
+                    module,
+                    import: Some(Import::Direct),
+                } => {
                     let module = modules.entry(module).or_default();
                     module.names.insert((&import.name, import.alias.as_ref()));
                 }
-                Module::Prefixed { module } => {
+                Module::Module {
+                    module,
+                    import: Some(Import::Prefixed),
+                } => {
                     let module = modules.entry(module).or_default();
                     module.self_import = true;
                 }
+                Module::Module {
+                    module,
+                    import: None,
+                } => match config.default_import {
+                    Import::Direct => {
+                        let module = modules.entry(module).or_default();
+                        module.names.insert((&import.name, import.alias.as_ref()));
+                    }
+                    Import::Prefixed => {
+                        let module = modules.entry(module).or_default();
+                        module.self_import = true;
+                    }
+                },
                 Module::Aliased { module, alias } => {
                     let module = modules.entry(module).or_default();
                     module.self_aliases.insert(alias);
@@ -572,7 +664,7 @@ impl Lang for Rust {
     ) -> fmt::Result {
         let mut toks: Tokens = Tokens::new();
 
-        Self::imports(&mut toks, &tokens);
+        Self::imports(&mut toks, config, &tokens);
 
         toks.extend(tokens);
         toks.format(out, config, level)
@@ -686,7 +778,8 @@ where
     N: Into<ItemStr>,
 {
     Type {
-        module: Module::Direct {
+        module: Module::Module {
+            import: None,
             module: module.into(),
         },
         reference: None,

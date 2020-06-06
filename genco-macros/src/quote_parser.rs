@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::iter::FromIterator as _;
 use syn::parse::{ParseStream, Parser as _};
 use syn::token;
-use syn::{Expr, Ident, LitStr, Result, Token};
+use syn::{Expr, Ident, Result, Token};
 
 use crate::{Cursor, ItemBuffer};
 /// Items to process from the queue.
@@ -13,7 +13,6 @@ pub(crate) enum Item {
     Expression(Cursor, TokenTree),
     Register(Cursor, TokenTree),
     DelimiterClose(Cursor, Delimiter),
-    Repeat(Cursor, TokenTree, Option<TokenTree>),
     /// A local scope which exposes the tokens being built as the specified
     /// variable.
     Scope {
@@ -31,7 +30,6 @@ impl Item {
             Self::Expression(cursor, ..) => *cursor,
             Self::Register(cursor, ..) => *cursor,
             Self::DelimiterClose(cursor, ..) => *cursor,
-            Self::Repeat(cursor, ..) => *cursor,
             Self::Scope { cursor, .. } => *cursor,
         }
     }
@@ -142,32 +140,6 @@ impl QuoteParser<'_> {
                 Item::Expression(_, expr) => {
                     item_buffer.flush(&mut output);
                     output.extend(quote::quote_spanned!(expr.span() => #receiver.append(#expr);));
-                }
-                Item::Repeat(_, inner, separator) => {
-                    item_buffer.flush(&mut output);
-
-                    if let Some(separator) = separator {
-                        let separator = LitStr::new(&separator.to_string(), separator.span());
-
-                        output.extend(quote::quote! {{
-                            let mut iter = std::iter::IntoIterator::into_iter(#inner).peekable();
-
-                            while let Some(element) = iter.next() {
-                                #receiver.append(element);
-
-                                if iter.peek().is_some() {
-                                    #receiver.append(genco::ItemStr::Static(#separator));
-                                    #receiver.spacing();
-                                }
-                            }
-                        }});
-                    } else {
-                        output.extend(quote::quote! {{
-                            for element in #inner {
-                                #receiver.append(element);
-                            }
-                        }});
-                    }
                 }
                 Item::Scope {
                     binding,
@@ -344,19 +316,6 @@ fn parse_expression(start: Span, input: ParseStream) -> Result<Item> {
         let cursor = Cursor::join(start, ident.span());
         (cursor, TokenTree::Ident(ident))
     };
-
-    if input.peek2(Token![*]) {
-        let separator = input.parse::<TokenTree>()?;
-        let star = input.parse::<Token![*]>()?;
-        let cursor = cursor.with_end(star.span.end());
-        return Ok(Item::Repeat(cursor, inner, Some(separator)));
-    }
-
-    if input.peek(Token![*]) {
-        let star = input.parse::<Token![*]>()?;
-        let cursor = cursor.with_end(star.span.end());
-        return Ok(Item::Repeat(cursor, inner, None));
-    }
 
     Ok(Item::Expression(cursor, inner))
 }
