@@ -276,27 +276,27 @@ macro_rules! impl_lang_item {
 }
 
 macro_rules! impl_variadic_type_args {
-    ($args:ident, $ty:ident, $type_box:ident) => {
+    ($args_vis:vis $args:ident, $trait:ident, $type_box:ident) => {
         /// Helper trait for things that can be turned into generic arguments.
-        pub trait $args {
+        $args_vis trait $args {
             /// Convert the given type into a collection of arguments.
             fn into_args(self) -> Vec<$type_box>;
         }
 
         impl<T> $args for T
         where
-            T: 'static + $ty,
+            T: 'static + $trait,
         {
             fn into_args(self) -> Vec<$type_box> {
                 vec![$type_box::new(self)]
             }
         }
 
-        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a);
-        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b);
-        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b, C => c);
-        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b, C => c, D => d);
-        impl_variadic_type_args!(@args $args, $ty, $type_box, A => a, B => b, C => c, D => d, E => e);
+        impl_variadic_type_args!(@args $args, $trait, $type_box, A => a);
+        impl_variadic_type_args!(@args $args, $trait, $type_box, A => a, B => b);
+        impl_variadic_type_args!(@args $args, $trait, $type_box, A => a, B => b, C => c);
+        impl_variadic_type_args!(@args $args, $trait, $type_box, A => a, B => b, C => c, D => d);
+        impl_variadic_type_args!(@args $args, $trait, $type_box, A => a, B => b, C => c, D => d, E => e);
     };
 
     (@args $args:ty, $ty:ident, $type_box:ident, $($ident:ident => $var:ident),*) => {
@@ -344,10 +344,30 @@ macro_rules! impl_plain_variadic_args {
 }
 
 macro_rules! impl_dynamic_types {
-    ($lang:ty, $enum:ident<$lt:lifetime>, $trait:ident, $type_box:ident, $args:ident, {$($ty:ident),*}) => {
+    ($lang:ty =>
+        $trait_vis:vis trait $trait:ident {
+            $($trait_item:tt)*
+        }
+
+        $args_vis:vis trait $args:ident;
+        $type_box_vis:vis struct $type_box:ident;
+        $enum_vis:vis enum $enum:ident;
+
+        $(impl $trait_impl:ident for $ty:ident {
+            $($ty_item:tt)*
+        })*
+    ) => {
+        /// Trait implemented by all types
+        $trait_vis trait TypeTrait: 'static + fmt::Debug + LangItem<$lang> {
+            /// Coerce trait into an enum that can be used for type-specific operations
+            fn as_enum(&self) -> $enum<'_>;
+
+            $($trait_item)*
+        }
+
         #[derive(Clone)]
         #[doc = "Boxed type container"]
-        pub struct $type_box {
+        $type_box_vis struct $type_box {
             inner: std::rc::Rc<dyn $trait>,
         }
 
@@ -402,14 +422,22 @@ macro_rules! impl_dynamic_types {
 
         #[doc = "Enum that can be used for casting between variants of the same type"]
         #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-        pub enum $enum<$lt> {
+        $enum_vis enum $enum<'a> {
             $(
                 #[doc = "Type variant"]
-                $ty(&$lt $ty),
+                $ty(&'a $ty),
             )*
         }
 
         $(
+            impl $trait_impl for $ty {
+                fn as_enum(&self) -> $enum<'_> {
+                    $enum::$ty(self)
+                }
+
+                $($ty_item)*
+            }
+
             impl From<$ty> for $type_box {
                 fn from(value: $ty) -> $type_box {
                     $type_box::new(value)
@@ -422,7 +450,7 @@ macro_rules! impl_dynamic_types {
             }
         )*
 
-        impl_variadic_type_args!($args, $trait, $type_box);
+        impl_variadic_type_args!($args_vis $args, $trait, $type_box);
     }
 }
 

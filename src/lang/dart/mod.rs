@@ -22,12 +22,17 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;
 
-impl_dynamic_types!(Dart, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, BuiltIn, Local, Void, Dynamic});
+impl_dynamic_types! { Dart =>
+    pub trait TypeTrait {}
+    pub trait TypeArgs;
+    pub struct TypeBox;
+    pub enum TypeEnum;
 
-/// Trait implemented by all types
-pub trait TypeTrait: 'static + fmt::Debug + LangItem<Dart> {
-    /// Coerce trait into an enum that can be used for type-specific operations
-    fn as_enum(&self) -> TypeEnum<'_>;
+    impl TypeTrait for Type {}
+    impl TypeTrait for BuiltIn {}
+    impl TypeTrait for Local {}
+    impl TypeTrait for Void {}
+    impl TypeTrait for Dynamic {}
 }
 
 static SEP: &'static str = ".";
@@ -95,12 +100,6 @@ pub struct BuiltIn {
     name: &'static str,
 }
 
-impl TypeTrait for BuiltIn {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::BuiltIn(self)
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Dart> for BuiltIn {
         fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
@@ -115,12 +114,6 @@ pub struct Local {
     name: ItemStr,
 }
 
-impl TypeTrait for Local {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Local(self)
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Dart> for Local {
         fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
@@ -133,12 +126,6 @@ impl_lang_item! {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Void(());
 
-impl TypeTrait for Void {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Void(self)
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Dart> for Void {
         fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
@@ -150,12 +137,6 @@ impl_lang_item! {
 /// The dynamic type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Dynamic(());
-
-impl TypeTrait for Dynamic {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Dynamic(self)
-    }
-}
 
 impl_lang_item! {
     impl LangItem<Dart> for Dynamic {
@@ -235,12 +216,6 @@ impl Type {
     /// Check if type is generic.
     pub fn is_generic(&self) -> bool {
         !self.arguments.is_empty()
-    }
-}
-
-impl TypeTrait for Type {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Type(self)
     }
 }
 

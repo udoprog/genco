@@ -43,12 +43,15 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
 
-impl_dynamic_types!(JavaScript, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Import, ImportDefault, Local});
+impl_dynamic_types! { JavaScript =>
+    pub trait TypeTrait {}
+    pub trait TypeArgs;
+    pub struct TypeBox;
+    pub enum TypeEnum;
 
-/// Trait implemented by all types.
-pub trait TypeTrait: 'static + fmt::Debug + LangItem<JavaScript> {
-    /// Coerce trait into an enum that can be used for type-specific operations.
-    fn as_enum(&self) -> TypeEnum<'_>;
+    impl TypeTrait for Import {}
+    impl TypeTrait for ImportDefault {}
+    impl TypeTrait for Local {}
 }
 
 /// An imported item in JavaScript.
@@ -110,12 +113,6 @@ impl Import {
     }
 }
 
-impl TypeTrait for Import {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Import(self)
-    }
-}
-
 impl_lang_item! {
     impl LangItem<JavaScript> for Import {
         fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
@@ -145,12 +142,6 @@ pub struct ImportDefault {
     name: ItemStr,
 }
 
-impl TypeTrait for ImportDefault {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::ImportDefault(self)
-    }
-}
-
 impl_lang_item! {
     impl LangItem<JavaScript> for ImportDefault {
         fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
@@ -170,12 +161,6 @@ impl_lang_item! {
 pub struct Local {
     /// The local name.
     name: ItemStr,
-}
-
-impl TypeTrait for Local {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Local(self)
-    }
 }
 
 impl_lang_item! {

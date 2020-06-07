@@ -23,26 +23,117 @@ pub use self::block_comment::BlockComment;
 /// Tokens container specialization for C#.
 pub type Tokens = crate::Tokens<Csharp>;
 
-impl_dynamic_types!(Csharp, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Simple, Optional, Type, Array, Void});
+impl_dynamic_types! { Csharp =>
+    pub trait TypeTrait {
+        /// Get the name of the type.
+        fn name(&self) -> &str;
 
-/// Trait implemented by all types
-pub trait TypeTrait: 'static + fmt::Debug + LangItem<Csharp> {
-    /// Coerce trait into an enum that can be used for type-specific operations
-    fn as_enum(&self) -> TypeEnum<'_>;
+        /// Get the namespace of the type, if available.
+        fn namespace(&self) -> Option<&str> {
+            None
+        }
 
-    /// Get the name of the type.
-    fn name(&self) -> &str;
+        /// Check if type is nullable.
+        fn is_nullable(&self) -> bool;
 
-    /// Get the namespace of the type, if available.
-    fn namespace(&self) -> Option<&str> {
-        None
+        /// Handle imports recursively.
+        fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
     }
 
-    /// Check if type is nullable.
-    fn is_nullable(&self) -> bool;
+    pub trait TypeArgs;
+    pub struct TypeBox;
+    pub enum TypeEnum;
 
-    /// Handle imports recursively.
-    fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
+    impl TypeTrait for Simple {
+        fn name(&self) -> &str {
+            self.name
+        }
+
+        fn namespace(&self) -> Option<&str> {
+            Some(SYSTEM)
+        }
+
+        fn is_nullable(&self) -> bool {
+            false
+        }
+
+        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+            modules.insert((SYSTEM.into(), self.alias.into()));
+        }
+    }
+
+    impl TypeTrait for Optional {
+        fn name(&self) -> &str {
+            self.inner.name()
+        }
+
+        fn namespace(&self) -> Option<&str> {
+            self.inner.namespace()
+        }
+
+        fn is_nullable(&self) -> bool {
+            false
+        }
+
+        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+            self.inner.type_imports(modules)
+        }
+    }
+
+    impl TypeTrait for Type {
+        fn name(&self) -> &str {
+            &*self.name
+        }
+
+        fn namespace(&self) -> Option<&str> {
+            self.namespace.as_deref()
+        }
+
+        fn is_nullable(&self) -> bool {
+            match self.kind {
+                Kind::Enum | Kind::Struct => false,
+                _ => true,
+            }
+        }
+
+        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+            for argument in &self.arguments {
+                argument.type_imports(modules);
+            }
+
+            if let Some(namespace) = &self.namespace {
+                modules.insert((namespace.clone(), self.name.clone()));
+            }
+        }
+    }
+
+    impl TypeTrait for Array {
+        fn name(&self) -> &str {
+            self.inner.name()
+        }
+
+        fn namespace(&self) -> Option<&str> {
+            self.inner.namespace()
+        }
+
+        fn is_nullable(&self) -> bool {
+            true
+        }
+
+        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+            self.inner.type_imports(modules);
+        }
+    }
+
+    impl TypeTrait for Void {
+        fn name(&self) -> &str {
+            "void"
+        }
+
+        fn is_nullable(&self) -> bool {
+            false
+        }
+    }
 }
 
 static SYSTEM: &'static str = "System";
@@ -208,28 +299,6 @@ pub struct Optional {
     inner: TypeBox,
 }
 
-impl TypeTrait for Optional {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Optional(self)
-    }
-
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
-
-    fn namespace(&self) -> Option<&str> {
-        self.inner.namespace()
-    }
-
-    fn is_nullable(&self) -> bool {
-        false
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-        self.inner.type_imports(modules)
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Csharp> for Optional {
         fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
@@ -328,37 +397,6 @@ impl Type {
     }
 }
 
-impl TypeTrait for Type {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Type(self)
-    }
-
-    fn name(&self) -> &str {
-        &*self.name
-    }
-
-    fn namespace(&self) -> Option<&str> {
-        self.namespace.as_deref()
-    }
-
-    fn is_nullable(&self) -> bool {
-        match self.kind {
-            Kind::Enum | Kind::Struct => false,
-            _ => true,
-        }
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-        for argument in &self.arguments {
-            argument.type_imports(modules);
-        }
-
-        if let Some(namespace) = &self.namespace {
-            modules.insert((namespace.clone(), self.name.clone()));
-        }
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Csharp> for Type {
         fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
@@ -429,28 +467,6 @@ pub struct Simple {
     alias: &'static str,
 }
 
-impl TypeTrait for Simple {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Simple(self)
-    }
-
-    fn name(&self) -> &str {
-        self.name
-    }
-
-    fn namespace(&self) -> Option<&str> {
-        Some(SYSTEM)
-    }
-
-    fn is_nullable(&self) -> bool {
-        false
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-        modules.insert((SYSTEM.into(), self.alias.into()));
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Csharp> for Simple {
         fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
@@ -470,28 +486,6 @@ pub struct Array {
     inner: TypeBox,
 }
 
-impl TypeTrait for Array {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Array(self)
-    }
-
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
-
-    fn namespace(&self) -> Option<&str> {
-        self.inner.namespace()
-    }
-
-    fn is_nullable(&self) -> bool {
-        true
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-        self.inner.type_imports(modules);
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Csharp> for Array {
         fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
@@ -509,20 +503,6 @@ impl_lang_item! {
 /// The special `void` type.
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Void(());
-
-impl TypeTrait for Void {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Void(self)
-    }
-
-    fn name(&self) -> &str {
-        "void"
-    }
-
-    fn is_nullable(&self) -> bool {
-        false
-    }
-}
 
 impl_lang_item! {
     impl LangItem<Csharp> for Void {

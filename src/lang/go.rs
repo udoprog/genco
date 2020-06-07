@@ -44,15 +44,38 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Go.
 pub type Tokens = crate::Tokens<Go>;
 
-impl_dynamic_types!(Go, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array, Interface});
+impl_dynamic_types! { Go =>
+    pub trait TypeTrait {
+        /// Handle imports for the given type.
+        fn type_imports(&self, _: &mut BTreeSet<ItemStr>) {}
+    }
 
-/// Trait implemented by all types
-pub trait TypeTrait: 'static + fmt::Debug + LangItem<Go> {
-    /// Coerce trait into an enum that can be used for type-specific operations
-    fn as_enum(&self) -> TypeEnum<'_>;
+    pub trait Args;
+    pub struct TypeBox;
+    pub enum TypeEnum;
 
-    /// Handle imports for the given type.
-    fn type_imports(&self, _: &mut BTreeSet<ItemStr>) {}
+    impl TypeTrait for Type {
+        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+            if let Some(module) = &self.module {
+                modules.insert(module.clone());
+            }
+        }
+    }
+
+    impl TypeTrait for Map {
+        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+            self.key.type_imports(modules);
+            self.value.type_imports(modules);
+        }
+    }
+
+    impl TypeTrait for Interface {}
+
+    impl TypeTrait for Array {
+        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+            self.inner.type_imports(modules);
+        }
+    }
 }
 
 /// The interface type `interface{}`.
@@ -67,18 +90,6 @@ pub struct Type {
     module: Option<ItemStr>,
     /// Name imported.
     name: ItemStr,
-}
-
-impl TypeTrait for Type {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Type(self)
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-        if let Some(module) = &self.module {
-            modules.insert(module.clone());
-        }
-    }
 }
 
 impl_lang_item! {
@@ -108,17 +119,6 @@ pub struct Map {
     value: TypeBox,
 }
 
-impl TypeTrait for Map {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Map(self)
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-        self.key.type_imports(modules);
-        self.value.type_imports(modules);
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Go> for Map {
         fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
@@ -142,16 +142,6 @@ pub struct Array {
     inner: TypeBox,
 }
 
-impl TypeTrait for Array {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Array(self)
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-        self.inner.type_imports(modules);
-    }
-}
-
 impl_lang_item! {
     impl LangItem<Go> for Array {
         fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
@@ -170,12 +160,6 @@ impl_lang_item! {
 /// The interface type `interface{}`.
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Interface(());
-
-impl TypeTrait for Interface {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Interface(self)
-    }
-}
 
 impl_lang_item! {
     impl LangItem<Go> for Interface {

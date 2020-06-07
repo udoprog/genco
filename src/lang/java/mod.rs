@@ -23,28 +23,92 @@ use std::fmt;
 /// Tokens container specialized for Java.
 pub type Tokens = crate::Tokens<Java>;
 
-impl_dynamic_types!(Java, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Primitive, Void, Type, Optional, Local});
+impl_dynamic_types! { Java =>
+    pub trait TypeTrait {
+        /// Get package type belongs to.
+        fn name(&self) -> &str;
 
-/// Trait implemented by all types
-pub trait TypeTrait: 'static + fmt::Debug + LangItem<Java> {
-    /// Coerce trait into an enum that can be used for type-specific operations
-    fn as_enum(&self) -> TypeEnum<'_>;
+        /// Get package type belongs to.
+        fn package(&self) -> Option<&str> {
+            None
+        }
 
-    /// Get package type belongs to.
-    fn name(&self) -> &str;
+        /// Get generic arguments associated with type.
+        fn arguments(&self) -> Option<&[TypeBox]> {
+            None
+        }
 
-    /// Get package type belongs to.
-    fn package(&self) -> Option<&str> {
-        None
+        /// Process which kinds of imports to deal with.
+        fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
     }
 
-    /// Get generic arguments associated with type.
-    fn arguments(&self) -> Option<&[TypeBox]> {
-        None
+    pub trait TypeArgs;
+    pub struct TypeBox;
+    pub enum TypeEnum;
+
+    impl TypeTrait for Primitive {
+        fn name(&self) -> &str {
+            self.primitive
+        }
+
+        fn package(&self) -> Option<&str> {
+            Some(JAVA_LANG)
+        }
     }
 
-    /// Process which kinds of imports to deal with.
-    fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
+    impl TypeTrait for Void {
+        fn name(&self) -> &str {
+            "void"
+        }
+    }
+
+    impl TypeTrait for Type {
+        fn name(&self) -> &str {
+            &*self.name
+        }
+
+        fn package(&self) -> Option<&str> {
+            Some(&*self.package)
+        }
+
+        fn arguments(&self) -> Option<&[TypeBox]> {
+            Some(&self.arguments)
+        }
+
+        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+            for argument in &self.arguments {
+                if let TypeEnum::Type(ty) = argument.as_enum() {
+                    ty.type_imports(modules);
+                }
+            }
+
+            modules.insert((self.package.clone(), self.name.clone()));
+        }
+    }
+
+    impl TypeTrait for Optional {
+        fn name(&self) -> &str {
+            self.value.name()
+        }
+
+        fn package(&self) -> Option<&str> {
+            self.value.package()
+        }
+
+        fn arguments(&self) -> Option<&[TypeBox]> {
+            self.value.arguments()
+        }
+
+        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+            self.value.type_imports(modules);
+        }
+    }
+
+    impl TypeTrait for Local {
+        fn name(&self) -> &str {
+            &*self.name
+        }
+    }
 }
 
 const JAVA_LANG: &'static str = "java.lang";
@@ -275,47 +339,9 @@ impl_lang_item! {
     }
 }
 
-impl TypeTrait for Type {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Type(self)
-    }
-
-    fn name(&self) -> &str {
-        &*self.name
-    }
-
-    fn package(&self) -> Option<&str> {
-        Some(&*self.package)
-    }
-
-    fn arguments(&self) -> Option<&[TypeBox]> {
-        Some(&self.arguments)
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-        for argument in &self.arguments {
-            if let TypeEnum::Type(ty) = argument.as_enum() {
-                ty.type_imports(modules);
-            }
-        }
-
-        modules.insert((self.package.clone(), self.name.clone()));
-    }
-}
-
 /// The void type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Void(());
-
-impl TypeTrait for Void {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Void(self)
-    }
-
-    fn name(&self) -> &str {
-        "void"
-    }
-}
 
 impl_lang_item! {
     impl LangItem<Java> for Void {
@@ -362,35 +388,11 @@ impl_lang_item! {
     }
 }
 
-impl TypeTrait for Primitive {
-    fn name(&self) -> &str {
-        self.primitive
-    }
-
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Primitive(self)
-    }
-
-    fn package(&self) -> Option<&str> {
-        Some(JAVA_LANG)
-    }
-}
-
 /// A local name with no specific qualification.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Local {
     /// Name of class.
     name: ItemStr,
-}
-
-impl TypeTrait for Local {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Local(self)
-    }
-
-    fn name(&self) -> &str {
-        &*self.name
-    }
 }
 
 impl_lang_item! {
@@ -412,28 +414,6 @@ pub struct Optional {
     pub value: TypeBox,
     /// The complete optional field type, including wrapper.
     pub field: TypeBox,
-}
-
-impl TypeTrait for Optional {
-    fn as_enum(&self) -> TypeEnum<'_> {
-        TypeEnum::Optional(self)
-    }
-
-    fn name(&self) -> &str {
-        self.value.name()
-    }
-
-    fn package(&self) -> Option<&str> {
-        self.value.package()
-    }
-
-    fn arguments(&self) -> Option<&[TypeBox]> {
-        self.value.arguments()
-    }
-
-    fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-        self.value.type_imports(modules);
-    }
 }
 
 impl Optional {
