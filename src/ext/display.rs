@@ -22,7 +22,7 @@ where
     T: fmt::Display,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(Item::Literal(
+        tokens.push_item(Item::Literal(
             self.inner.to_string().into_boxed_str().into(),
         ));
     }

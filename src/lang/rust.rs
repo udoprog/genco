@@ -214,16 +214,18 @@ impl Module {
 /// An imported name in Rust.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Type {
-    /// How the type is imported.
-    module: Module,
     /// Reference information on the type.
     reference: Option<Reference>,
+    /// If the type is dynamic.
+    dyn_type: bool,
+    /// How the type is imported.
+    module: Module,
     /// Name of type.
     name: ItemStr,
-    /// Alias to use for the type.
-    alias: Option<ItemStr>,
     /// Arguments of the class.
     arguments: Vec<Type>,
+    /// Alias to use for the type.
+    alias: Option<ItemStr>,
 }
 
 impl Type {
@@ -363,10 +365,18 @@ impl Type {
         }
     }
 
-    /// Create a name with the given reference.
+    /// Convert into a reference `&<type>` type.
     pub fn reference<R: Into<Reference>>(self, reference: R) -> Self {
         Self {
             reference: Some(reference.into()),
+            ..self
+        }
+    }
+
+    /// Convert into a dynamic `dyn <type>` type.
+    pub fn into_dyn(self) -> Self {
+        Self {
+            dyn_type: true,
             ..self
         }
     }
@@ -408,6 +418,10 @@ impl LangItem<Rust> for Type {
                     out.write_str("&")?;
                 }
             }
+        }
+
+        if self.dyn_type {
+            out.write_str("dyn ")?;
         }
 
         match &self.module {
@@ -796,14 +810,15 @@ where
     N: Into<ItemStr>,
 {
     Type {
+        reference: None,
+        dyn_type: false,
         module: Module::Module {
             import: None,
             module: module.into(),
         },
-        reference: None,
         name: name.into(),
-        alias: None,
         arguments: vec![],
+        alias: None,
     }
 }
 
@@ -826,9 +841,10 @@ where
     Type {
         module: Module::Local,
         reference: None,
+        dyn_type: false,
         name: name.into(),
-        alias: None,
         arguments: vec![],
+        alias: None,
     }
 }
 
@@ -845,8 +861,9 @@ pub const fn const_local(name: &'static str) -> Type {
     Type {
         module: Module::Local,
         reference: None,
+        dyn_type: false,
         name: ItemStr::Static(name),
-        alias: None,
         arguments: Vec::new(),
+        alias: None,
     }
 }

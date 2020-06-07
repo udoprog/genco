@@ -221,13 +221,13 @@ macro_rules! impl_lang_item {
     ($ty:ident, $lang:ty) => {
         impl crate::FormatTokens<$lang> for $ty {
             fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
-                tokens.elements.push(crate::Item::LangBox(self.into()));
+                tokens.push_item(crate::Item::LangBox(self.into()));
             }
         }
 
         impl<'a> crate::FormatTokens<$lang> for &'a $ty {
             fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
-                tokens.elements.push(crate::Item::LangBox(self.into()));
+                tokens.push_item(crate::Item::LangBox(self.into()));
             }
         }
 

@@ -17,7 +17,7 @@ where
     L: Lang,
 {
     fn register_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(Item::Registered(self.into()))
+        tokens.push_item(Item::Registered(self.into()))
     }
 }
 
@@ -30,7 +30,7 @@ macro_rules! impl_register_tokens {
         {
             fn register_tokens(self, tokens: &mut Tokens<L>) {
                 let ($($var,)*) = self;
-                $(tokens.elements.push(Item::Registered($var.into()));)*
+                $(tokens.push_item(Item::Registered($var.into()));)*
             }
         }
     }

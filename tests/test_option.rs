@@ -6,7 +6,7 @@ fn test_option() {
     let test2 = None::<rust::Tokens>;
 
     let tokens: rust::Tokens = quote! {
-        fn test() -> u32 {
+        fn test_option() -> u32 {
             #test1
             #test2
 
@@ -16,7 +16,7 @@ fn test_option() {
 
     assert_eq!(
         vec![
-            "fn test() -> u32 {",
+            "fn test_option() -> u32 {",
             "    println!(\"{}\", \"one\")",
             "",
             "    42",

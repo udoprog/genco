@@ -16,15 +16,40 @@ use std::fmt;
 use std::io;
 use std::iter::FromIterator;
 use std::result;
+use std::slice;
 use std::vec;
 
-/// A set of tokens.
+/// A stream of tokens.
+///
+/// # Structural Requirements
+///
+/// While not strictly necessary, this structure does its best to maintain
+/// so-called structural requirements.
+///
+/// That means the following:
+///
+/// * Only one [space()] may occur in sequence.
+/// * Only one [push()] may occur in sequence.
+/// * A [push()] may never be preceeded by a [line()], since it would have no
+///   effect.
+/// * Every [line()] must be preceeded by a [push()].
+///
+/// ```rust
+/// use genco::{Tokens, Item};
+///
+/// let mut tokens = Tokens::<()>::new();
+///
+/// tokens.push();
+/// tokens.push();
+///
+/// assert_eq!(format!("{:?}", vec![Item::Push::<()>]), format!("{:?}", tokens));
+/// ```
 #[derive(Default)]
 pub struct Tokens<L = ()>
 where
     L: Lang,
 {
-    pub(crate) elements: Vec<Item<L>>,
+    items: Vec<Item<L>>,
 }
 
 impl<L> fmt::Debug for Tokens<L>
@@ -32,7 +57,7 @@ where
     L: Lang,
 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.debug_list().entries(self.elements.iter()).finish()
+        fmt.debug_list().entries(self.items.iter()).finish()
     }
 }
 
@@ -43,8 +68,20 @@ where
 {
     /// Create a new set of tokens.
     pub fn new() -> Tokens<L> {
-        Tokens {
-            elements: Vec::new(),
+        Tokens { items: Vec::new() }
+    }
+
+    /// Construct an iterator over this token stream.
+    pub fn iter(&self) -> Iter<'_, L> {
+        Iter {
+            iter: self.items.iter(),
+        }
+    }
+
+    /// Construct an iterator that owns all items in token stream.
+    pub fn into_iter(self) -> IntoIter<L> {
+        IntoIter {
+            iter: self.items.into_iter(),
         }
     }
 
@@ -56,18 +93,53 @@ where
         tokens.format_tokens(self)
     }
 
+    /// Append a single item to the stream, while checking for structural
+    /// guarantees.
+    pub fn push_item(&mut self, item: Item<L>) {
+        match item {
+            Item::Push => self.push(),
+            Item::Line => self.line(),
+            Item::Space => self.space(),
+            other => self.items.push(other),
+        }
+    }
+
     /// Extend with another set of tokens.
+    ///
+    /// This respects the structural requirements of adding one element at a
+    /// time, like you would get by calling [space()], [push()], or [line()].
     pub fn extend<I>(&mut self, it: I)
     where
         I: IntoIterator<Item = Item<L>>,
     {
-        self.elements.extend(it.into_iter());
+        let mut it = it.into_iter();
+
+        while let Some(item) = it.next() {
+            self.push_item(item);
+        }
     }
 
-    /// Walk over all elements.
+    /// Walk over all imports.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let debug = rust::imported("std::fmt", "Debug");
+    ///
+    /// let ty = rust::imported("std::collections", "HashMap")
+    ///     .with_arguments((rust::U32, debug.into_dyn()));
+    ///
+    /// let tokens = quote!(foo #ty baz);
+    ///
+    /// for import in tokens.walk_imports() {
+    ///     println!("{:?}", import);
+    /// }
+    /// ```
     pub fn walk_imports(&self) -> WalkImports<'_, L> {
         WalkImports {
-            queue: self.elements.iter(),
+            queue: self.items.iter(),
         }
     }
 
@@ -95,7 +167,7 @@ where
     /// assert_eq!("use byteorder::WriteBytesExt as _;\n\n", tokens.to_file_string().unwrap());
     /// ```
     ///
-    /// [quote!]: genco_derive@quote!
+    /// [quote!]: crate::quote!
     pub fn register<T>(&mut self, tokens: T)
     where
         T: RegisterTokens<L>,
@@ -103,40 +175,48 @@ where
         tokens.register_tokens(self);
     }
 
-    /// Check if tokens contain no elements.
+    /// Check if tokens contain no items.
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let tokens: Tokens<()> = quote!();
+    ///
+    /// assert!(tokens.is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool {
-        self.elements.is_empty()
+        self.items.is_empty()
     }
 
     /// Add a single spacing to the token stream.
     pub fn space(&mut self) {
         // A space is already present.
-        match self.elements.last() {
+        match self.items.last() {
             Some(Item::Space) => return,
             // Space at the beginning of a stream does nothing.
             None => return,
             _ => (),
         }
 
-        self.elements.push(Item::Space);
+        self.items.push(Item::Space);
     }
 
     /// Add a single push spacing operation.
     pub fn push(&mut self) {
         // Already a push or an empty line in the stream.
         // Another one will do nothing.
-        match self.elements.last() {
+        match self.items.last() {
             Some(Item::Push) | Some(Item::Line) => return,
             _ => (),
         }
 
-        self.elements.push(Item::Push);
+        self.items.push(Item::Push);
     }
 
-    /// Assert that there's the necessary elements to create one empty line at
+    /// Assert that there's the necessary items to create one empty line at
     /// the end of the stream.
     pub fn line(&mut self) {
-        let mut it = self.elements.iter().rev();
+        let mut it = self.items.iter().rev();
 
         let last = it.next();
         let ntl = it.next();
@@ -145,19 +225,19 @@ where
             // A push + line is already at the end of the stream.
             (Some(Item::Push), Some(Item::Line)) => (),
             (_, Some(Item::Push)) => {
-                self.elements.push(Item::Line);
+                self.items.push(Item::Line);
             }
             // Assert that there is something to push behind us.
             (_, Some(..)) => {
-                self.elements.push(Item::Push);
-                self.elements.push(Item::Line);
+                self.items.push(Item::Push);
+                self.items.push(Item::Line);
             }
             // do nothing.
             _ => (),
         }
     }
 
-    /// Assert that there's the necessary elements to create one empty line at
+    /// Assert that there's the necessary items to create one empty line at
     /// the end of the stream.
     #[deprecated = "use `line` function instead"]
     pub fn push_line(&mut self) {
@@ -166,42 +246,17 @@ where
 
     /// Add a single indentation to the token stream.
     pub fn indent(&mut self) {
-        self.elements.push(Item::Indent);
+        self.items.push(Item::Indent);
     }
 
     /// Add a single unindentation to the token stream.
     pub fn unindent(&mut self) {
-        self.elements.push(Item::Unindent);
+        self.items.push(Item::Unindent);
     }
-}
 
-impl<L> Clone for Tokens<L>
-where
-    L: Lang,
-{
-    fn clone(&self) -> Self {
-        Self {
-            elements: self.elements.clone(),
-        }
-    }
-}
-
-impl<L> IntoIterator for Tokens<L>
-where
-    L: Lang,
-{
-    type Item = Item<L>;
-    type IntoIter = vec::IntoIter<Item<L>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.elements.into_iter()
-    }
-}
-
-impl<L: Lang> Tokens<L> {
     /// Format the tokens.
     pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
-        for element in &self.elements {
+        for element in &self.items {
             element.format(out, config, level)?;
         }
 
@@ -350,14 +405,91 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     }
 }
 
-impl<'a, L> FromIterator<&'a Item<L>> for Tokens<L>
+impl<L> Clone for Tokens<L>
+where
+    L: Lang,
+{
+    fn clone(&self) -> Self {
+        Self {
+            items: self.items.clone(),
+        }
+    }
+}
+
+/// Iterator over [Tokens].
+///
+/// This is created using [Tokens::into_iter()].
+pub struct IntoIter<L>
+where
+    L: Lang,
+{
+    iter: vec::IntoIter<Item<L>>,
+}
+
+impl<L> Iterator for IntoIter<L>
+where
+    L: Lang,
+{
+    type Item = Item<L>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+impl<L> IntoIterator for Tokens<L>
+where
+    L: Lang,
+{
+    type Item = Item<L>;
+    type IntoIter = IntoIter<L>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.into_iter()
+    }
+}
+
+/// Iterator over [Tokens].
+///
+/// This is created using [Tokens::iter()].
+pub struct Iter<'a, L>
+where
+    L: Lang,
+{
+    iter: slice::Iter<'a, Item<L>>,
+}
+
+impl<'a, L: 'a> Iterator for Iter<'a, L>
+where
+    L: Lang,
+{
+    type Item = &'a Item<L>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+impl<'a, L> IntoIterator for &'a Tokens<L>
+where
+    L: Lang,
+{
+    type Item = &'a Item<L>;
+    type IntoIter = Iter<'a, L>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, L: 'a> FromIterator<&'a Item<L>> for Tokens<L>
 where
     L: Lang,
 {
     fn from_iter<I: IntoIterator<Item = &'a Item<L>>>(iter: I) -> Tokens<L> {
-        Tokens {
-            elements: iter.into_iter().map(Clone::clone).collect(),
-        }
+        let mut tokens = Tokens::new();
+        tokens.extend(iter.into_iter().cloned());
+        tokens
     }
 }
 
@@ -366,13 +498,13 @@ where
     L: Lang,
 {
     fn from_iter<I: IntoIterator<Item = Item<L>>>(iter: I) -> Tokens<L> {
-        Tokens {
-            elements: iter.into_iter().collect(),
-        }
+        let mut tokens = Tokens::new();
+        tokens.extend(iter.into_iter());
+        tokens
     }
 }
 
-/// An iterator over language-specific imported elements.
+/// An iterator over language-specific imported items.
 ///
 /// Constructed using the [Tokens::walk_imports] method.
 pub struct WalkImports<'a, L>

@@ -32,11 +32,11 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Self) {
-        tokens.elements.extend(self.elements);
+        tokens.extend(self);
     }
 
     fn is_empty(&self) -> bool {
-        self.elements.is_empty()
+        Tokens::is_empty(self)
     }
 }
 
@@ -45,11 +45,11 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.extend(self.elements.iter().cloned());
+        tokens.extend(self.iter().cloned());
     }
 
     fn is_empty(&self) -> bool {
-        self.elements.is_empty()
+        Tokens::is_empty(*self)
     }
 }
 
@@ -60,7 +60,7 @@ where
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
         for t in self {
-            tokens.elements.extend(t.elements);
+            tokens.extend(t);
         }
     }
 
@@ -75,7 +75,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self);
+        tokens.push_item(self);
     }
 }
 
@@ -85,7 +85,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self.to_string().into());
+        tokens.push_item(self.to_string().into());
     }
 }
 
@@ -95,7 +95,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self.clone().into());
+        tokens.push_item(self.clone().into());
     }
 }
 
@@ -105,7 +105,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self.into());
+        tokens.push_item(self.into());
     }
 }
 
@@ -115,7 +115,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self.into());
+        tokens.push_item(self.into());
     }
 }
 
@@ -125,7 +125,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self.clone().into());
+        tokens.push_item(self.clone().into());
     }
 }
 
@@ -135,7 +135,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self.into());
+        tokens.push_item(self.into());
     }
 }
 
@@ -144,7 +144,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.elements.push(self.clone().into());
+        tokens.push_item(self.clone().into());
     }
 }
 
