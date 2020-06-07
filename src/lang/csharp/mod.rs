@@ -15,6 +15,7 @@ mod block_comment;
 
 use crate as genco;
 use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
+use std::any::Any;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 
@@ -241,6 +242,17 @@ impl LangItem<Csharp> for Optional {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -411,6 +423,17 @@ impl LangItem<Csharp> for Type {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -453,6 +476,17 @@ impl LangItem<Csharp> for Simple {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -493,6 +527,17 @@ impl LangItem<Csharp> for Array {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -520,6 +565,17 @@ impl LangItem<Csharp> for Void {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str("void")?;
         Ok(())
+    }
+
+    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&dyn TypeTrait> {

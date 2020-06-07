@@ -38,6 +38,7 @@
 
 use crate as genco;
 use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
+use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -92,6 +93,17 @@ impl LangItem<Go> for Type {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -126,6 +138,17 @@ impl LangItem<Go> for Map {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -156,6 +179,17 @@ impl LangItem<Go> for Array {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -174,6 +208,17 @@ impl TypeTrait for Interface {
 impl LangItem<Go> for Interface {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str("interface{}")
+    }
+
+    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&dyn TypeTrait> {

@@ -17,6 +17,7 @@ pub use self::doc_comment::DocComment;
 
 use crate as genco;
 use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
+use std::any::Any;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Dart.
@@ -105,6 +106,17 @@ impl LangItem<Dart> for BuiltIn {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str(self.name)
     }
+
+    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// a locally defined type.
@@ -123,6 +135,17 @@ impl LangItem<Dart> for Local {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str(&*self.name)
     }
+
+    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// the void type.
@@ -139,6 +162,17 @@ impl LangItem<Dart> for Void {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str("void")
     }
+
+    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// The dynamic type.
@@ -154,6 +188,17 @@ impl TypeTrait for Dynamic {
 impl LangItem<Dart> for Dynamic {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str("dynamic")
+    }
+
+    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -262,6 +307,17 @@ impl LangItem<Dart> for Type {
         }
 
         Ok(())
+    }
+
+    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&Self> {

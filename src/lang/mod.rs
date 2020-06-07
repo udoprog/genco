@@ -17,13 +17,14 @@ pub use self::rust::Rust;
 pub use self::swift::Swift;
 
 use crate::{Formatter, Tokens};
+use std::any::Any;
 use std::fmt;
 use std::rc::Rc;
 
 /// Trait to implement for language specialization.
 pub trait Lang
 where
-    Self: Sized,
+    Self: 'static + Sized,
 {
     /// Configuration associated with building a formatting element.
     type Config;
@@ -64,10 +65,17 @@ impl Lang for () {
 /// work.
 pub trait LangItem<L>
 where
+    Self: Any,
     L: Lang,
 {
     /// Format the language item appropriately.
     fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result;
+
+    /// Check equality.
+    fn eq(&self, other: &dyn LangItem<L>) -> bool;
+
+    /// Convert into any type.
+    fn as_any(&self) -> &dyn Any;
 
     /// Coerce into an imported type.
     ///
@@ -108,6 +116,14 @@ where
 {
     fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
         self.inner.format(out, config, level)
+    }
+
+    fn eq(&self, other: &dyn LangItem<L>) -> bool {
+        self.inner.eq(other)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self.inner.as_any()
     }
 
     fn as_import(&self) -> Option<&L::Import> {

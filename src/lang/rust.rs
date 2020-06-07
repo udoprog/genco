@@ -31,6 +31,7 @@
 //! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
+use std::any::Any;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{self, Write};
 use std::rc::Rc;
@@ -471,6 +472,17 @@ impl LangItem<Rust> for Type {
         }
 
         Ok(())
+    }
+
+    fn eq(&self, other: &dyn LangItem<Rust>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&Self> {

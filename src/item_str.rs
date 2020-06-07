@@ -1,5 +1,6 @@
 //! Helper trait to take ownership of strings.
 
+use crate::{FormatTokens, Lang, Tokens};
 use std::borrow::Cow;
 use std::fmt;
 use std::ops::Deref;
@@ -12,6 +13,25 @@ pub enum ItemStr {
     Box(Box<str>),
     /// A static string.
     Static(&'static str),
+}
+
+/// Convert stringy things.
+impl<L> FormatTokens<L> for ItemStr
+where
+    L: Lang,
+{
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
+        tokens.push_item(self.into());
+    }
+}
+
+impl<'a, L> FormatTokens<L> for &'a ItemStr
+where
+    L: Lang,
+{
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
+        tokens.push_item(self.clone().into());
+    }
 }
 
 impl AsRef<str> for ItemStr {

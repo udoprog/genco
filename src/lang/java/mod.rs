@@ -17,6 +17,7 @@ pub use self::block_comment::BlockComment;
 
 use crate as genco;
 use crate::{quote, quote_in, Formatter, ItemStr, Lang, LangItem};
+use std::any::Any;
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
@@ -268,6 +269,17 @@ impl LangItem<Java> for Type {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -323,6 +335,17 @@ impl LangItem<Java> for Void {
             out.write_str("void")
         }
     }
+
+    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 /// A primitive type.
@@ -353,6 +376,17 @@ impl LangItem<Java> for Primitive {
         } else {
             out.write_str(self.primitive)
         }
+    }
+
+    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 
@@ -390,6 +424,17 @@ impl TypeTrait for Local {
 impl LangItem<Java> for Local {
     fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
         out.write_str(&*self.name)
+    }
+
+    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&dyn TypeTrait> {
@@ -443,6 +488,17 @@ impl Optional {
 impl LangItem<Java> for Optional {
     fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
         self.field.format(out, config, level)
+    }
+
+    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&dyn TypeTrait> {

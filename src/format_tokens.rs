@@ -1,6 +1,6 @@
 //! Converter traits for things that can be converted into tokens.
 
-use super::{Item, ItemStr, Lang, Tokens};
+use super::{Item, Lang, Tokens};
 use std::rc::Rc;
 
 /// Helper trait to convert something into tokens.
@@ -121,25 +121,6 @@ where
 
 /// Convert reference to refcounted strings.
 impl<'a, L> FormatTokens<L> for &'a Rc<String>
-where
-    L: Lang,
-{
-    fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.push_item(self.clone().into());
-    }
-}
-
-/// Convert stringy things.
-impl<L> FormatTokens<L> for ItemStr
-where
-    L: Lang,
-{
-    fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.push_item(self.into());
-    }
-}
-
-impl<'a, L> FormatTokens<L> for &'a ItemStr
 where
     L: Lang,
 {

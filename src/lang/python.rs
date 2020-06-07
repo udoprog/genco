@@ -12,6 +12,7 @@
 //! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
+use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -88,6 +89,17 @@ impl Type {
 impl LangItem<Python> for Type {
     fn format(&self, out: &mut Formatter, _extra: &mut (), _level: usize) -> fmt::Result {
         write!(out, "{}", self)
+    }
+
+    fn eq(&self, other: &dyn LangItem<Python>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&Self> {

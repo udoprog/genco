@@ -12,6 +12,7 @@
 //! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
+use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -58,6 +59,17 @@ impl LangItem<Swift> for Type {
         out.write_str(&self.name)
     }
 
+    fn eq(&self, other: &dyn LangItem<Swift>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -93,6 +105,17 @@ impl LangItem<Swift> for Map {
         Ok(())
     }
 
+    fn eq(&self, other: &dyn LangItem<Swift>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn as_import(&self) -> Option<&dyn TypeTrait> {
         Some(self)
     }
@@ -121,6 +144,17 @@ impl LangItem<Swift> for Array {
         self.inner.format(out, config, level + 1)?;
         out.write_str("]")?;
         Ok(())
+    }
+
+    fn eq(&self, other: &dyn LangItem<Swift>) -> bool {
+        other
+            .as_any()
+            .downcast_ref::<Self>()
+            .map_or(false, |x| x == self)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
     fn as_import(&self) -> Option<&dyn TypeTrait> {
