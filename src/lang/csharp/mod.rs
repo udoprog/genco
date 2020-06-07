@@ -15,7 +15,6 @@ mod block_comment;
 
 use crate as genco;
 use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 
@@ -24,7 +23,7 @@ pub use self::block_comment::BlockComment;
 /// Tokens container specialization for C#.
 pub type Tokens = crate::Tokens<Csharp>;
 
-impl_type_basics!(Csharp, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Simple, Optional, Type, Array, Void});
+impl_dynamic_types!(Csharp, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Simple, Optional, Type, Array, Void});
 
 /// Trait implemented by all types
 pub trait TypeTrait: 'static + fmt::Debug + LangItem<Csharp> {
@@ -231,30 +230,21 @@ impl TypeTrait for Optional {
     }
 }
 
-impl LangItem<Csharp> for Optional {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        self.inner.format(out, config, level)?;
+impl_lang_item! {
+    impl LangItem<Csharp> for Optional {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            self.inner.format(out, config, level)?;
 
-        if !self.inner.is_nullable() {
-            out.write_str("?")?;
+            if !self.inner.is_nullable() {
+                out.write_str("?")?;
+            }
+
+            Ok(())
         }
 
-        Ok(())
-    }
-
-    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -369,73 +359,64 @@ impl TypeTrait for Type {
     }
 }
 
-impl LangItem<Csharp> for Type {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        {
-            let qualified = match self.qualified {
-                true => true,
-                false => {
-                    let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
-                    let imported = config
-                        .imported_names
-                        .get(self.name.as_ref())
-                        .map(String::as_str);
-                    let pkg = self.namespace.as_deref();
-                    imported != pkg && file_namespace != pkg
-                }
-            };
+impl_lang_item! {
+    impl LangItem<Csharp> for Type {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            {
+                let qualified = match self.qualified {
+                    true => true,
+                    false => {
+                        let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
+                        let imported = config
+                            .imported_names
+                            .get(self.name.as_ref())
+                            .map(String::as_str);
+                        let pkg = self.namespace.as_deref();
+                        imported != pkg && file_namespace != pkg
+                    }
+                };
 
-            if let Some(namespace) = &self.namespace {
-                if qualified {
-                    out.write_str(namespace)?;
-                    out.write_str(SEP)?;
-                }
-            }
-        }
-
-        {
-            out.write_str(self.name.as_ref())?;
-
-            let mut it = self.path.iter();
-
-            while let Some(n) = it.next() {
-                out.write_str(".")?;
-                out.write_str(n.as_ref())?;
-            }
-        }
-
-        if !self.arguments.is_empty() {
-            out.write_str("<")?;
-
-            let mut it = self.arguments.iter().peekable();
-
-            while let Some(argument) = it.next() {
-                argument.format(out, config, level + 1usize)?;
-
-                if it.peek().is_some() {
-                    out.write_str(", ")?;
+                if let Some(namespace) = &self.namespace {
+                    if qualified {
+                        out.write_str(namespace)?;
+                        out.write_str(SEP)?;
+                    }
                 }
             }
 
-            out.write_str(">")?;
+            {
+                out.write_str(self.name.as_ref())?;
+
+                let mut it = self.path.iter();
+
+                while let Some(n) = it.next() {
+                    out.write_str(".")?;
+                    out.write_str(n.as_ref())?;
+                }
+            }
+
+            if !self.arguments.is_empty() {
+                out.write_str("<")?;
+
+                let mut it = self.arguments.iter().peekable();
+
+                while let Some(argument) = it.next() {
+                    argument.format(out, config, level + 1usize)?;
+
+                    if it.peek().is_some() {
+                        out.write_str(", ")?;
+                    }
+                }
+
+                out.write_str(">")?;
+            }
+
+            Ok(())
         }
 
-        Ok(())
-    }
-
-    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -470,25 +451,16 @@ impl TypeTrait for Simple {
     }
 }
 
-impl LangItem<Csharp> for Simple {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str(self.alias)?;
-        Ok(())
-    }
+impl_lang_item! {
+    impl LangItem<Csharp> for Simple {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str(self.alias)?;
+            Ok(())
+        }
 
-    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -520,26 +492,17 @@ impl TypeTrait for Array {
     }
 }
 
-impl LangItem<Csharp> for Array {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        self.inner.format(out, config, level)?;
-        out.write_str("[]")?;
-        Ok(())
-    }
+impl_lang_item! {
+    impl LangItem<Csharp> for Array {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            self.inner.format(out, config, level)?;
+            out.write_str("[]")?;
+            Ok(())
+        }
 
-    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -561,25 +524,16 @@ impl TypeTrait for Void {
     }
 }
 
-impl LangItem<Csharp> for Void {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str("void")?;
-        Ok(())
-    }
+impl_lang_item! {
+    impl LangItem<Csharp> for Void {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str("void")?;
+            Ok(())
+        }
 
-    fn eq(&self, other: &dyn LangItem<Csharp>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 //! A single element
 
 use crate::{Formatter, ItemStr, Lang, LangBox, LangItem as _};
+use std::cmp;
 use std::fmt;
 use std::rc::Rc;
 
@@ -170,3 +171,25 @@ where
         }
     }
 }
+
+impl<L> cmp::PartialEq for Item<L>
+where
+    L: Lang,
+{
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Literal(a), Self::Literal(b)) => a == b,
+            (Self::Quoted(a), Self::Quoted(b)) => a == b,
+            (Self::LangBox(a), Self::LangBox(b)) => a.eq(b),
+            (Self::Registered(a), Self::Registered(b)) => a.eq(b),
+            (Self::Push, Self::Push) => true,
+            (Self::Line, Self::Line) => true,
+            (Self::Space, Self::Space) => true,
+            (Self::Indent, Self::Indent) => true,
+            (Self::Unindent, Self::Unindent) => true,
+            _ => false,
+        }
+    }
+}
+
+impl<L> cmp::Eq for Item<L> where L: Lang {}

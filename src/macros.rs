@@ -218,33 +218,61 @@ macro_rules! nested {
 }
 
 macro_rules! impl_lang_item {
-    ($ty:ident, $lang:ty) => {
-        impl crate::FormatTokens<$lang> for $ty {
-            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
+    (
+        $(impl FormatTokens<$from_lang:ty> for $from_ty:ident;)?
+        $(impl From<$box_from_ty:ident> for LangBox<$box_lang:ty>;)?
+
+        $(impl LangItem<$lang:ty> for $ty:ident {
+            $($item:item)*
+        })?
+    ) => {
+        $(
+        impl crate::FormatTokens<$from_lang> for $from_ty {
+            fn format_tokens(self, tokens: &mut crate::Tokens<$from_lang>) {
                 tokens.push_item(crate::Item::LangBox(self.into()));
             }
         }
 
-        impl<'a> crate::FormatTokens<$lang> for &'a $ty {
-            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
+        impl<'a> crate::FormatTokens<$from_lang> for &'a $from_ty {
+            fn format_tokens(self, tokens: &mut crate::Tokens<$from_lang>) {
                 tokens.push_item(crate::Item::LangBox(self.into()));
             }
         }
+        )?
 
-        impl From<$ty> for crate::LangBox<$lang> {
-            fn from(value: $ty) -> Self {
+        $(
+        impl From<$box_from_ty> for crate::LangBox<$from_lang> {
+            fn from(value: $box_from_ty) -> Self {
                 use std::rc::Rc;
-                crate::LangBox::from(Rc::new(value) as Rc<dyn LangItem<$lang>>)
+                crate::LangBox::from(Rc::new(value) as Rc<dyn LangItem<$from_lang>>)
             }
         }
 
-        impl<'a> From<&'a $ty> for crate::LangBox<$lang> {
-            fn from(value: &'a $ty) -> Self {
+        impl<'a> From<&'a $box_from_ty> for crate::LangBox<$from_lang> {
+            fn from(value: &'a $box_from_ty) -> Self {
                 use std::rc::Rc;
-                crate::LangBox::from(Rc::new(value.clone()) as Rc<dyn LangItem<$lang>>)
+                crate::LangBox::from(Rc::new(value.clone()) as Rc<dyn LangItem<$from_lang>>)
             }
         }
-    };
+        )?
+
+        $(
+            impl LangItem<$lang> for $ty {
+                $($item)*
+
+                fn eq(&self, other: &dyn LangItem<$lang>) -> bool {
+                    other
+                        .as_any()
+                        .downcast_ref::<Self>()
+                        .map_or(false, |x| x == self)
+                }
+
+                fn as_any(&self) -> &dyn std::any::Any {
+                    self
+                }
+            }
+            )?
+    }
 }
 
 macro_rules! impl_variadic_type_args {
@@ -315,7 +343,7 @@ macro_rules! impl_plain_variadic_args {
     };
 }
 
-macro_rules! impl_type_basics {
+macro_rules! impl_dynamic_types {
     ($lang:ty, $enum:ident<$lt:lifetime>, $trait:ident, $type_box:ident, $args:ident, {$($ty:ident),*}) => {
         #[derive(Clone)]
         #[doc = "Boxed type container"]
@@ -388,7 +416,10 @@ macro_rules! impl_type_basics {
                 }
             }
 
-            impl_lang_item!($ty, $lang);
+            impl_lang_item! {
+                impl FormatTokens<$lang> for $ty;
+                impl From<$ty> for LangBox<$lang>;
+            }
         )*
 
         impl_variadic_type_args!($args, $trait, $type_box);

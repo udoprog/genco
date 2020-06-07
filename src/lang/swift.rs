@@ -12,14 +12,13 @@
 //! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Swift>;
 
-impl_type_basics!(Swift, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array});
+impl_dynamic_types!(Swift, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array});
 
 /// Trait implemented by all types
 pub trait TypeTrait: 'static + fmt::Debug + LangItem<Swift> {
@@ -54,24 +53,15 @@ impl TypeTrait for Type {
     }
 }
 
-impl LangItem<Swift> for Type {
-    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
-        out.write_str(&self.name)
-    }
+impl_lang_item! {
+    impl LangItem<Swift> for Type {
+        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+            out.write_str(&self.name)
+        }
 
-    fn eq(&self, other: &dyn LangItem<Swift>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -95,29 +85,20 @@ impl TypeTrait for Map {
     }
 }
 
-impl LangItem<Swift> for Map {
-    fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
-        out.write_str("[")?;
-        self.key.format(out, config, level + 1)?;
-        out.write_str(": ")?;
-        self.value.format(out, config, level + 1)?;
-        out.write_str("]")?;
-        Ok(())
-    }
+impl_lang_item! {
+    impl LangItem<Swift> for Map {
+        fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
+            out.write_str("[")?;
+            self.key.format(out, config, level + 1)?;
+            out.write_str(": ")?;
+            self.value.format(out, config, level + 1)?;
+            out.write_str("]")?;
+            Ok(())
+        }
 
-    fn eq(&self, other: &dyn LangItem<Swift>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -138,27 +119,18 @@ impl TypeTrait for Array {
     }
 }
 
-impl LangItem<Swift> for Array {
-    fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
-        out.write_str("[")?;
-        self.inner.format(out, config, level + 1)?;
-        out.write_str("]")?;
-        Ok(())
-    }
+impl_lang_item! {
+    impl LangItem<Swift> for Array {
+        fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
+            out.write_str("[")?;
+            self.inner.format(out, config, level + 1)?;
+            out.write_str("]")?;
+            Ok(())
+        }
 
-    fn eq(&self, other: &dyn LangItem<Swift>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 

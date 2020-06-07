@@ -17,14 +17,13 @@ pub use self::block_comment::BlockComment;
 
 use crate as genco;
 use crate::{quote, quote_in, Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 
 /// Tokens container specialized for Java.
 pub type Tokens = crate::Tokens<Java>;
 
-impl_type_basics!(Java, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Primitive, Void, Type, Optional, Local});
+impl_dynamic_types!(Java, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Primitive, Void, Type, Optional, Local});
 
 /// Trait implemented by all types
 pub trait TypeTrait: 'static + fmt::Debug + LangItem<Java> {
@@ -226,62 +225,53 @@ impl Type {
     }
 }
 
-impl LangItem<Java> for Type {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        {
-            let file_package = config.package.as_ref().map(|p| p.as_ref());
-            let imported = config.imported.get(self.name.as_ref()).map(String::as_str);
-            let pkg = Some(self.package.as_ref());
+impl_lang_item! {
+    impl LangItem<Java> for Type {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            {
+                let file_package = config.package.as_ref().map(|p| p.as_ref());
+                let imported = config.imported.get(self.name.as_ref()).map(String::as_str);
+                let pkg = Some(self.package.as_ref());
 
-            if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
-                out.write_str(self.package.as_ref())?;
-                out.write_str(SEP)?;
-            }
-        }
-
-        {
-            out.write_str(self.name.as_ref())?;
-
-            let mut it = self.path.iter();
-
-            while let Some(n) = it.next() {
-                out.write_str(".")?;
-                out.write_str(n.as_ref())?;
-            }
-        }
-
-        if !self.arguments.is_empty() {
-            out.write_str("<")?;
-
-            let mut it = self.arguments.iter().peekable();
-
-            while let Some(argument) = it.next() {
-                argument.format(out, config, level + 1usize)?;
-
-                if it.peek().is_some() {
-                    out.write_str(", ")?;
+                if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
+                    out.write_str(self.package.as_ref())?;
+                    out.write_str(SEP)?;
                 }
             }
 
-            out.write_str(">")?;
+            {
+                out.write_str(self.name.as_ref())?;
+
+                let mut it = self.path.iter();
+
+                while let Some(n) = it.next() {
+                    out.write_str(".")?;
+                    out.write_str(n.as_ref())?;
+                }
+            }
+
+            if !self.arguments.is_empty() {
+                out.write_str("<")?;
+
+                let mut it = self.arguments.iter().peekable();
+
+                while let Some(argument) = it.next() {
+                    argument.format(out, config, level + 1usize)?;
+
+                    if it.peek().is_some() {
+                        out.write_str(", ")?;
+                    }
+                }
+
+                out.write_str(">")?;
+            }
+
+            Ok(())
         }
 
-        Ok(())
-    }
-
-    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -327,24 +317,15 @@ impl TypeTrait for Void {
     }
 }
 
-impl LangItem<Java> for Void {
-    fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
-        if level > 0 {
-            out.write_str("Void")
-        } else {
-            out.write_str("void")
+impl_lang_item! {
+    impl LangItem<Java> for Void {
+        fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
+            if level > 0 {
+                out.write_str("Void")
+            } else {
+                out.write_str("void")
+            }
         }
-    }
-
-    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 }
 
@@ -369,24 +350,15 @@ impl Primitive {
     }
 }
 
-impl LangItem<Java> for Primitive {
-    fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
-        if level > 0 {
-            out.write_str(self.boxed)
-        } else {
-            out.write_str(self.primitive)
+impl_lang_item! {
+    impl LangItem<Java> for Primitive {
+        fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
+            if level > 0 {
+                out.write_str(self.boxed)
+            } else {
+                out.write_str(self.primitive)
+            }
         }
-    }
-
-    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 }
 
@@ -421,24 +393,15 @@ impl TypeTrait for Local {
     }
 }
 
-impl LangItem<Java> for Local {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str(&*self.name)
-    }
+impl_lang_item! {
+    impl LangItem<Java> for Local {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str(&*self.name)
+        }
 
-    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -485,24 +448,15 @@ impl Optional {
     }
 }
 
-impl LangItem<Java> for Optional {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        self.field.format(out, config, level)
-    }
+impl_lang_item! {
+    impl LangItem<Java> for Optional {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            self.field.format(out, config, level)
+        }
 
-    fn eq(&self, other: &dyn LangItem<Java>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 

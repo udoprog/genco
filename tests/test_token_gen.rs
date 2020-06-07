@@ -7,22 +7,9 @@
 use genco::prelude::*;
 use genco::{Item, Item::*, ItemStr::*};
 
-/// Check that the expression equals a collection of items.
-macro_rules! assert_items_eq {
-    ($value:expr, [$($expect:expr,)*]) => {{
-        let value: rust::Tokens = $value;
-        let expected: Vec<Item<Rust>> = vec![$($expect,)*];
-        assert_eq!(format!("{:?}", value), format!("{:?}", expected));
-    }};
-
-    ($value:expr, [$($expect:expr),*]) => {
-        assert_items_eq!($value, [$($expect,)*])
-    };
-}
-
 #[test]
 fn test_token_gen() {
-    assert_items_eq! {
+    assert_eq! {
         quote! {
             foo
             bar
@@ -30,7 +17,7 @@ fn test_token_gen() {
                 #(tokens => quote_in! { tokens => hello })
             out?
         },
-        [
+        vec![
             Literal(Static("foo")),
             Push,
             Literal(Static("bar")),
@@ -40,27 +27,27 @@ fn test_token_gen() {
             Literal(Static("hello")),
             Unindent,
             Literal(Static("out?"))
-        ]
+        ] as Vec<Item<Rust>>
     }
 }
 
 #[test]
 fn test_iterator_gen() {
-    assert_items_eq! {
+    assert_eq! {
         quote! {
             #(t => for n in 0..3 {
                 t.push();
                 t.append(n);
             })
         },
-        [
+        vec![
             Push,
             Literal(Box("0".into())),
             Push,
             Literal(Box("1".into())),
             Push,
             Literal(Box("2".into())),
-        ]
+        ] as Vec<Item<Rust>>
     };
 }
 
@@ -80,9 +67,9 @@ fn test_tricky_continuation() {
         biz
     };
 
-    assert_items_eq! {
+    assert_eq! {
         output,
-        [
+        vec![
             Literal(Static("foo,")),
             Space,
             Literal(Static("bar")),
@@ -91,7 +78,7 @@ fn test_tricky_continuation() {
             Literal(Static("baz")),
             Push,
             Literal(Static("biz")),
-        ]
+        ] as Vec<Item<Rust>>
     };
 }
 
@@ -109,9 +96,15 @@ fn test_indentation() {
         c
     };
 
-    assert_items_eq! {
+    assert_eq! {
         a,
-        [Literal(Static("a")), Indent, Literal(Static("b")), Unindent, Literal(Static("c"))]
+        vec![
+            Literal(Static("a")),
+            Indent,
+            Literal(Static("b")),
+            Unindent,
+            Literal(Static("c"))
+        ] as Vec<Item<Rust>>
     };
 
     let mut b = rust::Tokens::new();
@@ -123,9 +116,9 @@ fn test_indentation() {
         c
     };
 
-    assert_items_eq! {
+    assert_eq! {
         b,
-        [Literal(Static("a")), Indent, Literal(Static("b")), Unindent, Literal(Static("c"))]
+        vec![Literal(Static("a")), Indent, Literal(Static("b")), Unindent, Literal(Static("c"))] as Vec<Item<Rust>>
     };
 }
 
@@ -140,9 +133,9 @@ fn test_repeat() {
         &mut output => foo #((a, b) in a.zip(b) => #a #b)
     };
 
-    assert_items_eq! {
+    assert_eq! {
         output,
-        [
+        vec![
             Literal(Static("foo")),
             Space,
             Literal("0".into()),
@@ -154,7 +147,7 @@ fn test_repeat() {
             Literal("2".into()),
             Space,
             Literal("5".into())
-        ]
+        ] as Vec<Item<Rust>>
     };
 }
 
@@ -164,14 +157,14 @@ fn test_tight_quote() {
         You are:#("fine")
     };
 
-    assert_items_eq! {
+    assert_eq! {
         output,
-        [
+        vec![
             Literal(Static("You")),
             Space,
             Literal(Static("are:")),
             Literal("fine".into()),
-        ]
+        ] as Vec<Item<Rust>>
     };
 }
 
@@ -181,9 +174,9 @@ fn test_tight_repitition() {
         You are: #(v in 0..3 join (, ) => #v)
     };
 
-    assert_items_eq! {
+    assert_eq! {
         output,
-        [
+        vec![
             Literal(Static("You")),
             Space,
             Literal(Static("are:")),
@@ -195,6 +188,6 @@ fn test_tight_repitition() {
             Literal(Static(",")),
             Space,
             Literal("2".into()),
-        ]
+        ] as Vec<Item<Rust>>
     };
 }

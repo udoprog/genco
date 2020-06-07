@@ -31,7 +31,6 @@
 //! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{self, Write};
 use std::rc::Rc;
@@ -41,7 +40,6 @@ pub type Tokens = crate::Tokens<Rust>;
 /// Language box specialization for Rust.
 pub type LangBox = crate::LangBox<Rust>;
 
-impl_lang_item!(Type, Rust);
 impl_plain_variadic_args!(Args, Type);
 
 /// The `()` (unit) type.
@@ -403,90 +401,84 @@ impl Type {
     }
 }
 
-impl LangItem<Rust> for Type {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        if let Some(reference) = &self.reference {
-            match reference {
-                Reference::StaticRef => {
-                    out.write_str("&'static ")?;
-                }
-                Reference::Named(name) => {
-                    out.write_str("&'")?;
-                    out.write_str(name.as_ref())?;
-                    out.write_str(" ")?;
-                }
-                Reference::Ref => {
-                    out.write_str("&")?;
-                }
-            }
-        }
+impl_lang_item! {
+    impl FormatTokens<Rust> for Type;
+    impl From<Type> for LangBox<Rust>;
 
-        if self.dyn_type {
-            out.write_str("dyn ")?;
-        }
-
-        match &self.module {
-            Module::Local
-            | Module::Module {
-                import: Some(Import::Direct),
-                ..
-            } => {
-                self.write_direct(out)?;
-            }
-            Module::Module {
-                import: Some(Import::Prefixed),
-                module,
-            } => {
-                self.write_prefixed(out, module)?;
-            }
-            Module::Module {
-                import: None,
-                module,
-            } => match &config.default_import {
-                Import::Direct => self.write_direct(out)?,
-                Import::Prefixed => self.write_prefixed(out, module)?,
-            },
-            Module::Aliased {
-                alias: ref module, ..
-            } => {
-                out.write_str(module)?;
-                out.write_str(SEP)?;
-                out.write_str(&self.name)?;
-            }
-        }
-
-        if !self.arguments.is_empty() {
-            let mut it = self.arguments.iter().peekable();
-
-            out.write_str("<")?;
-
-            while let Some(n) = it.next() {
-                n.format(out, config, level + 1)?;
-
-                if it.peek().is_some() {
-                    out.write_str(", ")?;
+    impl LangItem<Rust> for Type {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            if let Some(reference) = &self.reference {
+                match reference {
+                    Reference::StaticRef => {
+                        out.write_str("&'static ")?;
+                    }
+                    Reference::Named(name) => {
+                        out.write_str("&'")?;
+                        out.write_str(name.as_ref())?;
+                        out.write_str(" ")?;
+                    }
+                    Reference::Ref => {
+                        out.write_str("&")?;
+                    }
                 }
             }
 
-            out.write_str(">")?;
+            if self.dyn_type {
+                out.write_str("dyn ")?;
+            }
+
+            match &self.module {
+                Module::Local
+                | Module::Module {
+                    import: Some(Import::Direct),
+                    ..
+                } => {
+                    self.write_direct(out)?;
+                }
+                Module::Module {
+                    import: Some(Import::Prefixed),
+                    module,
+                } => {
+                    self.write_prefixed(out, module)?;
+                }
+                Module::Module {
+                    import: None,
+                    module,
+                } => match &config.default_import {
+                    Import::Direct => self.write_direct(out)?,
+                    Import::Prefixed => self.write_prefixed(out, module)?,
+                },
+                Module::Aliased {
+                    alias: ref module, ..
+                } => {
+                    out.write_str(module)?;
+                    out.write_str(SEP)?;
+                    out.write_str(&self.name)?;
+                }
+            }
+
+            if !self.arguments.is_empty() {
+                let mut it = self.arguments.iter().peekable();
+
+                out.write_str("<")?;
+
+                while let Some(n) = it.next() {
+                    n.format(out, config, level + 1)?;
+
+                    if it.peek().is_some() {
+                        out.write_str(", ")?;
+                    }
+                }
+
+                out.write_str(">")?;
+            }
+
+            Ok(())
         }
 
-        Ok(())
-    }
-
-    fn eq(&self, other: &dyn LangItem<Rust>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&Self> {
-        Some(self)
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
+        }
     }
 }
 

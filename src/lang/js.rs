@@ -37,14 +37,13 @@
 //! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
 
-impl_type_basics!(JavaScript, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Import, ImportDefault, Local});
+impl_dynamic_types!(JavaScript, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Import, ImportDefault, Local});
 
 /// Trait implemented by all types.
 pub trait TypeTrait: 'static + fmt::Debug + LangItem<JavaScript> {
@@ -117,30 +116,21 @@ impl TypeTrait for Import {
     }
 }
 
-impl LangItem<JavaScript> for Import {
-    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
-        if let Some(alias) = &self.alias {
-            out.write_str(alias)?;
-        } else {
-            out.write_str(&self.name)?;
+impl_lang_item! {
+    impl LangItem<JavaScript> for Import {
+        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+            if let Some(alias) = &self.alias {
+                out.write_str(alias)?;
+            } else {
+                out.write_str(&self.name)?;
+            }
+
+            Ok(())
         }
 
-        Ok(())
-    }
-
-    fn eq(&self, other: &dyn LangItem<JavaScript>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -161,24 +151,15 @@ impl TypeTrait for ImportDefault {
     }
 }
 
-impl LangItem<JavaScript> for ImportDefault {
-    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
-        out.write_str(&self.name)
-    }
+impl_lang_item! {
+    impl LangItem<JavaScript> for ImportDefault {
+        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+            out.write_str(&self.name)
+        }
 
-    fn eq(&self, other: &dyn LangItem<JavaScript>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -197,24 +178,15 @@ impl TypeTrait for Local {
     }
 }
 
-impl LangItem<JavaScript> for Local {
-    fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
-        out.write_str(&self.name)
-    }
+impl_lang_item! {
+    impl LangItem<JavaScript> for Local {
+        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+            out.write_str(&self.name)
+        }
 
-    fn eq(&self, other: &dyn LangItem<JavaScript>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        None
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            None
+        }
     }
 }
 

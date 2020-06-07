@@ -17,13 +17,12 @@ pub use self::doc_comment::DocComment;
 
 use crate as genco;
 use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;
 
-impl_type_basics!(Dart, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, BuiltIn, Local, Void, Dynamic});
+impl_dynamic_types!(Dart, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, BuiltIn, Local, Void, Dynamic});
 
 /// Trait implemented by all types
 pub trait TypeTrait: 'static + fmt::Debug + LangItem<Dart> {
@@ -102,20 +101,11 @@ impl TypeTrait for BuiltIn {
     }
 }
 
-impl LangItem<Dart> for BuiltIn {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str(self.name)
-    }
-
-    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
+impl_lang_item! {
+    impl LangItem<Dart> for BuiltIn {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str(self.name)
+        }
     }
 }
 
@@ -131,20 +121,11 @@ impl TypeTrait for Local {
     }
 }
 
-impl LangItem<Dart> for Local {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str(&*self.name)
-    }
-
-    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
+impl_lang_item! {
+    impl LangItem<Dart> for Local {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str(&*self.name)
+        }
     }
 }
 
@@ -158,20 +139,11 @@ impl TypeTrait for Void {
     }
 }
 
-impl LangItem<Dart> for Void {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str("void")
-    }
-
-    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
+impl_lang_item! {
+    impl LangItem<Dart> for Void {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str("void")
+        }
     }
 }
 
@@ -185,20 +157,11 @@ impl TypeTrait for Dynamic {
     }
 }
 
-impl LangItem<Dart> for Dynamic {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str("dynamic")
-    }
-
-    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
+impl_lang_item! {
+    impl LangItem<Dart> for Dynamic {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str("dynamic")
+        }
     }
 }
 
@@ -281,47 +244,38 @@ impl TypeTrait for Type {
     }
 }
 
-impl LangItem<Dart> for Type {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        if let Some(alias) = &self.alias {
-            out.write_str(alias.as_ref())?;
-            out.write_str(SEP)?;
-        }
-
-        out.write_str(&*self.name)?;
-
-        if !self.arguments.is_empty() {
-            out.write_str("<")?;
-
-            let mut it = self.arguments.iter().peekable();
-
-            while let Some(argument) = it.next() {
-                argument.format(out, config, level + 1)?;
-
-                if it.peek().is_some() {
-                    out.write_str(", ")?;
-                }
+impl_lang_item! {
+    impl LangItem<Dart> for Type {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            if let Some(alias) = &self.alias {
+                out.write_str(alias.as_ref())?;
+                out.write_str(SEP)?;
             }
 
-            out.write_str(">")?;
+            out.write_str(&*self.name)?;
+
+            if !self.arguments.is_empty() {
+                out.write_str("<")?;
+
+                let mut it = self.arguments.iter().peekable();
+
+                while let Some(argument) = it.next() {
+                    argument.format(out, config, level + 1)?;
+
+                    if it.peek().is_some() {
+                        out.write_str(", ")?;
+                    }
+                }
+
+                out.write_str(">")?;
+            }
+
+            Ok(())
         }
 
-        Ok(())
-    }
-
-    fn eq(&self, other: &dyn LangItem<Dart>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&Self> {
-        Some(self)
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
+        }
     }
 }
 

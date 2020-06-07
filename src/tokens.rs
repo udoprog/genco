@@ -12,6 +12,7 @@ use crate::formatter::{FmtWriter, IoWriter};
 use crate::{
     FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens, VecWriter,
 };
+use std::cmp;
 use std::fmt;
 use std::io;
 use std::iter::FromIterator;
@@ -42,7 +43,7 @@ use std::vec;
 /// tokens.push();
 /// tokens.push();
 ///
-/// assert_eq!(format!("{:?}", vec![Item::Push::<()>]), format!("{:?}", tokens));
+/// assert_eq!(vec![Item::Push::<()>], tokens);
 /// ```
 #[derive(Default)]
 pub struct Tokens<L = ()>
@@ -416,6 +417,53 @@ where
     }
 }
 
+impl<L> cmp::PartialEq for Tokens<L>
+where
+    L: Lang,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.items == other.items
+    }
+}
+
+impl<'a, L> cmp::PartialEq<Vec<Item<L>>> for Tokens<L>
+where
+    L: Lang,
+{
+    fn eq(&self, other: &Vec<Item<L>>) -> bool {
+        self.items == *other
+    }
+}
+
+impl<'a, L> cmp::PartialEq<Tokens<L>> for Vec<Item<L>>
+where
+    L: Lang,
+{
+    fn eq(&self, other: &Tokens<L>) -> bool {
+        *self == other.items
+    }
+}
+
+impl<'a, L> cmp::PartialEq<[Item<L>]> for Tokens<L>
+where
+    L: Lang,
+{
+    fn eq(&self, other: &[Item<L>]) -> bool {
+        &*self.items == other
+    }
+}
+
+impl<'a, L> cmp::PartialEq<Tokens<L>> for [Item<L>]
+where
+    L: Lang,
+{
+    fn eq(&self, other: &Tokens<L>) -> bool {
+        self == &*other.items
+    }
+}
+
+impl<L> cmp::Eq for Tokens<L> where L: Lang {}
+
 /// Iterator over [Tokens].
 ///
 /// This is created using [Tokens::into_iter()].
@@ -547,16 +595,19 @@ mod tests {
     #[derive(Debug, Clone, PartialEq, Eq)]
     struct Import(u32);
 
-    impl_lang_item!(Import, Lang);
+    impl_lang_item! {
+        impl FormatTokens<Lang> for Import;
+        impl From<Import> for LangBox<Lang>;
 
-    impl LangItem<Lang> for Import {
-        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
-            use std::fmt::Write as _;
-            write!(out, "{}", self.0)
-        }
+        impl LangItem<Lang> for Import {
+            fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+                use std::fmt::Write as _;
+                write!(out, "{}", self.0)
+            }
 
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
+            fn as_import(&self) -> Option<&Self> {
+                Some(self)
+            }
         }
     }
 

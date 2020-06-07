@@ -12,14 +12,11 @@
 //! ```
 
 use crate::{Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Python.
 pub type Tokens = crate::Tokens<Python>;
-
-impl_lang_item!(Type, Python);
 
 static SEP: &'static str = ".";
 
@@ -34,6 +31,21 @@ pub struct Type {
     ///
     /// If `None`, last component of module will be used.
     name: Option<ItemStr>,
+}
+
+impl_lang_item! {
+    impl FormatTokens<Python> for Type;
+    impl From<Type> for LangBox<Python>;
+
+    impl LangItem<Python> for Type {
+        fn format(&self, out: &mut Formatter, _extra: &mut (), _level: usize) -> fmt::Result {
+            write!(out, "{}", self)
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
+        }
+    }
 }
 
 impl fmt::Display for Type {
@@ -83,27 +95,6 @@ impl Type {
             name: Some(new_name.into()),
             ..self
         }
-    }
-}
-
-impl LangItem<Python> for Type {
-    fn format(&self, out: &mut Formatter, _extra: &mut (), _level: usize) -> fmt::Result {
-        write!(out, "{}", self)
-    }
-
-    fn eq(&self, other: &dyn LangItem<Python>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&Self> {
-        Some(self)
     }
 }
 

@@ -38,14 +38,13 @@
 
 use crate as genco;
 use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
-use std::any::Any;
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
 /// Tokens container specialization for Go.
 pub type Tokens = crate::Tokens<Go>;
 
-impl_type_basics!(Go, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array, Interface});
+impl_dynamic_types!(Go, TypeEnum<'a>, TypeTrait, TypeBox, TypeArgs, {Type, Map, Array, Interface});
 
 /// Trait implemented by all types
 pub trait TypeTrait: 'static + fmt::Debug + LangItem<Go> {
@@ -82,30 +81,21 @@ impl TypeTrait for Type {
     }
 }
 
-impl LangItem<Go> for Type {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
-            out.write_str(module)?;
-            out.write_str(SEP)?;
+impl_lang_item! {
+    impl LangItem<Go> for Type {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
+                out.write_str(module)?;
+                out.write_str(SEP)?;
+            }
+
+            out.write_str(&self.name)?;
+            Ok(())
         }
 
-        out.write_str(&self.name)?;
-        Ok(())
-    }
-
-    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -129,28 +119,19 @@ impl TypeTrait for Map {
     }
 }
 
-impl LangItem<Go> for Map {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        out.write_str("map[")?;
-        self.key.format(out, config, level + 1)?;
-        out.write_str("]")?;
-        self.value.format(out, config, level + 1)?;
-        Ok(())
-    }
+impl_lang_item! {
+    impl LangItem<Go> for Map {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            out.write_str("map[")?;
+            self.key.format(out, config, level + 1)?;
+            out.write_str("]")?;
+            self.value.format(out, config, level + 1)?;
+            Ok(())
+        }
 
-    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -171,27 +152,18 @@ impl TypeTrait for Array {
     }
 }
 
-impl LangItem<Go> for Array {
-    fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-        out.write_str("[")?;
-        out.write_str("]")?;
-        self.inner.format(out, config, level + 1)?;
-        Ok(())
-    }
+impl_lang_item! {
+    impl LangItem<Go> for Array {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+            out.write_str("[")?;
+            out.write_str("]")?;
+            self.inner.format(out, config, level + 1)?;
+            Ok(())
+        }
 
-    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
@@ -205,24 +177,15 @@ impl TypeTrait for Interface {
     }
 }
 
-impl LangItem<Go> for Interface {
-    fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-        out.write_str("interface{}")
-    }
+impl_lang_item! {
+    impl LangItem<Go> for Interface {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+            out.write_str("interface{}")
+        }
 
-    fn eq(&self, other: &dyn LangItem<Go>) -> bool {
-        other
-            .as_any()
-            .downcast_ref::<Self>()
-            .map_or(false, |x| x == self)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_import(&self) -> Option<&dyn TypeTrait> {
-        Some(self)
+        fn as_import(&self) -> Option<&dyn TypeTrait> {
+            Some(self)
+        }
     }
 }
 
