@@ -6,7 +6,7 @@ use syn::spanned::Spanned;
 use syn::token;
 use syn::{Result, Token};
 
-use crate::{Cursor, ItemBuffer};
+use crate::{Cursor, ItemBuffer, WhitespaceEmitter};
 
 enum ControlKind {
     Space,
@@ -144,68 +144,28 @@ impl<'a> QuoteParser<'a> {
         }
     }
 
-    pub(crate) fn parse(mut self, input: ParseStream) -> Result<TokenStream> {
+    pub(crate) fn parse(self, input: ParseStream) -> Result<TokenStream> {
         let receiver = self.receiver;
 
         let mut registers = Vec::new();
 
         let mut output = TokenStream::new();
 
-        // Keeping track of the span of the last token processed so we can
-        // determine when to insert spacing or indentation.
-        let mut cursor = None::<Cursor>;
-
-        // Used to determine the indentation state of a token.
-        let mut last_column = input.span().start().column;
-
         let mut queued = Vec::new();
         let mut queue = VecDeque::new();
 
         let mut item_buffer = ItemBuffer::new(receiver);
+        let mut whitespace = WhitespaceEmitter::new(
+            self.receiver,
+            self.span_start,
+            self.span_end,
+            input.span().start().column,
+        );
 
         parse_inner(|item| queue.push_back(item), input, receiver)?;
 
         while let Some(item) = queue.pop_front() {
-            let mut next = item.cursor();
-
-            // So we encountered the first ever token, while we have a spanned
-            // start like `quote_in! { out => foo }`, `foo` is now `next`.
-            //
-            // What we want to do is treat the beginning out `out` as the
-            // indentation position, so we adjust the token.
-            //
-            // But we also want to avoid situations like this:
-            //
-            // ```
-            // quote_in! { out =>
-            //     foo
-            //     bar
-            // }
-            // ```
-            //
-            // If we would treat `out` as the start, `foo` would be seen as
-            // unindented. So check if the first encountered token is on the
-            // same line as the binding `out` or not before adjusting them!
-            if let Some(span_start) = self.span_start.take() {
-                if next.start.line == span_start.line {
-                    last_column = span_start.column;
-                    next = next.with_start(span_start);
-                }
-            }
-
-            // Insert spacing if appropriate.
-            handle_spacing(
-                &mut output,
-                receiver,
-                next.start,
-                cursor.as_ref(),
-                &mut last_column,
-                &mut item_buffer,
-            );
-
-            // Assign the current cursor to the next item.
-            // This will then be used to make future indentation decisions.
-            cursor = Some(next);
+            whitespace.step(&mut output, &mut item_buffer, item.cursor());
 
             match item {
                 Item::Tree(_, tt) => match tt {
@@ -228,7 +188,7 @@ impl<'a> QuoteParser<'a> {
                             span_cursor.end_character(),
                             group.delimiter(),
                         ));
-                        cursor = Some(span_cursor.start_character());
+                        whitespace.set_current(span_cursor.start_character());
 
                         while let Some(item) = queued.pop() {
                             queue.push_front(item);
@@ -327,9 +287,7 @@ impl<'a> QuoteParser<'a> {
                 }
                 Item::Register(_, expr) => {
                     registers.push(quote::quote_spanned!(expr.span() => #receiver.register(#expr)));
-                    // Reset cursor, so that registers don't count as items to be offset from.
-                    // This allows imports to be grouped without affecting formatting.
-                    cursor = None;
+                    whitespace.reset();
                 }
                 Item::DelimiterClose(_, delimiter) => match delimiter {
                     Delimiter::Parenthesis => item_buffer.push(')'),
@@ -340,24 +298,7 @@ impl<'a> QuoteParser<'a> {
             }
         }
 
-        // evaluate whitespace in case we have an explicit end span.
-        if let Some(end) = self.span_end.take() {
-            if let Some(span_start) = self.span_start.take() {
-                if end.line == span_start.line {
-                    last_column = span_start.column;
-                }
-            }
-
-            // Insert spacing if appropriate.
-            handle_spacing(
-                &mut output,
-                receiver,
-                end,
-                cursor.as_ref(),
-                &mut last_column,
-                &mut item_buffer,
-            );
-        }
+        whitespace.end(&mut output, &mut item_buffer);
 
         item_buffer.flush(&mut output);
 
@@ -366,56 +307,6 @@ impl<'a> QuoteParser<'a> {
             #output
         })
     }
-}
-
-/// Insert indentation and spacing if appropriate in the output token stream.
-fn handle_spacing(
-    output: &mut TokenStream,
-    receiver: &syn::Expr,
-    next: LineColumn,
-    cursor: Option<&Cursor>,
-    last_column: &mut usize,
-    item_buffer: &mut ItemBuffer,
-) {
-    // Do nothing unless we have a cursor.
-    let cursor = match cursor {
-        Some(cursor) => cursor,
-        None => return,
-    };
-
-    // Insert spacing if we are on the same line, but column has changed.
-    if cursor.end.line == next.line {
-        // Same line, but next item doesn't match.
-        if cursor.end.column < next.column && *last_column != next.column {
-            item_buffer.flush(output);
-            output.extend(quote::quote!(#receiver.space();));
-        }
-
-        return;
-    }
-
-    // Line changed. Determine whether to indent, unindent, or hard break the
-    // line.
-    item_buffer.flush(output);
-
-    debug_assert!(next.line > cursor.start.line);
-
-    let line_spaced = if next.line - cursor.end.line > 1 {
-        output.extend(quote::quote!(#receiver.line();));
-        true
-    } else {
-        false
-    };
-
-    if *last_column < next.column {
-        output.extend(quote::quote!(#receiver.indent();));
-    } else if *last_column > next.column {
-        output.extend(quote::quote!(#receiver.unindent();));
-    } else if !line_spaced {
-        output.extend(quote::quote!(#receiver.push();));
-    }
-
-    *last_column = next.column;
 }
 
 /// Process expressions in the token stream.

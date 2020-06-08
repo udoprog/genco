@@ -10,9 +10,11 @@ mod cursor;
 mod item_buffer;
 mod quote_in_parser;
 mod quote_parser;
+mod whitespace_emitter;
 
 pub(crate) use self::cursor::Cursor;
 pub(crate) use self::item_buffer::ItemBuffer;
+pub(crate) use self::whitespace_emitter::WhitespaceEmitter;
 
 /// Language neutral, whitespace sensitive quasi-quoting for GenCo.
 ///
