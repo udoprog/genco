@@ -54,7 +54,6 @@ fn test_iterator_gen() {
 #[test]
 fn test_tricky_continuation() {
     let mut output = rust::Tokens::new();
-    // let output = &mut output;
 
     let bar = Static("bar");
 

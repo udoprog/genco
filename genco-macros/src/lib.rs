@@ -7,14 +7,14 @@ use syn::parse::{ParseStream, Parser as _};
 use syn::{Expr, Ident};
 
 mod cursor;
+mod encoder;
 mod item_buffer;
 mod quote_in_parser;
 mod quote_parser;
-mod whitespace_emitter;
 
 pub(crate) use self::cursor::Cursor;
+pub(crate) use self::encoder::{Binding, Control, Delimiter, Encoder};
 pub(crate) use self::item_buffer::ItemBuffer;
-pub(crate) use self::whitespace_emitter::WhitespaceEmitter;
 
 /// Language neutral, whitespace sensitive quasi-quoting for GenCo.
 ///
