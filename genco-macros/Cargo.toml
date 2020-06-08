@@ -12,7 +12,7 @@ Macros used by Genco, the even simpler code generator for Rust.
 """
 
 [dependencies]
-syn = { version = "1.0.18", features = ["full", "visit-mut"] }
+syn = { git = "https://github.com/udoprog/syn", branch = "parse-without-eager-brace", version = "1.0.30", features = ["full", "visit-mut"] }
 quote = "1.0.3"
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 

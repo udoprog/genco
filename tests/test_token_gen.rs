@@ -58,7 +58,8 @@ fn test_tricky_continuation() {
     let bar = Static("bar");
 
     quote_in! {
-        &mut output => foo, #(*output => {
+        &mut output =>
+        foo, #(*output => {
             output.append(&bar);
             output.append(Static(","));
             output.space();
@@ -117,7 +118,13 @@ fn test_indentation() {
 
     assert_eq! {
         b,
-        vec![Literal(Static("a")), Indent, Literal(Static("b")), Unindent, Literal(Static("c"))] as Vec<Item<Rust>>
+        vec![
+            Literal(Static("a")),
+            Indent,
+            Literal(Static("b")),
+            Unindent,
+            Literal(Static("c"))
+        ] as Vec<Item<Rust>>
     };
 }
 
@@ -129,7 +136,7 @@ fn test_repeat() {
     let b = 3..6;
 
     quote_in! {
-        &mut output => foo #((a, b) in a.zip(b) => #a #b)
+        &mut output => foo #(for (a, b) in a.zip(b) => #a #b)
     };
 
     assert_eq! {
@@ -170,7 +177,7 @@ fn test_tight_quote() {
 #[test]
 fn test_tight_repitition() {
     let output: rust::Tokens = quote! {
-        You are: #(v in 0..3 join (, ) => #v)
+        You are: #(for v in 0..3 join (, ) => #v)
     };
 
     assert_eq! {
@@ -188,5 +195,169 @@ fn test_tight_repitition() {
             Space,
             Literal("2".into()),
         ] as Vec<Item<Rust>>
+    };
+}
+
+#[test]
+fn test_if() {
+    let a = true;
+    let b = false;
+
+    let output: rust::Tokens = quote! {
+        #(if a => foo)
+        #(if a { foo2 })
+        #(if b { bar })
+        #(if b => bar2)
+        #(if a => baz)
+        #(if a { baz2 })
+        #(if b { not_biz } else { biz })
+    };
+
+    assert_eq! {
+        output,
+        vec![
+            Literal(Static("foo")),
+            Push,
+            Literal(Static("foo2")),
+            Push,
+            Literal(Static("baz")),
+            Push,
+            Literal(Static("baz2")),
+            Push,
+            Literal(Static("biz")),
+        ] as Vec<Item<Rust>>
+    };
+}
+
+#[test]
+fn test_match() {
+    enum Alt {
+        A,
+        B,
+    }
+
+    fn test(alt: Alt) -> rust::Tokens {
+        quote! {
+            #(match alt { Alt::A => a, Alt::B => b })
+        }
+    }
+
+    fn test2(alt: Alt) -> rust::Tokens {
+        quote! {
+            #(match alt { Alt::A => { a }, Alt::B => { b } })
+        }
+    }
+
+    fn test2_cond(alt: Alt, cond: bool) -> rust::Tokens {
+        quote! {
+            #(match alt { Alt::A if cond => { a }, _ => { b } })
+        }
+    }
+
+    assert_eq! {
+        test(Alt::A),
+        vec![Literal(Static("a"))] as Vec<Item<Rust>>
+    };
+
+    assert_eq! {
+        test(Alt::B),
+        vec![Literal(Static("b"))] as Vec<Item<Rust>>
+    };
+
+    assert_eq! {
+        test2(Alt::A),
+        vec![Literal(Static("a"))] as Vec<Item<Rust>>
+    };
+
+    assert_eq! {
+        test2(Alt::B),
+        vec![Literal(Static("b"))] as Vec<Item<Rust>>
+    };
+
+    assert_eq! {
+        test2_cond(Alt::A, true),
+        vec![Literal(Static("a"))] as Vec<Item<Rust>>
+    };
+
+    assert_eq! {
+        test2_cond(Alt::A, false),
+        vec![Literal(Static("b"))] as Vec<Item<Rust>>
+    };
+}
+
+#[test]
+fn test_empty_loop_whitespace() {
+    // Bug: This should generate two commas. But did generate a space following
+    // it!
+    let tokens: rust::Tokens = quote! {
+        #(for _ in 0..3 join(,) =>)
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Literal(Static(",")), Literal(Static(","))] as Vec<Item<Rust>>
+    };
+
+    let tokens: rust::Tokens = quote! {
+        #(for _ in 0..3 join( ,) =>)
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Space, Literal(Static(",")), Space, Literal(Static(","))] as Vec<Item<Rust>>
+    };
+
+    let tokens: rust::Tokens = quote! {
+          #(for _ in 0..3 join(, ) =>)
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Literal(Static(",")), Space, Literal(Static(",")), Space] as Vec<Item<Rust>>
+    };
+
+    let tokens: rust::Tokens = quote! {
+          #(for _ in 0..3 join( , ) =>)
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Space, Literal(Static(",")), Space, Literal(Static(",")), Space] as Vec<Item<Rust>>
+    };
+}
+
+#[test]
+fn test_indentation_empty() {
+    let tokens: rust::Tokens = quote! {
+        a
+            #(for _ in 0..3 =>)
+        b
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Literal(Static("a")), Indent, Unindent, Literal(Static("b"))] as Vec<Item<Rust>>
+    };
+
+    let tokens: rust::Tokens = quote! {
+        a
+            #(if false {})
+        b
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Literal(Static("a")), Indent, Unindent, Literal(Static("b"))] as Vec<Item<Rust>>
+    };
+
+    let tokens: rust::Tokens = quote! {
+        a
+            #(_tokens =>)
+        b
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Literal(Static("a")), Indent, Unindent, Literal(Static("b"))] as Vec<Item<Rust>>
     };
 }

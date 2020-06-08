@@ -859,7 +859,7 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
-/// const my_type: rust::Type = rust::const_local("MyType");
+/// const MY_TYPE: rust::Type = rust::const_local("MyType");
 /// ```
 pub const fn const_local(name: &'static str) -> Type {
     Type {

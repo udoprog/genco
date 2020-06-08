@@ -13,7 +13,7 @@ mod quote_in_parser;
 mod quote_parser;
 
 pub(crate) use self::cursor::Cursor;
-pub(crate) use self::encoder::{Binding, Control, Delimiter, Encoder};
+pub(crate) use self::encoder::{Binding, Control, Delimiter, Encoder, MatchArm};
 pub(crate) use self::item_buffer::ItemBuffer;
 
 /// Language neutral, whitespace sensitive quasi-quoting for GenCo.
@@ -98,9 +98,9 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// [Tokens::push]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.push
 /// [Tokens::line]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.line
 ///
-/// # Repetitions
+/// # Loops
 ///
-/// To repeat a pattern you can use `#(<bindings> in <expr> => <quoted>)`, where
+/// To repeat a pattern you can use `#(for <bindings> in <expr> => <quoted>)`, where
 /// <expr> is an iterator.
 ///
 /// `<quoted>` will be treated as a quoted expression, so anything which works
@@ -113,7 +113,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
-///     Your numbers are: #(n in numbers => #n#<space>)
+///     Your numbers are: #(for n in numbers => #n#<space>)
 /// };
 ///
 /// assert_eq!("Your numbers are: 3 4 5 ", tokens.to_string().unwrap());
@@ -123,10 +123,13 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// we also got a spacing at the end that we _probably_ don't want. To avoid
 /// this we can instead to a joined repetition.
 ///
-/// # Joining Repetitions
+/// # Joining Loops
 ///
-/// It's a common need to join repetitions of tokens. To do this, you can
-/// add `join (<quoted>)` to the end of a repitition specification.
+/// It's a common need to join loops. To do this, you can add `join (<quoted>)`
+/// to the end of a repitition specification.
+///
+/// The expression specified in `join (<quoted>)` is added _between_ each
+/// `<quoted>` produced by the loop.
 ///
 /// One difference with the `<quoted>` section with the regular [quote!] macro
 /// is that it is _whitespace sensitive_ at the tail of the expression.
@@ -142,10 +145,86 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
-///     Your numbers are: #(n in numbers join (, ) => #n).
+///     Your numbers are: #(for n in numbers join (, ) => #n).
 /// };
 ///
 /// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string().unwrap());
+/// ```
+///
+/// # Conditionals
+///
+/// You can specify a conditional with `#(if <condition> => <then>)` where
+/// <condition> is an expression evaluating to a `bool`, and `<then>` and
+/// `<else>` are quoted expressions.
+///
+/// It's also possible to specify a condition with an else branch, by using
+/// `#(if <condition> { <then> } else { <else> })`. In this instance, `<else>`
+/// is also a quoted expression.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// fn greeting(hello: bool, name: &str) -> Tokens<()> {
+///     quote!(Custom Greeting: #(if hello {
+///         Hello #name
+///     } else {
+///         Goodbye #name
+///     }))
+/// }
+///
+/// let tokens = greeting(true, "John");
+/// assert_eq!("Custom Greeting: Hello John", tokens.to_string().unwrap());
+///
+/// let tokens = greeting(false, "John");
+/// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
+/// ```
+///
+/// The `<else>` branch is optional, so the following is a valid expression that
+/// if `false`, won't result in any tokens:
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// fn greeting(hello: bool, name: &str) -> Tokens<()> {
+///     quote!(Custom Greeting:#(if hello {
+///         #<space>Hello #name
+///     }))
+/// }
+///
+/// let tokens = greeting(true, "John");
+/// assert_eq!("Custom Greeting: Hello John", tokens.to_string().unwrap());
+///
+/// let tokens = greeting(false, "John");
+/// assert_eq!("Custom Greeting:", tokens.to_string().unwrap());
+/// ```
+///
+/// # Match Statements
+///
+/// You can specify a match statement with
+/// `#(match <condition> { [<pattern> => <quoted>,]* }`, where <condition> is an
+/// evaluated expression that is match against each subsequent <pattern>. If a
+/// pattern matches, the arm with the matching `<quoted>` block is evaluated.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// enum Greeting {
+///     Hello,
+///     Goodbye,
+/// }
+///
+/// fn greeting(greeting: Greeting, name: &str) -> Tokens<()> {
+///     quote!(Custom Greeting: #(match greeting {
+///         Greeting::Hello => Hello #name,
+///         Greeting::Goodbye => Goodbye #name,
+///     }))
+/// }
+///
+/// let tokens = greeting(Greeting::Hello, "John");
+/// assert_eq!("Custom Greeting: Hello John", tokens.to_string().unwrap());
+///
+/// let tokens = greeting(Greeting::Goodbye, "John");
+/// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
 /// ```
 ///
 /// # Scopes

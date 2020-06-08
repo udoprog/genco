@@ -194,8 +194,6 @@ where
         // A space is already present.
         match self.items.last() {
             Some(Item::Space) => return,
-            // Space at the beginning of a stream does nothing.
-            None => return,
             _ => (),
         }
 

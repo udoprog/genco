@@ -20,11 +20,6 @@ where
         self.format_tokens(&mut tokens);
         tokens
     }
-
-    /// Hint to test if we are empty.
-    fn is_empty(&self) -> bool {
-        false
-    }
 }
 
 impl<L> FormatTokens<L> for Tokens<L>
@@ -34,10 +29,6 @@ where
     fn format_tokens(self, tokens: &mut Self) {
         tokens.extend(self);
     }
-
-    fn is_empty(&self) -> bool {
-        Tokens::is_empty(self)
-    }
 }
 
 impl<'a, L> FormatTokens<L> for &'a Tokens<L>
@@ -46,10 +37,6 @@ where
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
         tokens.extend(self.iter().cloned());
-    }
-
-    fn is_empty(&self) -> bool {
-        Tokens::is_empty(*self)
     }
 }
 
@@ -62,10 +49,6 @@ where
         for t in self {
             tokens.extend(t);
         }
-    }
-
-    fn is_empty(&self) -> bool {
-        self.iter().all(|t| t.is_empty())
     }
 }
 

@@ -5,7 +5,7 @@ use syn::spanned::Spanned;
 use syn::token;
 use syn::{Result, Token};
 
-use crate::{Binding, Control, Cursor, Delimiter, Encoder};
+use crate::{Binding, Control, Cursor, Delimiter, Encoder, MatchArm};
 
 /// Items to process from the queue.
 enum Item {
@@ -32,7 +32,7 @@ enum Item {
         stmt: TokenTree,
     },
     /// A loop repetition.
-    Repeat {
+    Loop {
         cursor: Cursor,
         /// The pattern being bound.
         pattern: syn::Pat,
@@ -44,6 +44,20 @@ enum Item {
         /// The inner stream processed.
         stream: TokenStream,
     },
+    Condition {
+        cursor: Cursor,
+        /// Expression being use as a condition.
+        condition: syn::Expr,
+        /// Then branch of the conditional.
+        then_branch: TokenStream,
+        /// Else branch of the conditional.
+        else_branch: Option<TokenStream>,
+    },
+    Match {
+        cursor: Cursor,
+        condition: syn::Expr,
+        arms: Vec<MatchArm>,
+    },
 }
 
 impl Item {
@@ -54,7 +68,9 @@ impl Item {
             Self::DelimiterClose { cursor, .. } => *cursor,
             Self::Control { cursor, .. } => *cursor,
             Self::Eval { cursor, .. } => *cursor,
-            Self::Repeat { cursor, .. } => *cursor,
+            Self::Loop { cursor, .. } => *cursor,
+            Self::Condition { cursor, .. } => *cursor,
+            Self::Match { cursor, .. } => *cursor,
         }
     }
 }
@@ -101,7 +117,25 @@ impl<'a> QuoteParser<'a> {
         }
     }
 
+    /// Parse until you've reached the given peek token.
+    pub(crate) fn parse_until(
+        self,
+        input: ParseStream,
+        until: impl Fn(ParseStream) -> bool + Copy,
+    ) -> Result<TokenStream> {
+        self.parse_internal(input, until)
+    }
+
+    /// Parse until end of stream.
     pub(crate) fn parse(self, input: ParseStream) -> Result<TokenStream> {
+        self.parse_internal(input, |_| false)
+    }
+
+    fn parse_internal(
+        self,
+        input: ParseStream,
+        until: impl Fn(ParseStream) -> bool + Copy,
+    ) -> Result<TokenStream> {
         let receiver = self.receiver;
 
         let mut registers = Vec::new();
@@ -109,14 +143,9 @@ impl<'a> QuoteParser<'a> {
         let mut queued = Vec::new();
         let mut queue = VecDeque::new();
 
-        let mut encoder = Encoder::new(
-            self.receiver,
-            self.span_start,
-            self.span_end,
-            input.span().start().column,
-        );
+        let mut encoder = Encoder::new(self.receiver, self.span_start, self.span_end);
 
-        parse_inner(|item| queue.push_back(item), input, receiver)?;
+        parse_inner(|item| queue.push_back(item), input, receiver, until)?;
 
         while let Some(item) = queue.pop_front() {
             encoder.step(item.cursor());
@@ -183,7 +212,7 @@ impl<'a> QuoteParser<'a> {
                 } => {
                     encoder.encode_eval(stmt);
                 }
-                Item::Repeat {
+                Item::Loop {
                     pattern,
                     expr,
                     join,
@@ -198,6 +227,19 @@ impl<'a> QuoteParser<'a> {
                 }
                 Item::DelimiterClose { delimiter, .. } => {
                     delimiter.encode_end(&mut encoder.item_buffer);
+                }
+                Item::Condition {
+                    condition,
+                    then_branch,
+                    else_branch,
+                    ..
+                } => {
+                    encoder.encode_condition(condition, then_branch, else_branch);
+                }
+                Item::Match {
+                    condition, arms, ..
+                } => {
+                    encoder.encode_match(condition, arms);
                 }
             }
         }
@@ -217,7 +259,7 @@ fn parse_tree_iterator(
     stream: TokenStream,
     receiver: &syn::Expr,
 ) -> Result<()> {
-    let parser = |input: ParseStream| parse_inner(queue, input, receiver);
+    let parser = |input: ParseStream| parse_inner(queue, input, receiver, |_| false);
     parser.parse2(stream)?;
     Ok(())
 }
@@ -238,9 +280,182 @@ fn parse_register(start: Span, input: ParseStream) -> Result<Item> {
     Ok(Item::Register { cursor, expr })
 }
 
-fn parse_expression(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
+/// Parse `if <condition> { <quoted> } [else { <quoted> }]`.
+fn parse_condition(cursor: Cursor, input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
+    input.parse::<Token![if]>()?;
+    let condition = syn::Expr::parse_without_eager_brace(input)?;
+
+    if input.peek(Token![=>]) {
+        input.parse::<Token![=>]>()?;
+        let then_branch = QuoteParser::new(receiver).parse(input)?;
+
+        return Ok(Item::Condition {
+            cursor,
+            condition,
+            then_branch,
+            else_branch: None,
+        });
+    }
+
+    let content;
+    syn::braced!(content in input);
+
+    let then_branch = QuoteParser::new(receiver).parse(&content)?;
+
+    let else_branch = if input.peek(Token![else]) {
+        input.parse::<Token![else]>()?;
+
+        let content;
+        syn::braced!(content in input);
+
+        Some(QuoteParser::new(receiver).parse(&content)?)
+    } else {
+        None
+    };
+
+    return Ok(Item::Condition {
+        cursor,
+        condition,
+        then_branch,
+        else_branch,
+    });
+}
+
+/// Parse `for <expr> in <iter> [join (<quoted>)] => <quoted>`.
+fn parse_loop(cursor: Cursor, input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
     syn::custom_keyword!(join);
 
+    input.parse::<Token![for]>()?;
+    let pattern = input.parse::<syn::Pat>()?;
+    input.parse::<Token![in]>()?;
+    let expr = input.parse::<syn::Expr>()?;
+
+    let join = if input.peek(join) {
+        input.parse::<join>()?;
+
+        let content;
+        let paren = syn::parenthesized!(content in input);
+        let parser = QuoteParser::new(receiver)
+            .with_span_start(adjust_start(paren.span.start()))
+            .with_span_end(adjust_end(paren.span.end()));
+
+        Some(parser.parse(&content)?)
+    } else {
+        None
+    };
+
+    input.parse::<Token![=>]>()?;
+
+    let parser = QuoteParser::new(receiver);
+    let stream = parser.parse(&input)?;
+
+    return Ok(Item::Loop {
+        cursor,
+        pattern,
+        join,
+        expr,
+        stream,
+    });
+
+    fn adjust_start(start: LineColumn) -> LineColumn {
+        LineColumn {
+            line: start.line,
+            column: start.column + 1,
+        }
+    }
+
+    fn adjust_end(end: LineColumn) -> LineColumn {
+        LineColumn {
+            line: end.line,
+            column: end.column.saturating_sub(1),
+        }
+    }
+}
+
+fn parse_match(cursor: Cursor, input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
+    input.parse::<Token![match]>()?;
+    let condition = syn::Expr::parse_without_eager_brace(input)?;
+
+    let body;
+    syn::braced!(body in input);
+
+    let mut arms = Vec::new();
+
+    while !body.is_empty() {
+        let pattern = body.parse::<syn::Pat>()?;
+
+        let condition = if body.peek(Token![if]) {
+            body.parse::<Token![if]>()?;
+            let condition = body.parse::<syn::Expr>()?;
+            Some(condition)
+        } else {
+            None
+        };
+
+        body.parse::<Token![=>]>()?;
+
+        let block = if body.peek(token::Brace) {
+            let block;
+            syn::braced!(block in body);
+
+            let parser = QuoteParser::new(receiver);
+            parser.parse(&block)?
+        } else {
+            let parser = QuoteParser::new(receiver);
+            parser.parse_until(&body, |s| s.peek(Token![,]))?
+        };
+
+        arms.push(MatchArm {
+            pattern,
+            condition,
+            block,
+        });
+
+        if body.peek(Token![,]) {
+            body.parse::<Token![,]>()?;
+        }
+    }
+
+    return Ok(Item::Match {
+        cursor,
+        condition,
+        arms,
+    });
+}
+
+/// Parse evaluation: `[*]<binding> => <expr>`.
+fn parse_eval(cursor: Cursor, input: ParseStream) -> Result<Item> {
+    let binding_borrowed =
+        if input.peek(Token![*]) && input.peek2(syn::Ident) && input.peek3(Token![=>]) {
+            input.parse::<Token![*]>()?;
+            true
+        } else {
+            false
+        };
+
+    let binding = if binding_borrowed || input.peek(syn::Ident) && input.peek2(Token![=>]) {
+        let binding = input.parse::<syn::Ident>()?;
+        input.parse::<Token![=>]>()?;
+
+        Some(Binding {
+            binding,
+            binding_borrowed,
+        })
+    } else {
+        None
+    };
+
+    let mut stmt = Group::new(pc::Delimiter::None, input.parse()?);
+    stmt.set_span(input.span());
+
+    Ok(Item::Eval {
+        cursor,
+        binding,
+        stmt: stmt.into(),
+    })
+}
+
+fn parse_expression(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
     let hash = input.parse::<Token![#]>()?;
     let start = hash.span;
 
@@ -261,81 +476,35 @@ fn parse_expression(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
 
     let cursor = Cursor::join(start, outer.span);
 
-    // Repeat
-    if scope.peek2(Token![in]) {
-        let pattern = scope.parse::<syn::Pat>()?;
-        scope.parse::<Token![in]>()?;
-        let expr = scope.parse::<syn::Expr>()?;
-
-        let join = if scope.peek(join) {
-            scope.parse::<join>()?;
-
-            let content;
-            let paren = syn::parenthesized!(content in scope);
-
-            // TODO: use end span.
-            let parser = QuoteParser::new(receiver).with_span_end(paren.span.end());
-
-            Some(parser.parse(&content)?)
-        } else {
-            None
-        };
-
-        scope.parse::<Token![=>]>()?;
-
-        let parser = QuoteParser::new(receiver).with_span_start(pattern.span().start());
-
-        let stream = parser.parse(&scope)?;
-
-        return Ok(Item::Repeat {
-            cursor,
-            pattern,
-            join,
-            expr,
-            stream,
-        });
+    // If statement.
+    if scope.peek(Token![if]) {
+        return parse_condition(cursor, &scope, receiver);
     }
 
-    let binding_borrowed =
-        if scope.peek(Token![*]) && scope.peek2(syn::Ident) && scope.peek3(Token![=>]) {
-            scope.parse::<Token![*]>()?;
-            true
-        } else {
-            false
-        };
+    // For loop.
+    if scope.peek(Token![for]) && scope.peek3(Token![in]) {
+        return parse_loop(cursor, &scope, receiver);
+    }
 
-    let binding = if binding_borrowed || scope.peek(syn::Ident) && scope.peek2(Token![=>]) {
-        let binding = scope.parse::<syn::Ident>()?;
-        scope.parse::<Token![=>]>()?;
+    // Match.
+    if scope.peek(Token![match]) {
+        return parse_match(cursor, &scope, receiver);
+    }
 
-        Some(Binding {
-            binding,
-            binding_borrowed,
-        })
-    } else {
-        None
-    };
-
-    let mut stmt = Group::new(pc::Delimiter::None, scope.parse()?);
-    stmt.set_span(scope.span());
-
-    Ok(Item::Eval {
-        cursor,
-        binding,
-        stmt: stmt.into(),
-    })
+    parse_eval(cursor, &scope)
 }
 
 fn parse_inner(
     mut queue: impl FnMut(Item),
     input: ParseStream,
     receiver: &syn::Expr,
+    until: impl Fn(ParseStream) -> bool + Copy,
 ) -> Result<()> {
     syn::custom_punctuation!(Register, #@);
     syn::custom_punctuation!(Escape, ##);
     syn::custom_punctuation!(ControlStart, #<);
 
-    while !input.is_empty() {
+    while !input.is_empty() && !until(input) {
         if input.peek(Register) {
             let register = input.parse::<Register>()?;
             queue(parse_register(register.spans[0], input)?);
