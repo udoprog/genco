@@ -17,6 +17,9 @@ use std::fmt::{self, Write};
 
 /// Tokens container specialization for Python.
 pub type Tokens = crate::Tokens<Python>;
+/// Configuration for python.
+#[derive(Debug, Clone, Default)]
+pub struct Config {}
 
 static SEP: &'static str = ".";
 
@@ -38,7 +41,7 @@ impl_lang_item! {
     impl From<Type> for LangBox<Python>;
 
     impl LangItem<Python> for Type {
-        fn format(&self, out: &mut Formatter, _extra: &mut (), _level: usize) -> fmt::Result {
+        fn format(&self, out: &mut Formatter, _extra: &mut Config, _level: usize) -> fmt::Result {
             write!(out, "{}", self)
         }
 
@@ -139,7 +142,7 @@ impl Python {
 }
 
 impl Lang for Python {
-    type Config = ();
+    type Config = Config;
     type Import = Type;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
