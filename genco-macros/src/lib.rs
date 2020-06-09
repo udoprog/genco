@@ -100,8 +100,11 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// # Loops
 ///
-/// To repeat a pattern you can use `#(for <bindings> in <expr> => <quoted>)`, where
-/// <expr> is an iterator.
+/// To repeat a pattern you can use `#(for <bindings> in <expr> { <quoted> })`,
+/// where <expr> is an iterator.
+///
+/// It is also possible to use the more compact
+/// `#(for <bindings> in <expr> => <quoted>)` (note the arrow).
 ///
 /// `<quoted>` will be treated as a quoted expression, so anything which works
 /// during regular quoting will work here as well, with the addition that

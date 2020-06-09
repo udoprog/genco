@@ -316,7 +316,7 @@ fn parse_loop(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
     input.parse::<Token![for]>()?;
     let pattern = input.parse::<syn::Pat>()?;
     input.parse::<Token![in]>()?;
-    let expr = input.parse::<syn::Expr>()?;
+    let expr = syn::Expr::parse_without_eager_brace(input)?;
 
     let join = if input.peek(join) {
         input.parse::<join>()?;
@@ -332,7 +332,15 @@ fn parse_loop(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
         None
     };
 
-    input.parse::<Token![=>]>()?;
+    let content;
+
+    let input = if input.peek(Token![=>]) {
+        input.parse::<Token![=>]>()?;
+        input
+    } else {
+        syn::braced!(content in input);
+        &content
+    };
 
     let parser = QuoteParser::new(receiver);
     let stream = parser.parse(&input)?;
