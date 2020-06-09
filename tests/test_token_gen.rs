@@ -51,6 +51,23 @@ fn test_iterator_gen() {
             Literal(Box("2".into())),
         ] as Vec<Item<Rust>>
     };
+
+    assert_eq! {
+        quote! {
+            #(t {for n in 0..3 {
+                t.push();
+                t.append(n);
+            }})
+        },
+        vec![
+            Push,
+            Literal(Box("0".into())),
+            Push,
+            Literal(Box("1".into())),
+            Push,
+            Literal(Box("2".into())),
+        ] as Vec<Item<Rust>>
+    };
 }
 
 #[test]
@@ -132,17 +149,29 @@ fn test_indentation() {
 
 #[test]
 fn test_repeat() {
-    let mut output = rust::Tokens::new();
-
-    let a = 0..3;
-    let b = 3..6;
-
-    quote_in! {
-        &mut output => foo #(for (a, b) in a.zip(b) => #a #b)
+    assert_eq! {
+        quote! {
+            foo #(for (a, b) in (0..3).zip(3..6) => #a #b)
+        },
+        vec![
+            Literal(Static("foo")),
+            Space,
+            Literal("0".into()),
+            Space,
+            Literal("3".into()),
+            Literal("1".into()),
+            Space,
+            Literal("4".into()),
+            Literal("2".into()),
+            Space,
+            Literal("5".into())
+        ] as Vec<Item<Rust>>
     };
 
     assert_eq! {
-        output,
+        quote! {
+            foo #(for (a, b) in (0..3).zip(3..6) { #a #b })
+        },
         vec![
             Literal(Static("foo")),
             Space,

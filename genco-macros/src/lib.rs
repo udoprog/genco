@@ -64,7 +64,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// assert_eq!("hello WORLD", tokens.to_string().unwrap());
 /// ```
 ///
-/// # Esacping Whitespace
+/// # Escaping Whitespace
 ///
 /// Because this macro is whitespace sensitive, it might sometimes be necessary
 /// to provide hints of where they should be inserted.
@@ -232,9 +232,11 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// # Scopes
 ///
-/// You can use `#(<binding> => <stmt>)` to gain mutable access to the current
+/// You can use `#(<binding> { <expr> })` to gain mutable access to the current
 /// token stream. This is a great alternative if you want to do more complex
 /// logic during evaluation.
+///
+/// For a more compact version, you can also use `#(<binding> => <expr>)`
 ///
 /// Note that this can cause borrowing issues if the underlying stream is
 /// already a mutable reference. To work around this you can specify

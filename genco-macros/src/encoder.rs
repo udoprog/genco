@@ -199,7 +199,7 @@ impl<'a> Encoder<'a> {
         }
     }
 
-    pub(crate) fn encode_eval_binding(&mut self, binding: Binding, stmt: TokenTree) {
+    pub(crate) fn encode_scope(&mut self, binding: Binding, content: TokenStream) {
         let Binding {
             binding,
             binding_borrowed,
@@ -218,16 +218,25 @@ impl<'a> Encoder<'a> {
 
         self.output.extend(quote::quote! {{
             #binding
-            #stmt
+            #content
         }});
     }
 
     /// Encode an evaluation of the given expression.
-    pub(crate) fn encode_eval(&mut self, stmt: TokenTree) {
+    pub(crate) fn encode_eval_ident(&mut self, ident: syn::Ident) {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);
         self.output.extend(quote::quote! {
-            #receiver.append(#stmt);
+            #receiver.append(#ident);
+        });
+    }
+
+    /// Encode an evaluation of the given expression.
+    pub(crate) fn encode_eval(&mut self, expr: syn::Expr) {
+        let receiver = self.receiver;
+        self.item_buffer.flush(&mut self.output);
+        self.output.extend(quote::quote! {
+            #receiver.append(#expr);
         });
     }
 

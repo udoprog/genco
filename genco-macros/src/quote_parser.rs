@@ -1,4 +1,4 @@
-use proc_macro2::{self as pc, Group, LineColumn, Punct, Spacing, Span, TokenStream, TokenTree};
+use proc_macro2::{self as pc, LineColumn, Punct, Spacing, Span, TokenStream, TokenTree};
 use std::collections::VecDeque;
 use syn::parse::{ParseStream, Parser as _};
 use syn::spanned::Spanned;
@@ -21,10 +21,17 @@ enum Item {
     Control {
         control: Control,
     },
+    EvalIdent {
+        ident: syn::Ident,
+    },
     /// Something to be evaluated as rust.
     Eval {
-        binding: Option<Binding>,
-        stmt: TokenTree,
+        expr: syn::Expr,
+    },
+    /// A bound scope.
+    Scope {
+        binding: Binding,
+        content: TokenStream,
     },
     /// A loop repetition.
     Loop {
@@ -188,19 +195,16 @@ impl<'a> QuoteParser<'a> {
                 Item::Control { control, .. } => {
                     encoder.encode_control(control);
                 }
-                Item::Eval {
-                    binding: Some(binding),
-                    stmt,
-                    ..
+                Item::Scope {
+                    binding, content, ..
                 } => {
-                    encoder.encode_eval_binding(binding, stmt);
+                    encoder.encode_scope(binding, content);
                 }
-                Item::Eval {
-                    binding: None,
-                    stmt,
-                    ..
-                } => {
-                    encoder.encode_eval(stmt);
+                Item::EvalIdent { ident } => {
+                    encoder.encode_eval_ident(ident);
+                }
+                Item::Eval { expr, .. } => {
+                    encoder.encode_eval(expr);
                 }
                 Item::Loop {
                     pattern,
@@ -416,32 +420,42 @@ fn parse_match(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
 
 /// Parse evaluation: `[*]<binding> => <expr>`.
 fn parse_eval(input: ParseStream) -> Result<Item> {
-    let binding_borrowed =
-        if input.peek(Token![*]) && input.peek2(syn::Ident) && input.peek3(Token![=>]) {
-            input.parse::<Token![*]>()?;
-            true
-        } else {
-            false
-        };
+    let matches_scope = input.peek(Token![*])
+        && (input.peek3(token::Brace) || input.peek3(Token![=>]))
+        || input.peek2(token::Brace)
+        || input.peek2(Token![=>]);
 
-    let binding = if binding_borrowed || input.peek(syn::Ident) && input.peek2(Token![=>]) {
-        let binding = input.parse::<syn::Ident>()?;
-        input.parse::<Token![=>]>()?;
+    if !matches_scope {
+        return Ok(Item::Eval {
+            expr: input.parse()?,
+        });
+    }
 
-        Some(Binding {
-            binding,
-            binding_borrowed,
-        })
+    let binding_borrowed = if input.peek(Token![*]) {
+        input.parse::<Token![*]>()?;
+        true
     } else {
-        None
+        false
     };
 
-    let mut stmt = Group::new(pc::Delimiter::None, input.parse()?);
-    stmt.set_span(input.span());
+    let binding = input.parse()?;
 
-    Ok(Item::Eval {
-        binding,
-        stmt: stmt.into(),
+    let content;
+
+    let content = if input.peek(Token![=>]) {
+        input.parse::<Token![=>]>()?;
+        input
+    } else {
+        syn::braced!(content in input);
+        &content
+    };
+
+    Ok(Item::Scope {
+        binding: Binding {
+            binding_borrowed,
+            binding,
+        },
+        content: content.parse()?,
     })
 }
 
@@ -458,10 +472,7 @@ fn parse_expression(input: ParseStream, receiver: &syn::Expr) -> Result<QueueIte
         return Ok(QueueItem::with_span(
             span,
             cursor,
-            Item::Eval {
-                binding: None,
-                stmt: TokenTree::Ident(ident),
-            },
+            Item::EvalIdent { ident },
         ));
     }
 
