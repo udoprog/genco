@@ -58,21 +58,19 @@ where
             }
             // whitespace below
             Push => {
-                out.new_line_unless_empty()?;
+                out.push();
             }
             Line => {
-                out.new_line()?;
+                out.line();
             }
             Space => {
-                out.write_str(" ")?;
+                out.space();
             }
             Indent => {
                 out.indent();
-                out.new_line_unless_empty()?;
             }
             Unindent => {
                 out.unindent();
-                out.new_line_unless_empty()?;
             }
         }
 

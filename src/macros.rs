@@ -36,7 +36,6 @@
 ///     "    return v;",
 ///     "}",
 ///     "var foo = bar();",
-///     "",
 /// ];
 ///
 /// assert_eq!(expected, t.to_file_vec().unwrap());
@@ -78,7 +77,6 @@ macro_rules! toks {
 ///     vec![
 ///         "foo hello",
 ///         "bar hello",
-///         ""
 ///     ],
 ///     toks.to_file_vec().unwrap()
 /// );
@@ -106,7 +104,6 @@ macro_rules! toks {
 ///     vec![
 ///         "foo hello",
 ///         "bar hello",
-///         ""
 ///     ],
 ///     toks.to_file_vec().unwrap()
 /// );
@@ -155,11 +152,12 @@ macro_rules! push {
 /// nested!(toks, "foo ", id);
 /// nested!(toks, "bar ", id);
 ///
+/// println!("{:?}", toks);
+///
 /// assert_eq!(
 ///     vec![
 ///         "    foo hello",
 ///         "    bar hello",
-///         ""
 ///     ],
 ///     toks.to_file_vec().unwrap()
 /// );
@@ -186,7 +184,6 @@ macro_rules! push {
 /// let mut out = Vec::new();
 /// out.push("    foo hello");
 /// out.push("    bar hello");
-/// out.push("");
 ///
 /// assert_eq!(out.join("\n").as_str(), toks.to_string().unwrap().as_str());
 /// # }

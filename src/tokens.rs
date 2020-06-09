@@ -163,7 +163,7 @@ where
     ///
     /// let tokens = quote!(#@(write_bytes_ext));
     ///
-    /// assert_eq!("use byteorder::WriteBytesExt as _;\n\n", tokens.to_file_string().unwrap());
+    /// assert_eq!("use byteorder::WriteBytesExt as _;\n", tokens.to_file_string().unwrap());
     /// ```
     ///
     /// [quote!]: crate::quote!
@@ -272,6 +272,7 @@ where
         {
             let mut formatter = Formatter::new(&mut w, format_config);
             L::write_file(self, &mut formatter, &mut config, 0usize)?;
+            formatter.force_new_line()?;
         }
 
         Ok(w.into_writer())
@@ -327,7 +328,7 @@ where
         {
             let mut formatter = Formatter::new(&mut w, format_config);
             L::write_file(self, &mut formatter, &mut config, 0usize)?;
-            formatter.new_line_unless_empty()?;
+            formatter.force_new_line()?;
         }
 
         Ok(())
@@ -349,7 +350,7 @@ where
         {
             let mut formatter = Formatter::new(&mut w, format_config);
             L::write_file(self, &mut formatter, &mut config, 0usize)?;
-            formatter.new_line_unless_empty()?;
+            formatter.force_new_line()?;
         }
 
         Ok(())

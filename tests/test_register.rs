@@ -13,8 +13,6 @@ fn test_register() {
         }
     };
 
-    println!("{:?}", tokens);
-
     assert_eq!(
         vec![
             "use std::iter::FromIterator as _;",

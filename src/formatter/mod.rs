@@ -1,5 +1,4 @@
 use std::fmt;
-use std::iter;
 
 mod config;
 mod fmt_writer;
@@ -11,97 +10,148 @@ pub(crate) use self::fmt_writer::FmtWriter;
 pub(crate) use self::io_writer::IoWriter;
 pub(crate) use self::vec_writer::VecWriter;
 
+/// Buffer used as indentation source.
+static INDENTATION: &str = "                                                                                                    ";
+
 /// Trait that defines a line writer.
-pub trait Write: fmt::Write {
+pub(crate) trait Write: fmt::Write {
     fn write_line(&mut self, config: &Config) -> fmt::Result;
 }
 
-/// Formatter implementation for write types.
+/// Token stream formatter. Keeps track of everything we need to know in order
+/// to enforce genco's indentation and whitespace rules.
 pub struct Formatter<'write> {
     write: &'write mut dyn Write,
-    /// if last line was empty.
-    current_line_empty: bool,
+    /// How many lines we want to add to the output stream.
+    ///
+    /// This will only be realized if we push non-whitespace.
+    lines: usize,
+    /// How many spaces we want to add to the output stream.
+    ///
+    /// This will only be realized if we push non-whitespace, and will be reset
+    /// if a new line is pushed or indentation changes.
+    spaces: usize,
     /// Current indentation level.
     indent: usize,
+    /// Indicates if the line we are currently working on is empty or not.
+    /// An empty line is one which is only prepared to add whitespace.
+    line_empty: bool,
     /// Number of indentations per level.
     config: Config,
-    /// Holds the current indentation level as a string.
-    buffer: String,
 }
 
 impl<'write> Formatter<'write> {
     /// Create a new write formatter.
-    pub fn new(write: &mut dyn Write, config: Config) -> Formatter {
+    pub(crate) fn new(write: &mut dyn Write, config: Config) -> Formatter {
         Formatter {
             write: write,
-            current_line_empty: true,
+            lines: 0usize,
+            spaces: 0usize,
             indent: 0usize,
+            line_empty: true,
             config,
-            buffer: String::from("  "),
         }
-    }
-
-    fn check_indent(&mut self) -> fmt::Result {
-        if self.current_line_empty && self.indent > 0 {
-            self.write
-                .write_str(&self.buffer[0..(self.indent * self.config.indentation())])?;
-            self.current_line_empty = false;
-        }
-
-        Ok(())
     }
 
     /// Write the given string.
-    pub fn write_str(&mut self, s: &str) -> fmt::Result {
+    pub(crate) fn write_str(&mut self, s: &str) -> fmt::Result {
         if s.len() > 0 {
-            self.check_indent()?;
+            self.flush_whitespace()?;
             self.write.write_str(s)?;
-            self.current_line_empty = false;
         }
 
         Ok(())
+    }
+
+    pub(crate) fn push(&mut self) {
+        if self.line_empty {
+            return;
+        }
+
+        if self.lines < 1 {
+            self.lines += 1;
+        }
+
+        self.line_empty = true;
     }
 
     /// Push a new line.
-    pub fn new_line(&mut self) -> fmt::Result {
-        self.write.write_line(&self.config)?;
-        self.current_line_empty = true;
-        Ok(())
+    pub(crate) fn line(&mut self) {
+        self.line_empty = true;
+        self.spaces = 0;
+
+        // Limit the maximum number of lines to two.
+        if self.lines < 2 {
+            self.lines += 1;
+        }
     }
 
-    /// Push a new line, unless the current line is empty.
-    pub fn new_line_unless_empty(&mut self) -> fmt::Result {
-        if !self.current_line_empty {
-            self.new_line()?;
-        }
-
-        Ok(())
+    /// Push a space.
+    pub(crate) fn space(&mut self) {
+        self.spaces += 1;
     }
 
     /// Increase indentation level.
-    pub fn indent(&mut self) {
-        self.indent += 1;
-
-        let extra = (self.indent * self.config.indentation()).saturating_sub(self.buffer.len());
-
-        // check that buffer contains the current indentation.
-        for c in iter::repeat(' ').take(extra) {
-            self.buffer.push(c);
+    pub(crate) fn indent(&mut self) {
+        if !self.line_empty {
+            self.lines += 1;
+            self.spaces = 0;
+            self.line_empty = true;
         }
+
+        self.indent += 1;
     }
 
     /// Decrease indentation level.
-    pub fn unindent(&mut self) {
+    pub(crate) fn unindent(&mut self) {
+        if !self.line_empty {
+            self.lines += 1;
+            self.spaces = 0;
+            self.line_empty = true;
+        }
+
         self.indent = self.indent.saturating_sub(1);
+    }
+
+    /// Force the writing of a new line.
+    ///
+    /// Usually done at the end of a file.
+    pub(crate) fn force_new_line(&mut self) -> fmt::Result {
+        self.write.write_line(&self.config)?;
+        Ok(())
+    }
+
+    // Realize any pending whitespace just prior to writing a non-whitespace
+    // item.
+    fn flush_whitespace(&mut self) -> fmt::Result {
+        if std::mem::take(&mut self.line_empty) {
+            for _ in 0..std::mem::take(&mut self.lines) {
+                self.write.write_line(&self.config)?;
+            }
+
+            if self.indent > 0 {
+                let mut to_write = self.indent * self.config.indentation();
+
+                while to_write > 0 {
+                    let len = usize::min(to_write, INDENTATION.len());
+                    self.write.write_str(&INDENTATION[0..len])?;
+                    to_write -= len;
+                }
+            }
+        }
+
+        for _ in 0..std::mem::take(&mut self.spaces) {
+            self.write.write_str(" ")?;
+        }
+
+        Ok(())
     }
 }
 
 impl<'write> fmt::Write for Formatter<'write> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         if s.len() > 0 {
-            self.check_indent()?;
-            self.write.write_str(s)?;
-            self.current_line_empty = false;
+            Formatter::write_str(self, s)?;
         }
 
         Ok(())
