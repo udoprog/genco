@@ -361,3 +361,56 @@ fn test_indentation_empty() {
         vec![Literal(Static("a")), Indent, Unindent, Literal(Static("b"))] as Vec<Item<Rust>>
     };
 }
+
+#[test]
+fn test_indentation_management() {
+    assert_eq! {
+        quote! {
+            if a:
+                if b:
+                    foo
+            else:
+                c
+        },
+        vec![
+            Literal(Static("if")),
+            Space,
+            Literal(Static("a:")),
+            Indent,
+            Literal(Static("if")),
+            Space,
+            Literal(Static("b:")),
+            Indent,
+            Literal(Static("foo")),
+            Unindent,
+            Unindent,
+            Literal(Static("else:")),
+            Indent,
+            Literal(Static("c")),
+            Unindent
+        ] as Vec<Item<Rust>>
+    };
+
+    let tokens = quote! {
+        if a:
+            if b:
+                foo
+    };
+
+    assert_eq! {
+        tokens,
+        vec![
+            Literal(Static("if")),
+            Space,
+            Literal(Static("a:")),
+            Indent,
+            Literal(Static("if")),
+            Space,
+            Literal(Static("b:")),
+            Indent,
+            Literal(Static("foo")),
+            Unindent,
+            Unindent,
+        ] as Vec<Item<Rust>>
+    };
+}

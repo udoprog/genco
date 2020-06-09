@@ -117,6 +117,8 @@ pub(crate) struct Encoder<'a> {
     last: Option<Cursor>,
     /// Which column the last line start on.
     last_start_column: Option<usize>,
+    /// Indentation columns.
+    indents: Vec<(usize, Option<Span>)>,
 }
 
 impl<'a> Encoder<'a> {
@@ -133,13 +135,14 @@ impl<'a> Encoder<'a> {
             output: TokenStream::new(),
             last: None,
             last_start_column: None,
+            indents: Vec::new(),
         }
     }
 
     /// Finalize and translate into a token stream.
-    pub(crate) fn into_output(mut self) -> TokenStream {
-        self.finalize();
-        self.output
+    pub(crate) fn into_output(mut self) -> Result<TokenStream> {
+        self.finalize()?;
+        Ok(self.output)
     }
 
     pub(crate) fn set_current(&mut self, last: Cursor) {
@@ -152,15 +155,16 @@ impl<'a> Encoder<'a> {
         self.last = None;
     }
 
-    pub(crate) fn step(&mut self, next: Cursor) {
+    pub(crate) fn step(&mut self, next: Cursor, to_span: Span) -> Result<()> {
         if let Some(from) = self.from() {
             // Insert spacing if appropriate.
-            self.tokenize_whitespace(from, next.start);
+            self.tokenize_whitespace(from, next.start, Some(to_span))?;
         }
 
         // Assign the current cursor to the next item.
         // This will then be used to make future indentation decisions.
         self.last = Some(next);
+        Ok(())
     }
 
     pub(crate) fn encode_start_delimiter(&mut self, d: Delimiter) {
@@ -335,25 +339,38 @@ impl<'a> Encoder<'a> {
     }
 
     /// Finalize the encoder.
-    fn finalize(&mut self) {
+    fn finalize(&mut self) -> Result<()> {
         // evaluate whitespace in case we have an explicit end span.
         while let Some(to) = self.span_end.take() {
             if let Some(from) = self.from() {
                 // Insert spacing if appropriate, up until the "fake" end.
-                self.tokenize_whitespace(from, to);
+                self.tokenize_whitespace(from, to, None)?;
             }
         }
 
         self.item_buffer.flush(&mut self.output);
+
+        let receiver = self.receiver;
+
+        while let Some(_) = self.indents.pop() {
+            self.output.extend(quote::quote!(#receiver.unindent();));
+        }
+
+        Ok(())
     }
 
     /// Insert indentation and spacing if appropriate in the output token stream.
-    fn tokenize_whitespace(&mut self, from: LineColumn, to: LineColumn) {
-        let receiver = self.receiver;
+    fn tokenize_whitespace(
+        &mut self,
+        from: LineColumn,
+        to: LineColumn,
+        to_span: Option<Span>,
+    ) -> Result<()> {
+        let r = self.receiver;
 
         // Do nothing if empty span.
         if from == to {
-            return;
+            return Ok(());
         }
 
         // Insert spacing if we are on the same line, but column has changed.
@@ -361,10 +378,10 @@ impl<'a> Encoder<'a> {
             // Same line, but next item doesn't match.
             if from.column < to.column {
                 self.item_buffer.flush(&mut self.output);
-                self.output.extend(quote::quote!(#receiver.space();));
+                self.output.extend(quote::quote!(#r.space();));
             }
 
-            return;
+            return Ok(());
         }
 
         // Line changed. Determine whether to indent, unindent, or hard break the
@@ -374,7 +391,7 @@ impl<'a> Encoder<'a> {
         debug_assert!(from.line < to.line);
 
         let line_spaced = if to.line - from.line > 1 {
-            self.output.extend(quote::quote!(#receiver.line();));
+            self.output.extend(quote::quote!(#r.line();));
             true
         } else {
             false
@@ -382,12 +399,53 @@ impl<'a> Encoder<'a> {
 
         if let Some(last_start_column) = self.last_start_column.take() {
             if last_start_column < to.column {
-                self.output.extend(quote::quote!(#receiver.indent();));
+                self.indents.push((last_start_column, to_span));
+                self.output.extend(quote::quote!(#r.indent();));
             } else if last_start_column > to.column {
-                self.output.extend(quote::quote!(#receiver.unindent();));
+                while let Some((column, _)) = self.indents.pop() {
+                    if column > to.column && !self.indents.is_empty() {
+                        self.output.extend(quote::quote!(#r.unindent();));
+                        continue;
+                    } else if column == to.column {
+                        self.output.extend(quote::quote!(#r.unindent();));
+                        break;
+                    }
+
+                    return Err(indentation_error(to.column, column, to_span));
+                }
             } else if !line_spaced {
-                self.output.extend(quote::quote!(#receiver.push();));
+                self.output.extend(quote::quote!(#r.push();));
             }
         }
+
+        Ok(())
     }
+}
+
+fn indentation_error(to_column: usize, from_column: usize, to_span: Option<Span>) -> syn::Error {
+    let error = if to_column > from_column {
+        let len = to_column - from_column;
+
+        format!(
+            "expected {} less {} of indentation",
+            len,
+            if len == 1 { "space" } else { "spaces" }
+        )
+    } else {
+        let len = from_column - to_column;
+
+        format!(
+            "expected {} more {} of indentation",
+            len,
+            if len == 1 { "space" } else { "spaces" }
+        )
+    };
+
+    let error = if let Some(span) = to_span {
+        syn::Error::new(span, error)
+    } else {
+        syn::Error::new(Span::call_site(), error)
+    };
+
+    error
 }

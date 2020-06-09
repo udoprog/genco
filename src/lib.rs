@@ -94,10 +94,11 @@
 //! So:
 //!
 //! ```rust
-//! let _: genco::Tokens<genco::Rust> = genco::quote!(fn   test() {});
+//! # use genco::prelude::*;
+//! let _: rust::Tokens = quote!(fn   test() {});
 //! ```
 //!
-//! Becomes:
+//! Would give:
 //!
 //! ```rust
 //! fn test() {}
@@ -105,10 +106,9 @@
 //!
 //! **More that two line breaks** are collapsed.
 //!
-//! So:
-//!
 //! ```rust
-//! let _: genco::Tokens<genco::Rust> = genco::quote! {
+//! # use genco::prelude::*;
+//! let _: rust::Tokens = quote! {
 //!     fn test() {
 //!         println!("Hello...");
 //!
@@ -118,7 +118,7 @@
 //! };
 //! ```
 //!
-//! Becomes:
+//! Would give:
 //!
 //! ```rust
 //! fn test() {
@@ -131,21 +131,20 @@
 //! **Indentation** is determined on a row-by-row basis. If a column is further in
 //! than the one on the preceeding row, it is indented **one level** deeper.
 //!
-//! Like wise if a column starts before the previous rows column, it is indended one
-//! level shallower.
-//!
-//! So:
+//! If a column starts shallower than a previous row, it will be matched against
+//! previously known indentation levels. A mismatch would cause an error.
 //!
 //! ```rust
-//! let _: genco::Tokens<genco::Rust> = genco::quote! {
-//!   fn test() {
-//!       println!("Hello...");
-//!       println!("... World!");
+//! # use genco::prelude::*;
+//! let _: rust::Tokens = quote! {
+//!     fn test() {
+//!         println!("Hello...");
+//!         println!("... World!");
 //!     }
 //! };
 //! ```
 //!
-//! Becomes:
+//! Would give:
 //!
 //! ```rust
 //! fn test() {

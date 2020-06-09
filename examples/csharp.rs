@@ -15,38 +15,38 @@ fn main() -> anyhow::Result<()> {
     let test: Tokens<Csharp> = quote! {
         public class Test {
             public static void Main()  {
-               #("// Creates a new TestSimpleObject object.")
-               #simple_object obj = new #simple_object();
+                #("// Creates a new TestSimpleObject object.")
+                #simple_object obj = new #simple_object();
 
-               #console.WriteLine("Before serialization the object contains: ");
-               obj.Print();
+                #console.WriteLine("Before serialization the object contains: ");
+                obj.Print();
 
-               #("// Opens a file and serializes the object into it in binary format.")
-               #stream stream = #file.Open("data.xml", FileMode.Create);
-               #soap_formatter formatter = new #soap_formatter();
+                #("// Opens a file and serializes the object into it in binary format.")
+                #stream stream = #file.Open("data.xml", FileMode.Create);
+                #soap_formatter formatter = new #soap_formatter();
 
-               #("//BinaryFormatter formatter = new BinaryFormatter();")
+                #("//BinaryFormatter formatter = new BinaryFormatter();")
 
-               formatter.Serialize(stream, obj);
-               stream.Close();
+                formatter.Serialize(stream, obj);
+                stream.Close();
 
-               #("// Empties obj.")
-               obj = null;
+                #("// Empties obj.")
+                obj = null;
 
-               #("// Opens file \"data.xml\" and deserializes the object from it.")
-               stream = #file.Open("data.xml", FileMode.Open);
-               formatter = new #soap_formatter();
+                #("// Opens file \"data.xml\" and deserializes the object from it.")
+                stream = #file.Open("data.xml", FileMode.Open);
+                formatter = new #soap_formatter();
 
-               #("//formatter = new BinaryFormatter();")
+                #("//formatter = new BinaryFormatter();")
 
-               obj = (#simple_object)formatter.Deserialize(stream);
-               stream.Close();
+                obj = (#simple_object)formatter.Deserialize(stream);
+                stream.Close();
 
-               #console.WriteLine("");
-               #console.WriteLine("After deserialization the object contains: ");
-               obj.Print();
+                #console.WriteLine("");
+                #console.WriteLine("After deserialization the object contains: ");
+                obj.Print();
             }
-         }
+        }
     };
 
     println!("{}", test.to_file_string()?);
