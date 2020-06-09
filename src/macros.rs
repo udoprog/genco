@@ -115,22 +115,20 @@ macro_rules! push {
     ($dest:expr, |$t:ident| $code:block) => {{
         $dest.append({
             let mut $t = $crate::Tokens::new();
+            $t.push();
             $code
             $t
         });
-        $dest.push();
     }};
 
     ($dest:expr, $($x:expr),*) => {{
-        $dest.append({
-            let mut _t = $crate::Tokens::new();
-            $(_t.append(Clone::clone(&$x));)*
-            _t
-        });
         $dest.push();
+        $($dest.append(Clone::clone(&$x));)*
     }};
 
-    ($dest:expr, $($x:expr,)*) => {push!($dest, $($x),*)};
+    ($dest:expr, $($x:expr,)*) => {
+        push!($dest, $($x),*)
+    };
 }
 
 /// Helper macro to reduce boilerplate needed with nested token expressions.
@@ -192,6 +190,7 @@ macro_rules! push {
 #[deprecated(since = "0.5.0", note = "Use the quote! procedural macro instead.")]
 macro_rules! nested {
     ($dest:expr, |$t:ident| $code:block) => {{
+        $dest.push();
         $dest.indent();
         $dest.append({
             let mut $t = $crate::Tokens::new();
@@ -202,12 +201,9 @@ macro_rules! nested {
     }};
 
     ($dest:expr, $($x:expr),*) => {
+        $dest.push();
         $dest.indent();
-        $dest.append({
-            let mut _t = $crate::Tokens::new();
-            $(_t.append(Clone::clone(&$x));)*
-            _t
-        });
+        $($dest.append(Clone::clone(&$x));)*
         $dest.unindent();
     };
 

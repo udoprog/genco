@@ -4,6 +4,8 @@
 //! we do comparisons based on `fmt::Debug` representation, which is already
 //! available. But do note that they will not represent language items.
 
+use std::num::NonZeroI16;
+
 use genco::prelude::*;
 use genco::{Item, Item::*, ItemStr::*};
 
@@ -23,9 +25,9 @@ fn test_token_gen() {
             Literal(Static("bar")),
             Push,
             Literal(Static("baz")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("hello")),
-            Unindent,
+            Indentation(NonZeroI16::new(-1).unwrap()),
             Literal(Static("out?"))
         ] as Vec<Item<Rust>>
     }
@@ -100,9 +102,9 @@ fn test_indentation() {
         a,
         vec![
             Literal(Static("a")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("b")),
-            Unindent,
+            Indentation(NonZeroI16::new(-1).unwrap()),
             Literal(Static("c"))
         ] as Vec<Item<Rust>>
     };
@@ -120,9 +122,9 @@ fn test_indentation() {
         b,
         vec![
             Literal(Static("a")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("b")),
-            Unindent,
+            Indentation(NonZeroI16::new(-1).unwrap()),
             Literal(Static("c"))
         ] as Vec<Item<Rust>>
     };
@@ -336,7 +338,10 @@ fn test_indentation_empty() {
 
     assert_eq! {
         tokens,
-        vec![Literal(Static("a")), Indent, Unindent, Literal(Static("b"))] as Vec<Item<Rust>>
+        vec![
+            Literal(Static("a")),
+            Literal(Static("b"))
+        ] as Vec<Item<Rust>>
     };
 
     let tokens: rust::Tokens = quote! {
@@ -347,7 +352,10 @@ fn test_indentation_empty() {
 
     assert_eq! {
         tokens,
-        vec![Literal(Static("a")), Indent, Unindent, Literal(Static("b"))] as Vec<Item<Rust>>
+        vec![
+            Literal(Static("a")),
+            Literal(Static("b"))
+        ] as Vec<Item<Rust>>
     };
 
     let tokens: rust::Tokens = quote! {
@@ -358,7 +366,10 @@ fn test_indentation_empty() {
 
     assert_eq! {
         tokens,
-        vec![Literal(Static("a")), Indent, Unindent, Literal(Static("b"))] as Vec<Item<Rust>>
+        vec![
+            Literal(Static("a")),
+            Literal(Static("b"))
+        ] as Vec<Item<Rust>>
     };
 }
 
@@ -376,18 +387,17 @@ fn test_indentation_management() {
             Literal(Static("if")),
             Space,
             Literal(Static("a:")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("if")),
             Space,
             Literal(Static("b:")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("foo")),
-            Unindent,
-            Unindent,
+            Indentation(NonZeroI16::new(-2).unwrap()),
             Literal(Static("else:")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("c")),
-            Unindent
+            Indentation(NonZeroI16::new(-1).unwrap())
         ] as Vec<Item<Rust>>
     };
 
@@ -403,14 +413,13 @@ fn test_indentation_management() {
             Literal(Static("if")),
             Space,
             Literal(Static("a:")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("if")),
             Space,
             Literal(Static("b:")),
-            Indent,
+            Indentation(NonZeroI16::new(1).unwrap()),
             Literal(Static("foo")),
-            Unindent,
-            Unindent,
+            Indentation(NonZeroI16::new(-2).unwrap()),
         ] as Vec<Item<Rust>>
     };
 }

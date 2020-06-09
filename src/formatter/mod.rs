@@ -1,4 +1,5 @@
 use std::fmt;
+use std::num::NonZeroI16;
 
 mod config;
 mod fmt_writer;
@@ -32,7 +33,7 @@ pub struct Formatter<'write> {
     /// if a new line is pushed or indentation changes.
     spaces: usize,
     /// Current indentation level.
-    indent: usize,
+    indent: i16,
     /// Indicates if the line we are currently working on is empty or not.
     /// An empty line is one which is only prepared to add whitespace.
     line_empty: bool,
@@ -44,10 +45,10 @@ impl<'write> Formatter<'write> {
     /// Create a new write formatter.
     pub(crate) fn new(write: &mut dyn Write, config: Config) -> Formatter {
         Formatter {
-            write: write,
+            write,
             lines: 0usize,
             spaces: 0usize,
-            indent: 0usize,
+            indent: 0i16,
             line_empty: true,
             config,
         }
@@ -92,25 +93,14 @@ impl<'write> Formatter<'write> {
     }
 
     /// Increase indentation level.
-    pub(crate) fn indent(&mut self) {
+    pub(crate) fn indentation(&mut self, n: NonZeroI16) {
         if !self.line_empty {
             self.lines += 1;
             self.spaces = 0;
             self.line_empty = true;
         }
 
-        self.indent += 1;
-    }
-
-    /// Decrease indentation level.
-    pub(crate) fn unindent(&mut self) {
-        if !self.line_empty {
-            self.lines += 1;
-            self.spaces = 0;
-            self.line_empty = true;
-        }
-
-        self.indent = self.indent.saturating_sub(1);
+        self.indent += n.get();
     }
 
     /// Force the writing of a new line.
@@ -130,7 +120,7 @@ impl<'write> Formatter<'write> {
             }
 
             if self.indent > 0 {
-                let mut to_write = self.indent * self.config.indentation();
+                let mut to_write = self.indent as usize * self.config.indentation();
 
                 while to_write > 0 {
                     let len = usize::min(to_write, INDENTATION.len());

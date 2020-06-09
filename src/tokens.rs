@@ -14,6 +14,7 @@ use std::cmp;
 use std::fmt;
 use std::io;
 use std::iter::FromIterator;
+use std::num::NonZeroI16;
 use std::result;
 use std::slice;
 use std::vec;
@@ -243,12 +244,34 @@ where
 
     /// Add a single indentation to the token stream.
     pub fn indent(&mut self) {
-        self.items.push(Item::Indent);
+        let n = match self.items.pop() {
+            None => NonZeroI16::new(1),
+            Some(Item::Indentation(level)) => NonZeroI16::new(level.get() + 1),
+            Some(item) => {
+                self.items.push(item);
+                NonZeroI16::new(1)
+            }
+        };
+
+        if let Some(n) = n {
+            self.items.push(Item::Indentation(n));
+        }
     }
 
     /// Add a single unindentation to the token stream.
     pub fn unindent(&mut self) {
-        self.items.push(Item::Unindent);
+        let n = match self.items.pop() {
+            None => NonZeroI16::new(-1),
+            Some(Item::Indentation(level)) => NonZeroI16::new(level.get() - 1),
+            Some(item) => {
+                self.items.push(item);
+                NonZeroI16::new(-1)
+            }
+        };
+
+        if let Some(n) = n {
+            self.items.push(Item::Indentation(n));
+        }
     }
 
     /// Format the tokens.

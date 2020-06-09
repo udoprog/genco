@@ -22,8 +22,6 @@ fn test_indentation_rules() {
 
     assert_eq!("fn test()", rule1.to_string().unwrap());
 
-    println!("{:?}", rule2);
-
     assert_eq!(
         "fn test() {\n    println!(\"Hello...\");\n\n    println!(\"... World!\");\n}",
         rule2.to_string().unwrap()

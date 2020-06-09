@@ -116,7 +116,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     Your numbers are: #(for n in numbers => #n#<space>)
 /// };
 ///
-/// assert_eq!("Your numbers are: 3 4 5 ", tokens.to_string().unwrap());
+/// assert_eq!("Your numbers are: 3 4 5", tokens.to_string().unwrap());
 /// ```
 ///
 /// Note how we had to escape the tail spacing (`#<space>`) to have it included, and

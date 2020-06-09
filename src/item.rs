@@ -3,6 +3,7 @@
 use crate::{Formatter, ItemStr, Lang, LangBox, LangItem as _};
 use std::cmp;
 use std::fmt;
+use std::num::NonZeroI16;
 use std::rc::Rc;
 
 /// A single element in a set of tokens.
@@ -31,10 +32,8 @@ where
     /// Multiple spacings in sequence are collapsed into one.
     /// A spacing does nothing if at the beginning of a line.
     Space,
-    /// Indent one step.
-    Indent,
-    /// Unindent one step.
-    Unindent,
+    /// Manage indentation.
+    Indentation(NonZeroI16),
 }
 
 impl<L> Item<L>
@@ -66,11 +65,8 @@ where
             Space => {
                 out.space();
             }
-            Indent => {
-                out.indent();
-            }
-            Unindent => {
-                out.unindent();
+            Indentation(n) => {
+                out.indentation(n);
             }
         }
 
@@ -91,8 +87,7 @@ where
             Self::Push => write!(fmt, "Push"),
             Self::Line => write!(fmt, "Line"),
             Self::Space => write!(fmt, "Space"),
-            Self::Indent => write!(fmt, "Indent"),
-            Self::Unindent => write!(fmt, "Unindent"),
+            Self::Indentation(n) => write!(fmt, "Indentation({:?})", n),
         }
     }
 }
@@ -164,8 +159,7 @@ where
             Self::Push => Self::Push,
             Self::Line => Self::Line,
             Self::Space => Self::Space,
-            Self::Indent => Self::Indent,
-            Self::Unindent => Self::Unindent,
+            Self::Indentation(n) => Self::Indentation(*n),
         }
     }
 }
@@ -183,11 +177,20 @@ where
             (Self::Push, Self::Push) => true,
             (Self::Line, Self::Line) => true,
             (Self::Space, Self::Space) => true,
-            (Self::Indent, Self::Indent) => true,
-            (Self::Unindent, Self::Unindent) => true,
+            (Self::Indentation(a), Self::Indentation(b)) => *a == *b,
             _ => false,
         }
     }
 }
 
 impl<L> cmp::Eq for Item<L> where L: Lang {}
+
+#[cfg(test)]
+mod tests {
+    use super::Item;
+
+    #[test]
+    fn test_size() {
+        assert_eq!(std::mem::size_of::<Item<()>>(), 32);
+    }
+}
