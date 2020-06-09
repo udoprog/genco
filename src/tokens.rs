@@ -8,10 +8,8 @@
 //! toks.append("foo");
 //! ```
 
-use crate::formatter::{FmtWriter, IoWriter};
-use crate::{
-    FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens, VecWriter,
-};
+use crate::formatter::{FmtWriter, IoWriter, VecWriter};
+use crate::{FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens};
 use std::cmp;
 use std::fmt;
 use std::io;

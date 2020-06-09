@@ -182,7 +182,7 @@ mod tokens;
 
 pub use self::ext::{Display, DisplayExt, Quoted, QuotedExt};
 pub use self::format_tokens::FormatTokens;
-pub use self::formatter::{Formatter, FormatterConfig, VecWriter};
+pub use self::formatter::{Config as FormatterConfig, Formatter};
 pub use self::item::Item;
 pub use self::item_str::ItemStr;
 pub use self::lang::*;
