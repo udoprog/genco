@@ -168,7 +168,7 @@ impl<'a> QuoteParser<'a> {
                         parse_tree_iterator(|item| queued.push(item), group.stream(), receiver)?;
 
                         let cursor = Cursor::from(group.span());
-                        d.encode_start(&mut encoder.item_buffer);
+                        encoder.encode_start_delimiter(d);
 
                         // Add an item marker so that we encode the delimiter at
                         // the end.
@@ -226,7 +226,7 @@ impl<'a> QuoteParser<'a> {
                     encoder.reset();
                 }
                 Item::DelimiterClose { delimiter, .. } => {
-                    delimiter.encode_end(&mut encoder.item_buffer);
+                    encoder.encode_end_delimiter(delimiter);
                 }
                 Item::Condition {
                     condition,

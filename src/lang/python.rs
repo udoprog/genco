@@ -11,7 +11,8 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-use crate::{Formatter, ItemStr, Lang, LangItem};
+use crate as genco;
+use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 
@@ -28,8 +29,10 @@ static SEP: &'static str = ".";
 pub struct Type {
     /// Module of the imported name.
     module: Option<ItemStr>,
+
     /// Alias of module.
     alias: Option<ItemStr>,
+
     /// Name imported.
     ///
     /// If `None`, last component of module will be used.
@@ -85,7 +88,7 @@ impl fmt::Display for Type {
 
 impl Type {
     /// Set alias for python element.
-    pub fn alias<N: Into<ItemStr>>(self, new_alias: N) -> Type {
+    pub fn alias<N: Into<ItemStr>>(self, new_alias: N) -> Self {
         Self {
             alias: Some(new_alias.into()),
             ..self
@@ -93,7 +96,7 @@ impl Type {
     }
 
     /// Set name for python element.
-    pub fn name<N: Into<ItemStr>>(self, new_name: N) -> Type {
+    pub fn name<N: Into<ItemStr>>(self, new_name: N) -> Self {
         Self {
             name: Some(new_name.into()),
             ..self
@@ -105,39 +108,20 @@ impl Type {
 pub struct Python(());
 
 impl Python {
-    fn imports(tokens: &Tokens) -> Option<Tokens> {
+    fn imports(out: &mut Tokens, tokens: &Tokens) {
         let mut modules = BTreeSet::new();
 
-        for import in tokens.walk_imports() {
-            let Type { module, alias, .. } = import;
-
-            if let Some(ref module) = *module {
+        for Type { module, alias, .. } in tokens.walk_imports() {
+            if let Some(module) = module {
                 modules.insert((module.clone(), alias.clone()));
             }
         }
 
-        if modules.is_empty() {
-            return None;
+        if !modules.is_empty() {
+            quote_in! { out => #(for (module, alias) in modules =>
+                #<push>import #(module)#(if let Some(alias) = alias => #<space>as #alias)
+            )#<line>}
         }
-
-        let mut out = Tokens::new();
-
-        for (module, alias) in modules {
-            let mut s = Tokens::new();
-
-            s.append("import ");
-            s.append(module);
-
-            if let Some(alias) = alias {
-                s.append(" as ");
-                s.append(alias);
-            }
-
-            out.append(s);
-            out.push();
-        }
-
-        Some(out)
     }
 }
 
@@ -174,12 +158,7 @@ impl Lang for Python {
         level: usize,
     ) -> fmt::Result {
         let mut toks = Tokens::new();
-
-        if let Some(imports) = Self::imports(&tokens) {
-            toks.append(imports);
-            toks.line();
-        }
-
+        Self::imports(&mut toks, &tokens);
         toks.extend(tokens);
         toks.format(out, config, level)
     }

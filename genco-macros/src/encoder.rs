@@ -110,7 +110,7 @@ pub(crate) struct Encoder<'a> {
     /// unless it specifically reached the end of the span.
     span_end: Option<LineColumn>,
     /// TODO: make private.
-    pub(crate) item_buffer: ItemBuffer<'a>,
+    item_buffer: ItemBuffer<'a>,
     /// The token stream we are constructing.
     output: TokenStream,
     /// Currently stored cursor.
@@ -161,6 +161,14 @@ impl<'a> Encoder<'a> {
         // Assign the current cursor to the next item.
         // This will then be used to make future indentation decisions.
         self.last = Some(next);
+    }
+
+    pub(crate) fn encode_start_delimiter(&mut self, d: Delimiter) {
+        d.encode_start(&mut self.item_buffer);
+    }
+
+    pub(crate) fn encode_end_delimiter(&mut self, d: Delimiter) {
+        d.encode_end(&mut self.item_buffer);
     }
 
     pub(crate) fn encode_tree(&mut self, tt: TokenTree) {
