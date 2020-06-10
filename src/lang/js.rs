@@ -45,9 +45,10 @@ pub type Tokens = crate::Tokens<JavaScript>;
 
 impl_dynamic_types! { JavaScript =>
     pub trait TypeTrait {}
-    pub trait TypeArgs;
-    pub struct TypeBox;
-    pub enum TypeEnum;
+
+    pub trait Args;
+    pub struct AnyType;
+    pub enum AnyTypeRef;
 
     impl TypeTrait for Import {}
     impl TypeTrait for ImportDefault {}
@@ -188,7 +189,7 @@ impl JavaScript {
 
         for import in tokens.walk_imports() {
             match import.as_enum() {
-                TypeEnum::Import(this) => {
+                AnyTypeRef::Import(this) => {
                     let module = modules.entry(&this.module).or_default();
 
                     module.set.insert(match &this.alias {
@@ -196,7 +197,7 @@ impl JavaScript {
                         Some(alias) => ImportedElement::Aliased(&this.name, alias),
                     });
                 }
-                TypeEnum::ImportDefault(this) => {
+                AnyTypeRef::ImportDefault(this) => {
                     let module = modules.entry(&this.module).or_default();
                     module.default_import = Some(&this.name);
                 }

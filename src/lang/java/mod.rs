@@ -34,7 +34,7 @@ impl_dynamic_types! { Java =>
         }
 
         /// Get generic arguments associated with type.
-        fn arguments(&self) -> Option<&[TypeBox]> {
+        fn arguments(&self) -> Option<&[AnyType]> {
             None
         }
 
@@ -42,9 +42,9 @@ impl_dynamic_types! { Java =>
         fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
     }
 
-    pub trait TypeArgs;
-    pub struct TypeBox;
-    pub enum TypeEnum;
+    pub trait Args;
+    pub struct AnyType;
+    pub enum AnyTypeRef;
 
     impl TypeTrait for Primitive {
         fn name(&self) -> &str {
@@ -71,13 +71,13 @@ impl_dynamic_types! { Java =>
             Some(&*self.package)
         }
 
-        fn arguments(&self) -> Option<&[TypeBox]> {
+        fn arguments(&self) -> Option<&[AnyType]> {
             Some(&self.arguments)
         }
 
         fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
             for argument in &self.arguments {
-                if let TypeEnum::Type(ty) = argument.as_enum() {
+                if let AnyTypeRef::Type(ty) = argument.as_enum() {
                     ty.type_imports(modules);
                 }
             }
@@ -95,7 +95,7 @@ impl_dynamic_types! { Java =>
             self.value.package()
         }
 
-        fn arguments(&self) -> Option<&[TypeBox]> {
+        fn arguments(&self) -> Option<&[AnyType]> {
             self.value.arguments()
         }
 
@@ -240,7 +240,7 @@ pub struct Type {
     /// Path of class when nested.
     path: Vec<ItemStr>,
     /// Arguments of the class.
-    arguments: Vec<TypeBox>,
+    arguments: Vec<AnyType>,
 }
 
 impl Type {
@@ -262,7 +262,7 @@ impl Type {
     /// Add arguments to the given variable.
     ///
     /// Only applies to classes, any other will return the same value.
-    pub fn with_arguments(self, args: impl TypeArgs) -> Self {
+    pub fn with_arguments(self, args: impl Args) -> Self {
         Self {
             package: self.package,
             name: self.name,
@@ -411,19 +411,19 @@ impl_lang_item! {
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Optional {
     /// The type that is optional.
-    pub value: TypeBox,
+    pub value: AnyType,
     /// The complete optional field type, including wrapper.
-    pub field: TypeBox,
+    pub field: AnyType,
 }
 
 impl Optional {
     /// Get the field type (includes optionality).
-    pub fn as_field(self) -> TypeBox {
+    pub fn as_field(self) -> AnyType {
         self.field.clone()
     }
 
     /// Get the value type (strips optionality).
-    pub fn as_value(self) -> TypeBox {
+    pub fn as_value(self) -> AnyType {
         self.value.clone()
     }
 }
@@ -585,7 +585,7 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Local {
 }
 
 /// Setup an optional type.
-pub fn optional<I: Into<TypeBox>, F: Into<TypeBox>>(value: I, field: F) -> Optional {
+pub fn optional<I: Into<AnyType>, F: Into<AnyType>>(value: I, field: F) -> Optional {
     Optional {
         value: value.into(),
         field: field.into(),

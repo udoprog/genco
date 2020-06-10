@@ -12,7 +12,7 @@
 //! ```
 
 use crate as genco;
-use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
+use crate::{quote_in, Formatter, ItemStr, Lang};
 use std::collections::BTreeSet;
 use std::fmt::{self, Write};
 

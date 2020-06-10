@@ -27,23 +27,23 @@ macro_rules! impl_lang_item {
         impl From<$box_from_ty> for crate::LangBox<$from_lang> {
             fn from(value: $box_from_ty) -> Self {
                 use std::rc::Rc;
-                crate::LangBox::from(Rc::new(value) as Rc<dyn LangItem<$from_lang>>)
+                crate::LangBox::from(Rc::new(value) as Rc<dyn crate::LangItem<$from_lang>>)
             }
         }
 
         impl<'a> From<&'a $box_from_ty> for crate::LangBox<$from_lang> {
             fn from(value: &'a $box_from_ty) -> Self {
                 use std::rc::Rc;
-                crate::LangBox::from(Rc::new(value.clone()) as Rc<dyn LangItem<$from_lang>>)
+                crate::LangBox::from(Rc::new(value.clone()) as Rc<dyn crate::LangItem<$from_lang>>)
             }
         }
         )?
 
         $(
-            impl LangItem<$lang> for $ty {
+            impl crate::LangItem<$lang> for $ty {
                 $($item)*
 
-                fn eq(&self, other: &dyn LangItem<$lang>) -> bool {
+                fn eq(&self, other: &dyn crate::LangItem<$lang>) -> bool {
                     other
                         .as_any()
                         .downcast_ref::<Self>()
@@ -68,10 +68,10 @@ macro_rules! impl_variadic_type_args {
 
         impl<T> $args for T
         where
-            T: 'static + $trait,
+            T: Into<$type_box>,
         {
             fn into_args(self) -> Vec<$type_box> {
-                vec![$type_box::new(self)]
+                vec![self.into()]
             }
         }
 
@@ -83,10 +83,10 @@ macro_rules! impl_variadic_type_args {
     };
 
     (@args $args:ty, $ty:ident, $type_box:ident, $($ident:ident => $var:ident),*) => {
-        impl<$($ident,)*> $args for ($($ident,)*) where $($ident: 'static + $ty,)* {
+        impl<$($ident,)*> $args for ($($ident,)*) where $($ident: Into<$type_box>,)* {
             fn into_args(self) -> Vec<$type_box> {
                 let ($($var,)*) = self;
-                vec![$($type_box::new($var),)*]
+                vec![$($var.into(),)*]
             }
         }
     };
@@ -141,7 +141,7 @@ macro_rules! impl_dynamic_types {
         })*
     ) => {
         /// Trait implemented by all types
-        $trait_vis trait TypeTrait: 'static + fmt::Debug + LangItem<$lang> {
+        $trait_vis trait TypeTrait: 'static + fmt::Debug + crate::LangItem<$lang> {
             /// Coerce trait into an enum that can be used for type-specific operations
             fn as_enum(&self) -> $enum<'_>;
 
@@ -149,37 +149,61 @@ macro_rules! impl_dynamic_types {
         }
 
         #[derive(Clone)]
-        #[doc = "Boxed type container"]
-        $type_box_vis struct $type_box {
-            inner: std::rc::Rc<dyn $trait>,
+        #[doc = "Dynamic type container"]
+        $type_box_vis enum $type_box {
+            $(
+                #[doc = "Generated variant"]
+                $ty(std::rc::Rc<$ty>),
+            )*
+        }
+
+        $(
+            impl From<$ty> for $type_box {
+                fn from(value: $ty) -> Self {
+                    Self::$ty(std::rc::Rc::new(value))
+                }
+            }
+        )*
+
+        impl crate::FormatTokens<$lang> for $type_box {
+            fn format_tokens(self, tokens: &mut $crate::Tokens<$lang>) {
+                let value = match self {
+                    $(Self::$ty(value) => value as std::rc::Rc<dyn LangItem<$lang>>,)*
+                };
+
+                tokens.item(crate::Item::LangBox(value.into()));
+            }
+        }
+
+        impl<'a> crate::FormatTokens<$lang> for &'a $type_box {
+            fn format_tokens(self, tokens: &mut $crate::Tokens<$lang>) {
+                let value = match self {
+                    $($type_box::$ty(value) => value.clone() as std::rc::Rc<dyn LangItem<$lang>>,)*
+                };
+
+                tokens.item(crate::Item::LangBox(value.into()));
+            }
         }
 
         impl std::ops::Deref for $type_box {
             type Target = dyn $trait;
 
             fn deref(&self) -> &Self::Target {
-                &*self.inner
-            }
-        }
-
-        impl $type_box {
-            /// Construct a new type in a type box.
-            pub fn new<T>(inner: T) -> Self where T: 'static + $trait {
-                Self {
-                    inner: std::rc::Rc::new(inner),
+                match self {
+                    $(Self::$ty(value) => &**value,)*
                 }
             }
         }
 
         impl std::fmt::Debug for $type_box {
             fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-                self.inner.as_enum().fmt(fmt)
+                self.as_enum().fmt(fmt)
             }
         }
 
         impl std::cmp::PartialEq for $type_box {
             fn eq(&self, other: &Self) -> bool {
-                self.inner.as_enum() == other.inner.as_enum()
+                self.as_enum() == other.as_enum()
             }
         }
 
@@ -199,7 +223,7 @@ macro_rules! impl_dynamic_types {
 
         impl std::cmp::Ord for $type_box {
             fn cmp(&self, other: &$type_box) -> std::cmp::Ordering {
-                self.inner.as_enum().cmp(&other.inner.as_enum())
+                self.as_enum().cmp(&other.as_enum())
             }
         }
 
@@ -219,12 +243,6 @@ macro_rules! impl_dynamic_types {
                 }
 
                 $($ty_item)*
-            }
-
-            impl From<$ty> for $type_box {
-                fn from(value: $ty) -> $type_box {
-                    $type_box::new(value)
-                }
             }
 
             impl_lang_item! {

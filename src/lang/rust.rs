@@ -30,7 +30,7 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-use crate::{Formatter, ItemStr, Lang, LangItem};
+use crate::{Formatter, ItemStr, Lang};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::{self, Write};
 use std::rc::Rc;

@@ -40,9 +40,9 @@ impl_dynamic_types! { Csharp =>
         fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
     }
 
-    pub trait TypeArgs;
-    pub struct TypeBox;
-    pub enum TypeEnum;
+    pub trait Args;
+    pub struct AnyType;
+    pub enum AnyTypeRef;
 
     impl TypeTrait for Simple {
         fn name(&self) -> &str {
@@ -296,7 +296,7 @@ impl Config {
 /// An optional type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Optional {
-    inner: TypeBox,
+    inner: AnyType,
 }
 
 impl_lang_item! {
@@ -338,7 +338,7 @@ pub struct Type {
     /// Path of class when nested.
     path: Vec<ItemStr>,
     /// Arguments of the class.
-    arguments: Vec<TypeBox>,
+    arguments: Vec<AnyType>,
     /// Use as qualified type.
     qualified: bool,
     /// The kind of the type.
@@ -363,7 +363,7 @@ impl Type {
     /// Add arguments to the given type.
     ///
     /// Only applies to classes, any other will return the same value.
-    pub fn with_arguments(self, args: impl TypeArgs) -> Self {
+    pub fn with_arguments(self, args: impl Args) -> Self {
         Self {
             arguments: args.into_args(),
             ..self
@@ -483,7 +483,7 @@ impl_lang_item! {
 /// An array type in C#.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Array {
-    inner: TypeBox,
+    inner: AnyType,
 }
 
 impl_lang_item! {
@@ -692,14 +692,14 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Type {
 ///     toks.to_file_vec().unwrap()
 /// );
 /// ```
-pub fn array<I: Into<TypeBox>>(value: I) -> Array {
+pub fn array<I: Into<AnyType>>(value: I) -> Array {
     Array {
         inner: value.into(),
     }
 }
 
 /// Setup an optional type.
-pub fn optional<I: Into<TypeBox>>(value: I) -> Optional {
+pub fn optional<I: Into<AnyType>>(value: I) -> Optional {
     Optional {
         inner: value.into(),
     }

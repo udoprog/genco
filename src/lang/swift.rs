@@ -24,9 +24,9 @@ impl_dynamic_types! { Swift =>
         fn type_imports(&self, modules: &mut BTreeSet<ItemStr>);
     }
 
-    pub trait TypeArgs;
-    pub struct TypeBox;
-    pub enum TypeEnum;
+    pub trait Args;
+    pub struct AnyType;
+    pub enum AnyTypeRef;
 
     impl TypeTrait for Type {
         fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
@@ -78,9 +78,9 @@ impl_lang_item! {
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Map {
     /// Key of the map.
-    key: TypeBox,
+    key: AnyType,
     /// Value of the map.
-    value: TypeBox,
+    value: AnyType,
 }
 
 impl_lang_item! {
@@ -104,7 +104,7 @@ impl_lang_item! {
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Array {
     /// Inner value of the array.
-    inner: TypeBox,
+    inner: AnyType,
 }
 
 impl_lang_item! {
@@ -251,8 +251,8 @@ where
 /// ```
 pub fn map<K, V>(key: K, value: V) -> Map
 where
-    K: Into<TypeBox>,
-    V: Into<TypeBox>,
+    K: Into<AnyType>,
+    V: Into<AnyType>,
 {
     Map {
         key: key.into(),
@@ -280,7 +280,7 @@ where
 /// ```
 pub fn array<'a, I>(inner: I) -> Array
 where
-    I: Into<TypeBox>,
+    I: Into<AnyType>,
 {
     Array {
         inner: inner.into(),
