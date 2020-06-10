@@ -258,7 +258,7 @@ impl Type {
 
     /// Alias the module being imported.
     ///
-    /// This also implies that the import is [prefixed()].
+    /// This also implies that the import is [prefixed].
     ///
     /// # Examples
     ///
@@ -278,6 +278,8 @@ impl Type {
     ///     toks.to_file_vec().unwrap()
     /// );
     /// ```
+    ///
+    /// [prefixed]: Self::prefixed()
     pub fn module_alias<A: Into<ItemStr>>(self, alias: A) -> Type {
         Type {
             module: self.module.into_module_aliased(alias),
@@ -290,7 +292,7 @@ impl Type {
     /// So importing `std::fmt::Debug` will cause the module to be referenced as
     /// `fmt::Debug` instead of `Debug`.
     ///
-    /// This is implied if [module_alias()] is used.
+    /// This is implied if [module_alias()][Self::module_alias()] is used.
     ///
     /// # Examples
     ///

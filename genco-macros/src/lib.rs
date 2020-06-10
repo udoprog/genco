@@ -29,7 +29,8 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
-/// let field_ty = rust::imported("std::collections", "HashMap").with_arguments((rust::U32, rust::U32));
+/// let field_ty = rust::imported("std::collections", "HashMap")
+///     .with_arguments((rust::U32, rust::U32));
 ///
 /// let tokens: rust::Tokens = quote! {
 ///     struct Quoted {
@@ -63,6 +64,8 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("hello WORLD", tokens.to_string().unwrap());
 /// ```
+///
+/// [FormatTokens]: https://docs.rs/genco/latest/genco/trait.FormatTokens.html
 ///
 /// # Escaping Whitespace
 ///
@@ -153,6 +156,8 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string().unwrap());
 /// ```
+///
+/// [quote!]: macro.quote.html
 ///
 /// # Conditionals
 ///
@@ -290,7 +295,45 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// You specify the destination stream as the first argument, followed by a `=>`
 /// and then the code to generate.
 ///
-/// Note that there is a potential issue with reborrowing
+/// [quote!]: macro.quote.html
+///
+/// # Example
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let mut tokens = rust::Tokens::new();
+///
+/// quote_in! { tokens =>
+///     fn foo() -> u32 {
+///         42
+///     }
+/// }
+/// ```
+///
+/// # Use inside of [quote!]
+///
+/// [quote_in!] can be used inside of a [quote!] macro by using a scope.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let tokens: rust::Tokens = quote! {
+///     fn foo(v: bool) -> u32 {
+///         #(out {
+///             quote_in! { out =>
+///                 if v {
+///                     1
+///                 } else {
+///                     0
+///                 }
+///             }
+///         })
+///     }
+/// };
+/// ```
+///
+/// [quote!]: macro.quote.html
 ///
 /// # Reborrowing
 ///
@@ -326,32 +369,6 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///     }
 /// }
 /// ```
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// let mut tokens = rust::Tokens::new();
-///
-/// quote_in! { tokens =>
-///     fn foo() -> u32 {
-///         42
-///     }
-/// }
-/// ```
-///
-/// # Examples
-///
-/// ```rust
-///
-/// use genco::prelude::*;
-///
-/// let mut tokens = rust::Tokens::new();
-///
-/// quote_in!(tokens => fn hello() -> u32 { 42 });
-///
-/// assert_eq!(vec!["fn hello() -> u32 { 42 }"], tokens.to_file_vec().unwrap());
 #[proc_macro]
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let quote_in_parser::QuoteInParser;

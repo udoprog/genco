@@ -135,21 +135,24 @@ If a column starts shallower than a previous row, it will be matched against
 previously known indentation levels. A mismatch would cause an error.
 
 ```rust
-let _: rust::Tokens = quote! {
+use genco::prelude::*;
+
+let tokens: rust::Tokens = quote! {
     fn test() {
         println!("Hello...");
         println!("... World!");
     }
 };
-```
 
-Would give:
-
-```rust
-fn test() {
-    println!("Hello...");
-    println!("... World!");
-}
+assert_eq!(
+    vec![
+        "fn test() {",
+        "    println!(\"Hello... \");"
+        "    println!(\"World!\");"
+        "}",
+    ],
+    tokens.to_file_vec().unwrap(),
+)
 ```
 
 [reproto]: https://github.com/reproto/reproto

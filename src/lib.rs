@@ -9,16 +9,16 @@
 //! cargo +nightly run --example rust
 //! ```
 //!
-//! The workhorse of genco is the [quote!] macro. While tokens can be constructed
-//! manually, [quote!] makes this process much easier.
+//! The workhorse of genco is the [quote!] and [quote_in!] macros. While tokens
+//! can be constructed manually, these make this process much easier.
 //!
 //! genco only minimally deals with language-specific syntax, but primarily deals
 //! with solving the following:
 //!
 //! * Generates and groups import statements.
 //! * Quote (and escape) strings using [`<stmt>.quoted()`].
-//! * Indents and spaces your code according to generic [indentation rules] that can
-//!   be tweaked on a per-language basis.
+//! * Indents and spaces your code according to generic [whitespace rules] that
+//!   can be tweaked on a per-language basis.
 //!
 //! ## Examples
 //!
@@ -83,7 +83,7 @@
 //! }
 //! ```
 //!
-//! ## Indentation Rules
+//! ## Whitespace Rules
 //!
 //! The `quote!` macro has the following rules for dealing with indentation and
 //! spacing.
@@ -91,78 +91,121 @@
 //! **Two tokens** that are separated, are spaced. Regardless of how many spaces
 //! there are between them.
 //!
-//! So:
-//!
 //! ```rust
-//! # use genco::prelude::*;
-//! let _: rust::Tokens = quote!(fn   test() {});
-//! ```
+//! use genco::prelude::*;
 //!
-//! Would give:
+//! let tokens: rust::Tokens = quote! {
+//!     fn     test()     {
+//!         println!("Hello... ");
 //!
-//! ```rust
-//! fn test() {}
+//!         println!("World!");
+//!     }
+//! };
+//!
+//! assert_eq!(
+//!     vec![
+//!         "fn test() {",
+//!         "    println!(\"Hello... \");",
+//!         "",
+//!         "    println!(\"World!\");",
+//!         "}",
+//!     ],
+//!     tokens.to_file_vec().unwrap(),
+//! )
 //! ```
 //!
 //! **More that two line breaks** are collapsed.
 //!
 //! ```rust
-//! # use genco::prelude::*;
-//! let _: rust::Tokens = quote! {
+//! use genco::prelude::*;
+//!
+//! let tokens: rust::Tokens = quote! {
 //!     fn test() {
-//!         println!("Hello...");
+//!         println!("Hello... ");
 //!
 //!
-//!         println!("... World!");
+//!
+//!         println!("World!");
 //!     }
 //! };
-//! ```
 //!
-//! Would give:
-//!
-//! ```rust
-//! fn test() {
-//!     println!("Hello...");
-//!
-//!     println!("... World!");
-//! }
+//! assert_eq!(
+//!     vec![
+//!         "fn test() {",
+//!         "    println!(\"Hello... \");",
+//!         "",
+//!         "    println!(\"World!\");",
+//!         "}",
+//!     ],
+//!     tokens.to_file_vec().unwrap(),
+//! )
 //! ```
 //!
 //! **Indentation** is determined on a row-by-row basis. If a column is further in
 //! than the one on the preceeding row, it is indented **one level** deeper.
 //!
 //! If a column starts shallower than a previous row, it will be matched against
-//! previously known indentation levels. A mismatch would cause an error.
+//! previously known indentation levels.
 //!
 //! ```rust
-//! # use genco::prelude::*;
-//! let _: rust::Tokens = quote! {
+//! use genco::prelude::*;
+//!
+//! let tokens: rust::Tokens = quote! {
 //!     fn test() {
-//!         println!("Hello...");
-//!         println!("... World!");
+//!             println!("Hello... ");
+//!
+//!             println!("World!");
+//!     }
+//! };
+//!
+//! assert_eq!(
+//!     vec![
+//!         "fn test() {",
+//!         "    println!(\"Hello... \");",
+//!         "",
+//!         "    println!(\"World!\");",
+//!         "}",
+//!     ],
+//!     tokens.to_file_vec().unwrap(),
+//! )
+//! ```
+//!
+//! A mismatched indentation would result in an error:
+//!
+//! ```rust,compile_fail
+//! use genco::prelude::*;
+//!
+//! let tokens: rust::Tokens = quote! {
+//!     fn test() {
+//!             println!("Hello... ");
+//!
+//!         println!("World!");
 //!     }
 //! };
 //! ```
 //!
-//! Would give:
-//!
-//! ```rust
-//! fn test() {
-//!     println!("Hello...");
-//!     println!("... World!");
-//! }
+//! ```text
+//! ---- src\lib.rs -  (line 150) stdout ----
+//! error: expected 4 less spaces of indentation
+//! --> src\lib.rs:157:9
+//!    |
+//! 10 |         println!("World!");
+//!    |         ^^^^^^^
 //! ```
 //!
 //! [reproto]: https://github.com/reproto/reproto
-//! [indentation rules]: https://github.com/udoprog/genco#indentation-rules
+//! [whitespace rules]: https://github.com/udoprog/genco#whitespace-rules
 //! [Rust Example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
 //! [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 //! [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
 //! [Go Example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
+//! [quote!]: macro.quote.html
+//! [quote_in!]: macro.quote_in.html
 //! [`<stmt>.quoted()`]: crate::ext::QuotedExt::quoted
-//! [quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
 
+#![doc(html_root_url = "https://docs.rs/genco/0.5.0")]
 #![deny(missing_docs)]
+#![deny(intra_doc_link_resolution_failure)]
 
 pub use genco_macros::{quote, quote_in};
 

@@ -28,11 +28,11 @@ use std::vec;
 ///
 /// That means the following:
 ///
-/// * Only one [space()] may occur in sequence.
-/// * Only one [push()] may occur in sequence.
-/// * A [push()] may never be preceeded by a [line()], since it would have no
+/// * Only one [space] may occur in sequence.
+/// * Only one [push] may occur in sequence.
+/// * A [push] may never be preceeded by a [line], since it would have no
 ///   effect.
-/// * Every [line()] must be preceeded by a [push()].
+/// * Every [line] must be preceeded by a [push].
 ///
 /// ```rust
 /// use genco::{Tokens, Item};
@@ -44,6 +44,10 @@ use std::vec;
 ///
 /// assert_eq!(vec![Item::Push::<()>], tokens);
 /// ```
+///
+/// [space]: Self::space()
+/// [push]: Self::push()
+/// [line]: Self::line()
 #[derive(Default)]
 pub struct Tokens<L = ()>
 where
@@ -107,7 +111,11 @@ where
     /// Extend with another set of tokens.
     ///
     /// This respects the structural requirements of adding one element at a
-    /// time, like you would get by calling [space()], [push()], or [line()].
+    /// time, like you would get by calling [space], [push], or [line].
+    ///
+    /// [space]: Self::space()
+    /// [push]: Self::push()
+    /// [line]: Self::line()
     pub fn extend<I>(&mut self, it: I)
     where
         I: IntoIterator<Item = Item<L>>,
@@ -167,7 +175,7 @@ where
     /// assert_eq!("use byteorder::WriteBytesExt as _;\n", tokens.to_file_string().unwrap());
     /// ```
     ///
-    /// [quote!]: crate::quote!
+    /// [quote!]: genco_macros@quote!
     pub fn register<T>(&mut self, tokens: T)
     where
         T: RegisterTokens<L>,
