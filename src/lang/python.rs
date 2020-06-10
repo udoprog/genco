@@ -118,7 +118,7 @@ impl Python {
         }
 
         if !modules.is_empty() {
-            quote_in! { out => #(for (module, alias) in modules =>
+            quote_in! { *out => #(for (module, alias) in modules =>
                 #<push>import #(module)#(if let Some(alias) = alias => #<space>as #alias)
             )#<line>}
         }

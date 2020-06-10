@@ -5,7 +5,7 @@ use syn::spanned::Spanned;
 use syn::token;
 use syn::{Result, Token};
 
-use crate::{Binding, Control, Cursor, Delimiter, Encoder, MatchArm};
+use crate::{Control, Cursor, Delimiter, Encoder, MatchArm};
 
 /// Items to process from the queue.
 enum Item {
@@ -30,7 +30,7 @@ enum Item {
     },
     /// A bound scope.
     Scope {
-        binding: Binding,
+        binding: syn::Ident,
         content: TokenStream,
     },
     /// A loop repetition.
@@ -74,7 +74,7 @@ impl QueueItem {
 pub(crate) struct QuoteParser<'a> {
     /// Used to set the receiver identifier which is being modified by this
     /// macro.
-    receiver: &'a syn::Expr,
+    receiver: &'a syn::Ident,
     /// Use to modify the initial line/column in case something was processed
     /// before the input was handed off to the quote parser.
     ///
@@ -89,7 +89,7 @@ pub(crate) struct QuoteParser<'a> {
 
 impl<'a> QuoteParser<'a> {
     /// Construct a new quote parser.
-    pub(crate) fn new(receiver: &'a syn::Expr) -> Self {
+    pub(crate) fn new(receiver: &'a syn::Ident) -> Self {
         Self {
             receiver,
             span_start: None,
@@ -251,7 +251,7 @@ impl<'a> QuoteParser<'a> {
 fn parse_tree_iterator(
     queue: impl FnMut(QueueItem),
     stream: TokenStream,
-    receiver: &syn::Expr,
+    receiver: &syn::Ident,
 ) -> Result<()> {
     let parser = |input: ParseStream| parse_inner(queue, input, receiver, |_| false);
     parser.parse2(stream)?;
@@ -275,7 +275,7 @@ fn parse_register(start: Span, input: ParseStream) -> Result<QueueItem> {
 }
 
 /// Parse `if <condition> { <quoted> } [else { <quoted> }]`.
-fn parse_condition(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
+fn parse_condition(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
     input.parse::<Token![if]>()?;
     let condition = syn::Expr::parse_without_eager_brace(input)?;
 
@@ -314,7 +314,7 @@ fn parse_condition(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
 }
 
 /// Parse `for <expr> in <iter> [join (<quoted>)] => <quoted>`.
-fn parse_loop(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
+fn parse_loop(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
     syn::custom_keyword!(join);
 
     input.parse::<Token![for]>()?;
@@ -327,6 +327,7 @@ fn parse_loop(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
 
         let content;
         let paren = syn::parenthesized!(content in input);
+
         let parser = QuoteParser::new(receiver)
             .with_span_start(adjust_start(paren.span.start()))
             .with_span_end(adjust_end(paren.span.end()));
@@ -371,7 +372,7 @@ fn parse_loop(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
     }
 }
 
-fn parse_match(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
+fn parse_match(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
     input.parse::<Token![match]>()?;
     let condition = syn::Expr::parse_without_eager_brace(input)?;
 
@@ -419,47 +420,26 @@ fn parse_match(input: ParseStream, receiver: &syn::Expr) -> Result<Item> {
 }
 
 /// Parse evaluation: `[*]<binding> => <expr>`.
-fn parse_eval(input: ParseStream) -> Result<Item> {
-    let matches_scope = input.peek(Token![*])
-        && (input.peek3(token::Brace) || input.peek3(Token![=>]))
-        || input.peek2(token::Brace)
-        || input.peek2(Token![=>]);
-
-    if !matches_scope {
-        return Ok(Item::Eval {
-            expr: input.parse()?,
-        });
-    }
-
-    let binding_borrowed = if input.peek(Token![*]) {
-        input.parse::<Token![*]>()?;
-        true
-    } else {
-        false
-    };
-
+fn parse_scope(input: ParseStream) -> Result<Item> {
     let binding = input.parse()?;
+    input.parse::<Token![=>]>()?;
 
     let content;
 
-    let content = if input.peek(Token![=>]) {
-        input.parse::<Token![=>]>()?;
-        input
-    } else {
+    let content = if input.peek(token::Brace) {
         syn::braced!(content in input);
         &content
+    } else {
+        input
     };
 
     Ok(Item::Scope {
-        binding: Binding {
-            binding_borrowed,
-            binding,
-        },
+        binding,
         content: content.parse()?,
     })
 }
 
-fn parse_expression(input: ParseStream, receiver: &syn::Expr) -> Result<QueueItem> {
+fn parse_expression(input: ParseStream, receiver: &syn::Ident) -> Result<QueueItem> {
     let span = input.span();
     let hash = input.parse::<Token![#]>()?;
     let start = hash.span;
@@ -483,12 +463,16 @@ fn parse_expression(input: ParseStream, receiver: &syn::Expr) -> Result<QueueIte
 
     let item = if scope.peek(Token![if]) {
         parse_condition(&scope, receiver)?
-    } else if scope.peek(Token![for]) && scope.peek3(Token![in]) {
+    } else if scope.peek(Token![for]) {
         parse_loop(&scope, receiver)?
     } else if scope.peek(Token![match]) {
         parse_match(&scope, receiver)?
+    } else if scope.peek(syn::Ident) && scope.peek2(Token![=>]) {
+        parse_scope(&scope)?
     } else {
-        parse_eval(&scope)?
+        Item::Eval {
+            expr: scope.parse()?,
+        }
     };
 
     Ok(QueueItem::with_span(span, cursor, item))
@@ -497,7 +481,7 @@ fn parse_expression(input: ParseStream, receiver: &syn::Expr) -> Result<QueueIte
 fn parse_inner(
     mut queue: impl FnMut(QueueItem),
     input: ParseStream,
-    receiver: &syn::Expr,
+    receiver: &syn::Ident,
     until: impl Fn(ParseStream) -> bool + Copy,
 ) -> Result<()> {
     syn::custom_punctuation!(Register, #@);

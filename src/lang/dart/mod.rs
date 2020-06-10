@@ -279,9 +279,9 @@ impl Dart {
 
         for (name, alias) in modules {
             if let Some(alias) = alias {
-                quote_in!(output => import #(name.quoted()) as #alias;);
+                quote_in!(*output => import #(name.quoted()) as #alias;);
             } else {
-                quote_in!(output => import #(name.quoted()););
+                quote_in!(*output => import #(name.quoted()););
             }
 
             output.push();

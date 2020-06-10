@@ -1,14 +1,13 @@
 use proc_macro2::{Span, TokenStream};
-use syn::{Expr, LitStr};
 
 pub(crate) struct ItemBuffer<'a> {
-    receiver: &'a Expr,
+    receiver: &'a syn::Ident,
     buffer: String,
 }
 
 impl<'a> ItemBuffer<'a> {
     /// Construct a new line buffer.
-    pub(crate) fn new(receiver: &'a Expr) -> Self {
+    pub(crate) fn new(receiver: &'a syn::Ident) -> Self {
         Self {
             receiver,
             buffer: String::new(),
@@ -29,7 +28,7 @@ impl<'a> ItemBuffer<'a> {
     pub(crate) fn flush(&mut self, tokens: &mut TokenStream) {
         if !self.buffer.is_empty() {
             let receiver = self.receiver;
-            let s = LitStr::new(&self.buffer, Span::call_site());
+            let s = syn::LitStr::new(&self.buffer, Span::call_site());
             tokens.extend(quote::quote!(#receiver.append(genco::ItemStr::Static(#s));));
             self.buffer.clear();
         }

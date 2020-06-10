@@ -39,13 +39,6 @@ impl Delimiter {
     }
 }
 
-/// An evaluated binding to the current token stream.
-#[derive(Debug)]
-pub(crate) struct Binding {
-    pub(crate) binding: syn::Ident,
-    pub(crate) binding_borrowed: bool,
-}
-
 #[derive(Debug)]
 pub(crate) enum ControlKind {
     Space,
@@ -98,7 +91,7 @@ impl Parse for Control {
 
 /// Struct to deal with emitting the necessary spacing.
 pub(crate) struct Encoder<'a> {
-    receiver: &'a syn::Expr,
+    receiver: &'a syn::Ident,
     /// Use to modify the initial line/column in case something was processed
     /// before the input was handed off to the quote parser.
     ///
@@ -123,7 +116,7 @@ pub(crate) struct Encoder<'a> {
 
 impl<'a> Encoder<'a> {
     pub(crate) fn new(
-        receiver: &'a syn::Expr,
+        receiver: &'a syn::Ident,
         span_start: Option<LineColumn>,
         span_end: Option<LineColumn>,
     ) -> Self {
@@ -199,22 +192,11 @@ impl<'a> Encoder<'a> {
         }
     }
 
-    pub(crate) fn encode_scope(&mut self, binding: Binding, content: TokenStream) {
-        let Binding {
-            binding,
-            binding_borrowed,
-        } = binding;
-
+    pub(crate) fn encode_scope(&mut self, binding: syn::Ident, content: TokenStream) {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);
 
-        // If the receiver is borrowed, we need to reborrow to
-        // satisfy the borrow checker in case it's in a loop.
-        let binding = if binding_borrowed {
-            quote::quote_spanned!(binding.span() => let #binding = &mut *#receiver;)
-        } else {
-            quote::quote_spanned!(binding.span() => let #binding = &mut #receiver;)
-        };
+        let binding = quote::quote_spanned!(binding.span() => let #binding = &mut *#receiver;);
 
         self.output.extend(quote::quote! {{
             #binding

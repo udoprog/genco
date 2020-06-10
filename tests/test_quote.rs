@@ -65,7 +65,7 @@ fn test_scope() {
     let tokens: rust::Tokens = quote! {
         // Nested factory.
         #(tokens => {
-            quote_in!(tokens => fn test() -> u32 { 42 });
+            quote_in!(*tokens => fn test() -> u32 { 42 });
         })
     };
 

@@ -548,7 +548,7 @@ impl Csharp {
             }
 
             if !imported.contains(&*namespace) {
-                quote_in!(output => using #(&namespace););
+                quote_in!(*output => using #(&namespace););
                 output.push();
                 imported.insert(namespace.to_string());
             }

@@ -210,8 +210,8 @@ impl JavaScript {
 
         for (name, module) in modules {
             output.push();
-            quote_in! { output =>
-                import #( *tokens => {
+            quote_in! { *output =>
+                import #( tokens => {
                     if let Some(default) = module.default_import {
                         tokens.append(ItemStr::from(default));
 
@@ -232,7 +232,7 @@ impl JavaScript {
                                     tokens.append(name);
                                 },
                                 ImportedElement::Aliased(name, alias) => {
-                                    quote_in!(tokens => #name as #alias);
+                                    quote_in!(*tokens => #name as #alias);
                                 }
                             }
 

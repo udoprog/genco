@@ -16,7 +16,7 @@ fn test_token_gen() {
             foo
             bar
             baz
-                #(tokens => quote_in! { tokens => hello })
+                #(tokens => quote_in! { *tokens => hello })
             out?
         },
         vec![
@@ -54,10 +54,12 @@ fn test_iterator_gen() {
 
     assert_eq! {
         quote! {
-            #(t {for n in 0..3 {
-                t.push();
-                t.append(n);
-            }})
+            #(t => {
+                for n in 0..3 {
+                    t.push();
+                    t.append(n);
+                }
+            })
         },
         vec![
             Push,
@@ -78,7 +80,7 @@ fn test_tricky_continuation() {
 
     quote_in! {
         &mut output =>
-        foo, #(*output => {
+        foo, #(output => {
             output.append(&bar);
             output.append(Static(","));
             output.space();

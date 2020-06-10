@@ -4,7 +4,6 @@ extern crate proc_macro;
 
 use proc_macro2::Span;
 use syn::parse::{ParseStream, Parser as _};
-use syn::{Expr, Ident};
 
 mod cursor;
 mod encoder;
@@ -13,7 +12,7 @@ mod quote_in_parser;
 mod quote_parser;
 
 pub(crate) use self::cursor::Cursor;
-pub(crate) use self::encoder::{Binding, Control, Delimiter, Encoder, MatchArm};
+pub(crate) use self::encoder::{Control, Delimiter, Encoder, MatchArm};
 pub(crate) use self::item_buffer::ItemBuffer;
 
 /// Language neutral whitespace sensitive quasi-quoting.
@@ -49,7 +48,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     tokens.to_file_vec().unwrap(),
 /// );
 /// ```
-/// 
+///
 /// <br>
 ///
 /// Inline code can be evaluated through `#(<expr>)`.
@@ -63,7 +62,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("hello WORLD", tokens.to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
 ///
 /// Interpolations are evaluated in the same scope as where the macro is
@@ -82,7 +81,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     })
 /// }
 /// ```
-/// 
+///
 /// [FormatTokens]: https://docs.rs/genco/0/genco/trait.FormatTokens.html
 ///
 /// # Escape Sequences
@@ -116,7 +115,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
 ///
 /// [Tokens::space]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.space
@@ -146,7 +145,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("Your numbers are: 3 4 5", tokens.to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
 ///
 /// # Joining Loops
@@ -171,7 +170,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
 ///
 /// [quote!]: macro.quote.html
@@ -203,7 +202,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let tokens = greeting(false, "John");
 /// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
 ///
 /// The `<else>` branch is optional, so the following is a valid expression that
@@ -224,7 +223,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let tokens = greeting(false, "John");
 /// assert_eq!("Custom Greeting:", tokens.to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
 ///
 /// # Match Statements
@@ -255,16 +254,17 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let tokens = greeting(Greeting::Goodbye, "John");
 /// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
 ///
 /// # Scopes
 ///
-/// You can use `#(<binding> { <expr> })` to gain mutable access to the current
-/// token stream. This is a great alternative if you want to do more complex
-/// logic during evaluation.
+/// You can use `#(<binding> => { <quoted> })` to gain mutable access to the current
+/// token stream. This is an alternative to existing control flow operators if
+/// you want to execute more complex logic during evaluation.
 ///
-/// For a more compact version, you can also use `#(<binding> => <expr>)`
+/// For a more compact version, you can also omit the braces by doing
+/// `#(<binding> => <quoted>)`.
 ///
 /// Note that this can cause borrowing issues if the underlying stream is
 /// already a mutable reference. To work around this you can specify
@@ -289,14 +289,14 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// assert_eq!("Hello John", quote_greeting("John", None).to_string().unwrap());
 /// assert_eq!("Hello John Doe", quote_greeting("John", Some("Doe")).to_string().unwrap());
 /// ```
-/// 
+///
 /// <br>
-/// 
+///
 /// ## Whitespace Detection
 ///
 /// The [quote!] macro has the following rules for dealing with indentation and
 /// spacing.
-/// 
+///
 /// **Spaces** — Two tokens that are separated, are spaced. Regardless of how
 /// many spaces there are between them. This can also be controlled manually by
 /// inserting the [`#<space>`] escape in the token stream.
@@ -323,7 +323,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     tokens.to_file_vec().unwrap(),
 /// )
 /// ```
-/// 
+///
 /// <br>
 ///
 /// **Line breaking** — Line breaks are detected by leaving two empty lines
@@ -354,7 +354,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     tokens.to_file_vec().unwrap(),
 /// )
 /// ```
-/// 
+///
 /// <br>
 ///
 /// **Indentation** — Indentation is determined on a row-by-row basis. If a
@@ -363,7 +363,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// If a column starts shallower than a previous row, it will be matched against
 /// previously known indentation levels.
-/// 
+///
 /// All indentations inserted during the macro will be unrolled at the end of
 /// it. So any trailing indentations will be matched by unindentations.
 ///
@@ -412,15 +412,14 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// 10 |         println!("World!");
 ///    |         ^^^^^^^
 /// ```
-/// 
+///
 /// [`#<space>`]: #escape-sequences
 /// [`#<line>`]: #escape-sequences
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let toks = Ident::new("__toks", Span::call_site());
-    let toks = Expr::Verbatim(quote::quote!(#toks));
+    let receiver = &syn::Ident::new("__genco_macros_toks", Span::call_site());
 
-    let parser = quote_parser::QuoteParser::new(&toks);
+    let parser = quote_parser::QuoteParser::new(receiver);
 
     let parser = move |stream: ParseStream| parser.parse(stream);
 
@@ -430,9 +429,14 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     };
 
     let gen = quote::quote! {{
-        let mut #toks = genco::Tokens::new();
-        #output
-        #toks
+        let mut #receiver = genco::Tokens::new();
+
+        {
+            let mut #receiver = &mut #receiver;
+            #output
+        }
+
+        #receiver
     }};
 
     gen.into()
@@ -460,7 +464,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// }
 /// ```
 ///
-/// # Use inside of [quote!]
+/// # Example use inside of [quote!]
 ///
 /// [quote_in!] can be used inside of a [quote!] macro by using a scope.
 ///
@@ -469,8 +473,8 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// let tokens: rust::Tokens = quote! {
 ///     fn foo(v: bool) -> u32 {
-///         #(out {
-///             quote_in! { out =>
+///         #(out => {
+///             quote_in! { *out =>
 ///                 if v {
 ///                     1
 ///                 } else {
@@ -483,40 +487,6 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// ```
 ///
 /// [quote!]: macro.quote.html
-///
-/// # Reborrowing
-///
-/// In case you get a borrow issue like the following:
-///
-/// ```text
-/// 9  |   let tokens = &mut tokens;
-///    |       ------ help: consider changing this to be mutable: `mut tokens`
-/// ...
-/// 12 | /     quote_in! { tokens =>
-/// 13 | |         fn #name() -> u32 {
-/// 14 | |             #(tokens => tokens.append("42");)
-/// 15 | |         }
-/// 16 | |     }
-///    | |_____^ cannot borrow as mutable
-/// ```
-///
-/// This is because inner scoped like `#(tokens => <code>)` take ownership
-/// of their variable by default. To have it perform a proper reborrow, you can
-/// do the following instead:
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// let mut tokens = Tokens::<Rust>::new();
-/// let tokens = &mut tokens;
-///
-/// for name in vec!["foo", "bar", "baz"] {
-///     quote_in! { tokens =>
-///         fn #name() -> u32 {
-///             #(*tokens => tokens.append("42");)
-///         }
-///     }
-/// }
 /// ```
 #[proc_macro]
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

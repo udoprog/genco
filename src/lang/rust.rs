@@ -551,32 +551,32 @@ impl Rust {
                 // render as a group if there's more than one thing being
                 // imported.
                 if let Some(second) = render.next() {
-                    quote_in! { out =>
-                        use #m::{#( *o =>
+                    quote_in! { *out =>
+                        use #m::{#( o =>
                             first.render(o);
-                            quote_in!(o => , #(*o => second.render(o)));
+                            quote_in!(*o => , #(o => second.render(o)));
 
                             for item in render {
-                                quote_in!(o => , #(*o => item.render(o)));
+                                quote_in!(*o => , #(o => item.render(o)));
                             }
                         )};
                     };
                 } else {
                     match first {
                         RenderItem::SelfImport => {
-                            quote_in!(out => use #m;);
+                            quote_in!(*out => use #m;);
                         }
                         RenderItem::SelfAlias { alias } => {
-                            quote_in!(out => use #m as #alias;);
+                            quote_in!(*out => use #m as #alias;);
                         }
                         RenderItem::Name {
                             name,
                             alias: Some(alias),
                         } => {
-                            quote_in!(out => use #m::#name as #alias;);
+                            quote_in!(*out => use #m::#name as #alias;);
                         }
                         RenderItem::Name { name, alias: None } => {
-                            quote_in!(out => use #m::#name;);
+                            quote_in!(*out => use #m::#name;);
                         }
                     }
                 }
@@ -652,19 +652,19 @@ impl Rust {
             fn render(self, out: &mut Tokens) {
                 match self {
                     Self::SelfImport => {
-                        quote_in!(out => self);
+                        quote_in!(*out => self);
                     }
                     Self::SelfAlias { alias } => {
-                        quote_in!(out => self as #alias);
+                        quote_in!(*out => self as #alias);
                     }
                     Self::Name {
                         name,
                         alias: Some(alias),
                     } => {
-                        quote_in!(out => #name as #alias);
+                        quote_in!(*out => #name as #alias);
                     }
                     Self::Name { name, alias: None } => {
-                        quote_in!(out => #name);
+                        quote_in!(*out => #name);
                     }
                 }
             }
