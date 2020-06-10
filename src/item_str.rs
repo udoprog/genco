@@ -21,7 +21,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.push_item(self.into());
+        tokens.item(self.into());
     }
 }
 
@@ -30,7 +30,7 @@ where
     L: Lang,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.push_item(self.clone().into());
+        tokens.item(self.clone().into());
     }
 }
 

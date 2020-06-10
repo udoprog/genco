@@ -21,12 +21,9 @@ use std::vec;
 
 /// A stream of tokens.
 ///
-/// # Structural Requirements
+/// # Structural Guarantees
 ///
-/// While not strictly necessary, this structure does its best to maintain
-/// so-called structural requirements.
-///
-/// That means the following:
+/// This stream of tokens provides the following structural guarantees.
 ///
 /// * Only one [space] may occur in sequence.
 /// * Only one [push] may occur in sequence.
@@ -65,17 +62,26 @@ where
     }
 }
 
-/// Generic methods.
 impl<L> Tokens<L>
 where
     L: Lang,
 {
-    /// Create a new set of tokens.
+    /// Create a new empty stream of tokens.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let tokens = Tokens::<()>::new();
+    ///
+    /// assert!(tokens.is_empty());
+    /// ```
     pub fn new() -> Tokens<L> {
         Tokens { items: Vec::new() }
     }
 
-    /// Construct an iterator over this token stream.
+    /// Construct an iterator over the token stream.
     pub fn iter(&self) -> Iter<'_, L> {
         Iter {
             iter: self.items.iter(),
@@ -89,7 +95,28 @@ where
         }
     }
 
-    /// Append the given element.
+    /// Append the given tokens.
+    ///
+    /// This append function takes anything implementing [FormatTokens] making
+    /// the argument's behavior customizable. Most primitive types have built-in
+    /// implementations of [FormatTokens] treating them as raw tokens.
+    ///
+    /// Most notabley, things implementing [FormatTokens] can be used as
+    /// arguments for [interpolation] in the [quote!] macro.
+    ///
+    /// [quote!]: macro.quote.html
+    /// [interpolation]: macro.quote.html#interpolation
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    /// tokens.append(4u32);
+    ///
+    /// assert_eq!(quote!(#(4u32)), tokens);
+    /// ```
     pub fn append<T>(&mut self, tokens: T)
     where
         T: FormatTokens<L>,
@@ -97,9 +124,9 @@ where
         tokens.format_tokens(self)
     }
 
-    /// Append a single item to the stream, while checking for structural
+    /// Push a single item to the stream while checking for structural
     /// guarantees.
-    pub fn push_item(&mut self, item: Item<L>) {
+    pub fn item(&mut self, item: Item<L>) {
         match item {
             Item::Push => self.push(),
             Item::Line => self.line(),
@@ -123,7 +150,7 @@ where
         let mut it = it.into_iter();
 
         while let Some(item) = it.next() {
-            self.push_item(item);
+            self.item(item);
         }
     }
 
@@ -197,17 +224,63 @@ where
     }
 
     /// Add a single spacing to the token stream.
+    ///
+    /// A space operation has no effect unless it's followed by a non-whitespace
+    /// token.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.space();
+    /// tokens.append("hello");
+    /// tokens.space();
+    /// tokens.append("world");
+    /// tokens.space();
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         " hello world",
+    ///     ],
+    ///     tokens.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn space(&mut self) {
-        // A space is already present.
-        match self.items.last() {
-            Some(Item::Space) => return,
-            _ => (),
-        }
-
         self.items.push(Item::Space);
     }
 
-    /// Add a single push spacing operation.
+    /// Add a single push operation.
+    ///
+    /// Push operations ensure that any following tokens are added to their own
+    /// line.
+    ///
+    /// A push has no effect unless it's *preceeded* or *followed* by
+    /// non-whitespace tokens.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.push();
+    /// tokens.append("hello");
+    /// tokens.push();
+    /// tokens.append("world");
+    /// tokens.push();
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "hello",
+    ///         "world"
+    ///     ],
+    ///     tokens.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn push(&mut self) {
         // Already a push or an empty line in the stream.
         // Another one will do nothing.
@@ -219,8 +292,36 @@ where
         self.items.push(Item::Push);
     }
 
-    /// Assert that there's the necessary items to create one empty line at
-    /// the end of the stream.
+    /// Add a single line operation.
+    ///
+    /// A line ensures that any following tokens have one line of separation
+    /// between them and the preceeding tokens.
+    ///
+    /// A line has no effect unless it's *preceeded* and *followed* by
+    /// non-whitespace tokens.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.line();
+    /// tokens.append("hello");
+    /// tokens.line();
+    /// tokens.append("world");
+    /// tokens.line();
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "hello",
+    ///         "",
+    ///         "world"
+    ///     ],
+    ///     tokens.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn line(&mut self) {
         let mut it = self.items.iter().rev();
 
@@ -243,14 +344,40 @@ where
         }
     }
 
-    /// Assert that there's the necessary items to create one empty line at
-    /// the end of the stream.
-    #[deprecated = "use `line` function instead"]
-    pub fn push_line(&mut self) {
-        self.line();
-    }
-
-    /// Add a single indentation to the token stream.
+    /// Increase the indentation of the token stream.
+    ///
+    /// An indentation is a language-specific operation which adds whitespace to
+    /// the beginning of a line preceeding any non-whitespace tokens.
+    ///
+    /// An indentation has no effect unless it's *followed* by non-whitespace
+    /// tokens. It also acts like a [push], in that it will shift any tokens to
+    /// a new line.
+    ///
+    /// [push]: Self::push
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.indent();
+    /// tokens.append("hello");
+    /// tokens.indent();
+    /// tokens.append("world");
+    /// tokens.indent();
+    /// tokens.append("😀");
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "    hello",
+    ///         "        world",
+    ///         "            😀",
+    ///     ],
+    ///     tokens.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn indent(&mut self) {
         let n = match self.items.pop() {
             None => NonZeroI16::new(1),
@@ -266,7 +393,51 @@ where
         }
     }
 
-    /// Add a single unindentation to the token stream.
+    /// Decrease the indentation of the token stream.
+    ///
+    /// An indentation is a language-specific operation which adds whitespace to
+    /// the beginning of a line preceeding any non-whitespace tokens.
+    ///
+    /// An indentation has no effect unless it's *followed* by non-whitespace
+    /// tokens. It also acts like a [push], in that it will shift any tokens to
+    /// a new line.
+    ///
+    /// Indentation can never go below zero, and will just be ignored if that
+    /// were to happen. However, negative indentation is stored in the token
+    /// stream, so any negative indentation in place will have to be countered
+    /// before indentation starts again.
+    ///
+    /// [push]: Self::push
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.indent();
+    /// tokens.append("hello");
+    /// tokens.unindent();
+    /// tokens.append("world");
+    /// tokens.unindent();
+    /// tokens.append("😀");
+    /// tokens.indent();
+    /// tokens.append("😁");
+    /// tokens.indent();
+    /// tokens.append("😂");
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "    hello",
+    ///         "world",
+    ///         "😀",
+    ///         "😁",
+    ///         "    😂",
+    ///     ],
+    ///     tokens.to_file_vec().unwrap()
+    /// );
+    /// ```
     pub fn unindent(&mut self) {
         let n = match self.items.pop() {
             None => NonZeroI16::new(-1),
@@ -282,7 +453,7 @@ where
         }
     }
 
-    /// Format the tokens.
+    /// Low-level function to format tokens.
     pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
         for element in &self.items {
             element.format(out, config, level)?;

@@ -433,7 +433,7 @@ impl<'a> Encoder<'a> {
 
 fn indentation_error(to_column: usize, from_column: usize, to_span: Option<Span>) -> syn::Error {
     let error = if to_column > from_column {
-        let len = to_column - from_column;
+        let len = to_column.saturating_sub(from_column);
 
         format!(
             "expected {} less {} of indentation",
@@ -441,7 +441,7 @@ fn indentation_error(to_column: usize, from_column: usize, to_span: Option<Span>
             if len == 1 { "space" } else { "spaces" }
         )
     } else {
-        let len = from_column - to_column;
+        let len = from_column.saturating_sub(to_column);
 
         format!(
             "expected {} more {} of indentation",

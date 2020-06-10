@@ -353,7 +353,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal(Static(",")), Space, Literal(Static(",")), Space] as Vec<Item<Rust>>
+        vec![Space, Literal(Static(",")), Space, Space, Literal(Static(",")), Space] as Vec<Item<Rust>>
     };
 }
 

@@ -31,7 +31,7 @@ impl Cursor {
         Cursor {
             start: LineColumn {
                 line: self.end.line,
-                column: self.end.column - 1,
+                column: self.end.column.saturating_sub(1),
             },
             end: self.end,
         }

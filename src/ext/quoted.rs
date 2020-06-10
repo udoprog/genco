@@ -20,6 +20,6 @@ where
     T: Into<ItemStr>,
 {
     fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.push_item(Item::Quoted(self.inner.into()));
+        tokens.item(Item::Quoted(self.inner.into()));
     }
 }

@@ -16,15 +16,15 @@ pub(crate) use self::cursor::Cursor;
 pub(crate) use self::encoder::{Binding, Control, Delimiter, Encoder, MatchArm};
 pub(crate) use self::item_buffer::ItemBuffer;
 
-/// Language neutral, whitespace sensitive quasi-quoting for GenCo.
+/// Language neutral whitespace sensitive quasi-quoting.
 ///
-/// # Simple Interpolation
+/// # Interpolation
 ///
 /// Elements are interpolated using `#`, so to include the variable `test`,
 /// you could write `#test`. Returned elements must implement [FormatTokens].
 ///
-/// `#` can be escaped by repeating it twice in case it's needed in the target
-/// language. So `##` would produce a single `#`.
+/// **Note:** `#` can be escaped by repeating it twice. So `##` would produce a
+/// single `#` token.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -49,11 +49,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     tokens.to_file_vec().unwrap(),
 /// );
 /// ```
+/// 
+/// <br>
 ///
-/// Inline code can be evaluated using `#(<stmt>)`.
-///
-/// Note that this is evaluated in the same scope as where the macro is invoked,
-/// so you can make use of keywords like `?` (try) when appropriate.
+/// Inline code can be evaluated through `#(<expr>)`.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -64,26 +63,47 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("hello WORLD", tokens.to_string().unwrap());
 /// ```
+/// 
+/// <br>
 ///
-/// [FormatTokens]: https://docs.rs/genco/latest/genco/trait.FormatTokens.html
+/// Interpolations are evaluated in the same scope as where the macro is
+/// invoked, so you can make use of keywords like `?` (try) when appropriate.
 ///
-/// # Escaping Whitespace
+/// ```rust
+/// use std::error::Error;
 ///
-/// Because this macro is whitespace sensitive, it might sometimes be necessary
-/// to provide hints of where they should be inserted.
+/// use genco::prelude::*;
 ///
-/// The macro trims any trailing and leading whitespace that it sees. So
-/// `quote!(Hello )` is the same as `quote!(Hello)`. To include a spacing at the
+/// fn age_fn(age: &str) -> Result<rust::Tokens, Box<dyn Error>> {
+///     Ok(quote! {
+///         fn age() {
+///             println!("You are {} years old!", #(str::parse::<u32>(age)?));
+///         }
+///     })
+/// }
+/// ```
+/// 
+/// [FormatTokens]: https://docs.rs/genco/0/genco/trait.FormatTokens.html
+///
+/// # Escape Sequences
+///
+/// Because this macro is _whitespace sensitive_, it might sometimes be
+/// necessary to provide hints of where they should be inserted.
+///
+/// `quote!` trims any trailing and leading whitespace that it sees. So
+/// `quote!(Hello )` is the same as `quote!(Hello)`. To include a space at the
 /// end, we can use the special `#<space>` escape sequence: `quote!(Hello#<space>)`.
 ///
 /// The available escape sequences are:
 ///
-/// * `#<space>` for inserting a spacing between tokens. This corresponds to the
-///   [Tokens::spacing] function.
-/// * `#<push>` for inserting a push operation. Push operations makes sure that
+/// * `#<space>` — Inserts a space between tokens. This corresponds to the
+///   [Tokens::space] function.
+///
+/// * `#<push>` — Inserts a push operation. Push operations makes sure that
 ///   any following tokens are on their own dedicated line. This corresponds to
 ///   the [Tokens::push] function.
-/// * `#<line>` for inserting a line operation. Line operations makes sure that
+///
+/// * `#<line>` — Inserts a forced line. Line operations makes sure that
 ///   any following tokens have an empty line separating them. This corresponds
 ///   to the [Tokens::line] function.
 ///
@@ -96,10 +116,12 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string().unwrap());
 /// ```
+/// 
+/// <br>
 ///
-/// [Tokens::spacing]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.spacing
-/// [Tokens::push]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.push
-/// [Tokens::line]: https://docs.rs/genco/latest/genco/struct.Tokens.html#method.line
+/// [Tokens::space]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.space
+/// [Tokens::push]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.push
+/// [Tokens::line]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.line
 ///
 /// # Loops
 ///
@@ -124,26 +146,19 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("Your numbers are: 3 4 5", tokens.to_string().unwrap());
 /// ```
-///
-/// Note how we had to escape the tail spacing (`#<space>`) to have it included, and
-/// we also got a spacing at the end that we _probably_ don't want. To avoid
-/// this we can instead to a joined repetition.
+/// 
+/// <br>
 ///
 /// # Joining Loops
 ///
-/// It's a common need to join loops. To do this, you can add `join (<quoted>)`
-/// to the end of a repitition specification.
+/// You can add `join (<quoted>)` to the end of a repitition specification.
 ///
 /// The expression specified in `join (<quoted>)` is added _between_ each
-/// `<quoted>` produced by the loop.
+/// element produced by the loop.
 ///
-/// One difference with the `<quoted>` section with the regular [quote!] macro
-/// is that it is _whitespace sensitive_ at the tail of the expression.
-///
-/// So `(,)` would be different from `(, )`, which would have a spacing at the
-/// end.
-///
-/// With that in mind, let's redo the numbers example above.
+/// **Note:** The argument to `join` us *whitespace sensitive*, so leading and
+/// trailing is preserved. `join (,)` and `join (, )` would therefore produce
+/// different results.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -156,6 +171,8 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string().unwrap());
 /// ```
+/// 
+/// <br>
 ///
 /// [quote!]: macro.quote.html
 ///
@@ -186,6 +203,8 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let tokens = greeting(false, "John");
 /// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
 /// ```
+/// 
+/// <br>
 ///
 /// The `<else>` branch is optional, so the following is a valid expression that
 /// if `false`, won't result in any tokens:
@@ -205,6 +224,8 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let tokens = greeting(false, "John");
 /// assert_eq!("Custom Greeting:", tokens.to_string().unwrap());
 /// ```
+/// 
+/// <br>
 ///
 /// # Match Statements
 ///
@@ -234,6 +255,8 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// let tokens = greeting(Greeting::Goodbye, "John");
 /// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
 /// ```
+/// 
+/// <br>
 ///
 /// # Scopes
 ///
@@ -266,6 +289,132 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// assert_eq!("Hello John", quote_greeting("John", None).to_string().unwrap());
 /// assert_eq!("Hello John Doe", quote_greeting("John", Some("Doe")).to_string().unwrap());
 /// ```
+/// 
+/// <br>
+/// 
+/// ## Whitespace Detection
+///
+/// The [quote!] macro has the following rules for dealing with indentation and
+/// spacing.
+/// 
+/// **Spaces** — Two tokens that are separated, are spaced. Regardless of how
+/// many spaces there are between them. This can also be controlled manually by
+/// inserting the [`#<space>`] escape in the token stream.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let tokens: rust::Tokens = quote! {
+///     fn     test()     {
+///         println!("Hello... ");
+///
+///         println!("World!");
+///     }
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "fn test() {",
+///         "    println!(\"Hello... \");",
+///         "",
+///         "    println!(\"World!\");",
+///         "}",
+///     ],
+///     tokens.to_file_vec().unwrap(),
+/// )
+/// ```
+/// 
+/// <br>
+///
+/// **Line breaking** — Line breaks are detected by leaving two empty lines
+/// between two tokens. This can also be controlled manually by inserting the
+/// [`#<line>`] escape in the token stream.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let tokens: rust::Tokens = quote! {
+///     fn test() {
+///         println!("Hello... ");
+///
+///
+///
+///         println!("World!");
+///     }
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "fn test() {",
+///         "    println!(\"Hello... \");",
+///         "",
+///         "    println!(\"World!\");",
+///         "}",
+///     ],
+///     tokens.to_file_vec().unwrap(),
+/// )
+/// ```
+/// 
+/// <br>
+///
+/// **Indentation** — Indentation is determined on a row-by-row basis. If a
+/// column is further in than the one on the preceeding row, it is indented
+/// *one level* deeper.
+///
+/// If a column starts shallower than a previous row, it will be matched against
+/// previously known indentation levels.
+/// 
+/// All indentations inserted during the macro will be unrolled at the end of
+/// it. So any trailing indentations will be matched by unindentations.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let tokens: rust::Tokens = quote! {
+///     fn test() {
+///             println!("Hello... ");
+///
+///             println!("World!");
+///     }
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "fn test() {",
+///         "    println!(\"Hello... \");",
+///         "",
+///         "    println!(\"World!\");",
+///         "}",
+///     ],
+///     tokens.to_file_vec().unwrap(),
+/// )
+/// ```
+///
+/// A mismatched indentation would result in an error:
+///
+/// ```rust,compile_fail
+/// use genco::prelude::*;
+///
+/// let tokens: rust::Tokens = quote! {
+///     fn test() {
+///             println!("Hello... ");
+///
+///         println!("World!");
+///     }
+/// };
+/// ```
+///
+/// ```text
+/// ---- src\lib.rs -  (line 150) stdout ----
+/// error: expected 4 less spaces of indentation
+/// --> src\lib.rs:157:9
+///    |
+/// 10 |         println!("World!");
+///    |         ^^^^^^^
+/// ```
+/// 
+/// [`#<space>`]: #escape-sequences
+/// [`#<line>`]: #escape-sequences
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let toks = Ident::new("__toks", Span::call_site());
