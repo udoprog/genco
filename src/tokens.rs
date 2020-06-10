@@ -787,7 +787,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate as genco;
-    use crate::{quote, Formatter, LangItem, Tokens};
+    use crate::{quote, Formatter, Tokens};
     use std::fmt;
 
     /// Own little custom language for this test.

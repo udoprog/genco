@@ -34,7 +34,7 @@ impl_dynamic_types! { Java =>
         }
 
         /// Get generic arguments associated with type.
-        fn arguments(&self) -> Option<&[AnyType]> {
+        fn arguments(&self) -> Option<&[Any]> {
             None
         }
 
@@ -43,8 +43,8 @@ impl_dynamic_types! { Java =>
     }
 
     pub trait Args;
-    pub struct AnyType;
-    pub enum AnyTypeRef;
+    pub struct Any;
+    pub enum AnyRef;
 
     impl TypeTrait for Primitive {
         fn name(&self) -> &str {
@@ -71,13 +71,13 @@ impl_dynamic_types! { Java =>
             Some(&*self.package)
         }
 
-        fn arguments(&self) -> Option<&[AnyType]> {
+        fn arguments(&self) -> Option<&[Any]> {
             Some(&self.arguments)
         }
 
         fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
             for argument in &self.arguments {
-                if let AnyTypeRef::Type(ty) = argument.as_enum() {
+                if let AnyRef::Type(ty) = argument.as_enum() {
                     ty.type_imports(modules);
                 }
             }
@@ -95,7 +95,7 @@ impl_dynamic_types! { Java =>
             self.value.package()
         }
 
-        fn arguments(&self) -> Option<&[AnyType]> {
+        fn arguments(&self) -> Option<&[Any]> {
             self.value.arguments()
         }
 
@@ -240,7 +240,7 @@ pub struct Type {
     /// Path of class when nested.
     path: Vec<ItemStr>,
     /// Arguments of the class.
-    arguments: Vec<AnyType>,
+    arguments: Vec<Any>,
 }
 
 impl Type {
@@ -411,19 +411,19 @@ impl_lang_item! {
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Optional {
     /// The type that is optional.
-    pub value: AnyType,
+    pub value: Any,
     /// The complete optional field type, including wrapper.
-    pub field: AnyType,
+    pub field: Any,
 }
 
 impl Optional {
     /// Get the field type (includes optionality).
-    pub fn as_field(self) -> AnyType {
+    pub fn as_field(self) -> Any {
         self.field.clone()
     }
 
     /// Get the value type (strips optionality).
-    pub fn as_value(self) -> AnyType {
+    pub fn as_value(self) -> Any {
         self.value.clone()
     }
 }
@@ -585,7 +585,7 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Local {
 }
 
 /// Setup an optional type.
-pub fn optional<I: Into<AnyType>, F: Into<AnyType>>(value: I, field: F) -> Optional {
+pub fn optional<I: Into<Any>, F: Into<Any>>(value: I, field: F) -> Optional {
     Optional {
         value: value.into(),
         field: field.into(),

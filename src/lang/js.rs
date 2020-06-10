@@ -47,8 +47,8 @@ impl_dynamic_types! { JavaScript =>
     pub trait TypeTrait {}
 
     pub trait Args;
-    pub struct AnyType;
-    pub enum AnyTypeRef;
+    pub struct Any;
+    pub enum AnyRef;
 
     impl TypeTrait for Import {}
     impl TypeTrait for ImportDefault {}
@@ -189,7 +189,7 @@ impl JavaScript {
 
         for import in tokens.walk_imports() {
             match import.as_enum() {
-                AnyTypeRef::Import(this) => {
+                AnyRef::Import(this) => {
                     let module = modules.entry(&this.module).or_default();
 
                     module.set.insert(match &this.alias {
@@ -197,7 +197,7 @@ impl JavaScript {
                         Some(alias) => ImportedElement::Aliased(&this.name, alias),
                     });
                 }
-                AnyTypeRef::ImportDefault(this) => {
+                AnyRef::ImportDefault(this) => {
                     let module = modules.entry(&this.module).or_default();
                     module.default_import = Some(&this.name);
                 }

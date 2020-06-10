@@ -41,8 +41,8 @@ impl_dynamic_types! { Csharp =>
     }
 
     pub trait Args;
-    pub struct AnyType;
-    pub enum AnyTypeRef;
+    pub struct Any;
+    pub enum AnyRef;
 
     impl TypeTrait for Simple {
         fn name(&self) -> &str {
@@ -296,7 +296,7 @@ impl Config {
 /// An optional type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Optional {
-    inner: AnyType,
+    inner: Any,
 }
 
 impl_lang_item! {
@@ -338,7 +338,7 @@ pub struct Type {
     /// Path of class when nested.
     path: Vec<ItemStr>,
     /// Arguments of the class.
-    arguments: Vec<AnyType>,
+    arguments: Vec<Any>,
     /// Use as qualified type.
     qualified: bool,
     /// The kind of the type.
@@ -483,7 +483,7 @@ impl_lang_item! {
 /// An array type in C#.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Array {
-    inner: AnyType,
+    inner: Any,
 }
 
 impl_lang_item! {
@@ -692,14 +692,14 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Type {
 ///     toks.to_file_vec().unwrap()
 /// );
 /// ```
-pub fn array<I: Into<AnyType>>(value: I) -> Array {
+pub fn array<I: Into<Any>>(value: I) -> Array {
     Array {
         inner: value.into(),
     }
 }
 
 /// Setup an optional type.
-pub fn optional<I: Into<AnyType>>(value: I) -> Optional {
+pub fn optional<I: Into<Any>>(value: I) -> Optional {
     Optional {
         inner: value.into(),
     }

@@ -25,8 +25,8 @@ pub type Tokens = crate::Tokens<Dart>;
 impl_dynamic_types! { Dart =>
     pub trait TypeTrait {}
     pub trait Args;
-    pub struct AnyType;
-    pub enum AnyTypeRef;
+    pub struct Any;
+    pub enum AnyRef;
 
     impl TypeTrait for Type {}
     impl TypeTrait for BuiltIn {}
@@ -156,7 +156,7 @@ pub struct Type {
     /// Alias of module.
     alias: Option<ItemStr>,
     /// Generic arguments.
-    arguments: Vec<AnyType>,
+    arguments: Vec<Any>,
 }
 
 impl Type {
