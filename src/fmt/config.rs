@@ -4,9 +4,9 @@ use crate::Lang;
 #[derive(Clone)]
 pub struct Config {
     /// Indentation level to use.
-    indentation: usize,
+    pub(super) indentation: usize,
     /// What to use as a newline.
-    newline: &'static str,
+    pub(super) newline: &'static str,
 }
 
 impl Config {
@@ -33,17 +33,5 @@ impl Config {
     /// Set what to use as newline.
     pub fn with_newline(self, newline: &'static str) -> Self {
         Self { newline, ..self }
-    }
-
-    /// How many characters an indentation is.
-    #[inline(always)]
-    pub fn indentation(&self) -> usize {
-        self.indentation
-    }
-
-    /// Current newline in use.
-    #[inline(always)]
-    pub fn newline(&self) -> &str {
-        self.newline
     }
 }

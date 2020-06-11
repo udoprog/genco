@@ -90,7 +90,7 @@ where
     #[inline(always)]
     fn write_line(&mut self, config: &fmt::Config) -> fmt::Result {
         self.writer
-            .write_all(config.newline().as_bytes())
+            .write_all(config.newline.as_bytes())
             .map_err(|_| std::fmt::Error)
     }
 }

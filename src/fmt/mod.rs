@@ -48,6 +48,7 @@
 //! ```
 
 use std::fmt;
+use std::mem;
 use std::num::NonZeroI16;
 
 mod config;
@@ -64,11 +65,40 @@ pub use self::vec_writer::VecWriter;
 pub type Result<T = ()> = std::result::Result<T, std::fmt::Error>;
 
 /// Buffer used as indentation source.
-static INDENTATION: &str = "                                                                                                    ";
+static SPACES: &str = "                                                                                                    ";
 
 /// Trait that defines a line writer.
 pub(crate) trait Write: std::fmt::Write {
     fn write_line(&mut self, config: &Config) -> Result;
+}
+
+#[derive(Clone, Copy)]
+enum Line {
+    Initial,
+    None,
+    Push,
+    Line,
+}
+
+impl Line {
+    /// Convert into an indentation level.
+    ///
+    /// If we return `None`, no indentation nor lines should be written since we
+    /// are at the initial stage of the file.
+    fn into_indent(self) -> Option<usize> {
+        match self {
+            Self::Initial => Some(0),
+            Self::Push => Some(1),
+            Self::Line => Some(2),
+            Self::None => return None,
+        }
+    }
+}
+
+impl Default for Line {
+    fn default() -> Self {
+        Self::None
+    }
 }
 
 /// Token stream formatter. Keeps track of everything we need to know in order
@@ -78,7 +108,7 @@ pub struct Formatter<'a> {
     /// How many lines we want to add to the output stream.
     ///
     /// This will only be realized if we push non-whitespace.
-    lines: usize,
+    line: Line,
     /// How many spaces we want to add to the output stream.
     ///
     /// This will only be realized if we push non-whitespace, and will be reset
@@ -86,9 +116,6 @@ pub struct Formatter<'a> {
     spaces: usize,
     /// Current indentation level.
     indent: i16,
-    /// Indicates if the line we are currently working on is empty or not.
-    /// An empty line is one which is only prepared to add whitespace.
-    line_empty: bool,
     /// Number of indentations per level.
     config: Config,
 }
@@ -98,10 +125,9 @@ impl<'a> Formatter<'a> {
     pub(crate) fn new(write: &'a mut (dyn Write + 'a), config: Config) -> Formatter<'a> {
         Formatter {
             write,
-            lines: 0usize,
+            line: Line::Initial,
             spaces: 0usize,
             indent: 0i16,
-            line_empty: true,
             config,
         }
     }
@@ -117,26 +143,23 @@ impl<'a> Formatter<'a> {
     }
 
     pub(crate) fn push(&mut self) {
-        if self.line_empty {
-            return;
-        }
+        self.line = match self.line {
+            Line::Initial => return,
+            Line::Line => return,
+            _ => Line::Push,
+        };
 
-        if self.lines < 1 {
-            self.lines += 1;
-        }
-
-        self.line_empty = true;
+        self.spaces = 0;
     }
 
     /// Push a new line.
     pub(crate) fn line(&mut self) {
-        self.line_empty = true;
-        self.spaces = 0;
+        self.line = match self.line {
+            Line::Initial => return,
+            _ => Line::Line,
+        };
 
-        // Limit the maximum number of lines to two.
-        if self.lines < 2 {
-            self.lines += 1;
-        }
+        self.spaces = 0;
     }
 
     /// Push a space.
@@ -146,36 +169,27 @@ impl<'a> Formatter<'a> {
 
     /// Increase indentation level.
     pub(crate) fn indentation(&mut self, n: NonZeroI16) {
-        if !self.line_empty {
-            self.lines += 1;
-            self.spaces = 0;
-            self.line_empty = true;
-        }
-
+        self.push();
         self.indent += n.get();
     }
 
     // Realize any pending whitespace just prior to writing a non-whitespace
     // item.
     fn flush_whitespace(&mut self) -> fmt::Result {
-        if std::mem::take(&mut self.line_empty) {
-            for _ in 0..std::mem::take(&mut self.lines) {
+        let mut spaces = mem::take(&mut self.spaces);
+
+        if let Some(lines) = mem::take(&mut self.line).into_indent() {
+            for _ in 0..lines {
                 self.write.write_line(&self.config)?;
             }
 
-            if self.indent > 0 {
-                let mut to_write = self.indent as usize * self.config.indentation();
-
-                while to_write > 0 {
-                    let len = usize::min(to_write, INDENTATION.len());
-                    self.write.write_str(&INDENTATION[0..len])?;
-                    to_write -= len;
-                }
-            }
+            spaces += i16::max(self.indent, 0) as usize * self.config.indentation;
         }
 
-        for _ in 0..std::mem::take(&mut self.spaces) {
-            self.write.write_str(" ")?;
+        while spaces > 0 {
+            let len = usize::min(spaces, SPACES.len());
+            self.write.write_str(&SPACES[0..len])?;
+            spaces -= len;
         }
 
         Ok(())

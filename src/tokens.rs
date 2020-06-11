@@ -388,24 +388,12 @@ where
     /// );
     /// ```
     pub fn line(&mut self) {
-        let mut it = self.items.iter().rev();
-
-        let last = it.next();
-        let ntl = it.next();
-
-        match (ntl, last) {
-            // A push + line is already at the end of the stream.
-            (Some(Item::Push), Some(Item::Line)) => (),
-            (_, Some(Item::Push)) => {
+        match self.items.pop() {
+            Some(Item::Push) | Some(Item::Line) | None => self.items.push(Item::Line),
+            Some(other) => {
+                self.items.push(other);
                 self.items.push(Item::Line);
             }
-            // Assert that there is something to push behind us.
-            (_, Some(..)) => {
-                self.items.push(Item::Push);
-                self.items.push(Item::Line);
-            }
-            // do nothing.
-            _ => (),
         }
     }
 

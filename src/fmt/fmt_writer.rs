@@ -83,6 +83,6 @@ where
 {
     #[inline(always)]
     fn write_line(&mut self, config: &fmt::Config) -> fmt::Result {
-        self.writer.write_str(config.newline())
+        self.writer.write_str(config.newline)
     }
 }
