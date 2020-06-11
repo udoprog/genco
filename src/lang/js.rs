@@ -43,6 +43,10 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
 
+/// Configuration for JavaScript.
+#[derive(Default)]
+pub struct Config {}
+
 impl_dynamic_types! { JavaScript =>
     pub trait TypeTrait {}
 
@@ -116,7 +120,7 @@ impl Import {
 
 impl_lang_item! {
     impl LangItem<JavaScript> for Import {
-        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
             if let Some(alias) = &self.alias {
                 out.write_str(alias)?;
             } else {
@@ -145,7 +149,7 @@ pub struct ImportDefault {
 
 impl_lang_item! {
     impl LangItem<JavaScript> for ImportDefault {
-        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
             out.write_str(&self.name)
         }
 
@@ -166,7 +170,7 @@ pub struct Local {
 
 impl_lang_item! {
     impl LangItem<JavaScript> for Local {
-        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
             out.write_str(&self.name)
         }
 
@@ -266,7 +270,7 @@ impl JavaScript {
 }
 
 impl Lang for JavaScript {
-    type Config = ();
+    type Config = Config;
     type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {

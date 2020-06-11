@@ -18,6 +18,10 @@ use std::fmt::{self, Write};
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Swift>;
 
+/// Configuration for formatting Swift code.
+#[derive(Default)]
+pub struct Config {}
+
 impl_dynamic_types! { Swift =>
     pub trait TypeTrait {
         /// Handle imports for the given type.
@@ -64,7 +68,7 @@ pub struct Type {
 
 impl_lang_item! {
     impl LangItem<Swift> for Type {
-        fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
             out.write_str(&self.name)
         }
 
@@ -85,7 +89,7 @@ pub struct Map {
 
 impl_lang_item! {
     impl LangItem<Swift> for Map {
-        fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
             out.write_str("[")?;
             self.key.format(out, config, level + 1)?;
             out.write_str(": ")?;
@@ -109,7 +113,7 @@ pub struct Array {
 
 impl_lang_item! {
     impl LangItem<Swift> for Array {
-        fn format(&self, out: &mut Formatter, config: &mut (), level: usize) -> fmt::Result {
+        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
             out.write_str("[")?;
             self.inner.format(out, config, level + 1)?;
             out.write_str("]")?;
@@ -151,7 +155,7 @@ impl Swift {
 }
 
 impl Lang for Swift {
-    type Config = ();
+    type Config = Config;
     type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
