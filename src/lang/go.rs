@@ -7,6 +7,7 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: js::Tokens = quote! {
 //!     function foo(v) {
 //!         return v + ", World";
@@ -23,8 +24,10 @@
 //!         "",
 //!         "foo(\"Hello\");",
 //!     ],
-//!     toks.to_file_vec().unwrap()
+//!     toks.to_file_vec()?
 //! );
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! String quoting in JavaScript:
@@ -32,8 +35,11 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: go::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 use crate as genco;
@@ -271,6 +277,7 @@ impl Lang for Go {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let ty = go::imported("foo", "Debug");
 ///
 /// let toks = quote! {
@@ -283,8 +290,10 @@ impl Lang for Go {
 ///        "",
 ///        "foo.Debug",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
@@ -304,8 +313,11 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!(#(go::local("MyType")));
-/// assert_eq!(vec!["MyType"], toks.to_file_vec().unwrap());
+/// assert_eq!(vec!["MyType"], toks.to_file_vec()?);
+/// # Ok(())
+/// # }
 /// ```
 pub fn local<N>(name: N) -> Type
 where
@@ -324,6 +336,7 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let ty = go::map(go::imported("foo", "Debug"), go::INTERFACE);
 ///
 /// let toks = quote! {
@@ -336,9 +349,10 @@ where
 ///         "",
 ///         "map[foo.Debug]interface{}",
 ///     ],
-///     toks.to_file_vec()
-///     .unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn map<K, V>(key: K, value: V) -> Map
 where
@@ -358,6 +372,7 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let import = go::array(go::imported("foo", "Debug"));
 ///
 /// let toks = quote!(#import);
@@ -368,8 +383,10 @@ where
 ///         "",
 ///         "[]foo.Debug",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn array<I>(inner: I) -> Array
 where

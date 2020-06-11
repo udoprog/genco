@@ -7,11 +7,15 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: csharp::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 mod block_comment;
+mod comment;
 
 use crate as genco;
 use crate::fmt;
@@ -19,6 +23,7 @@ use crate::{quote_in, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 pub use self::block_comment::BlockComment;
+pub use self::comment::Comment;
 
 /// Tokens container specialization for C#.
 pub type Tokens = crate::Tokens<Csharp>;
@@ -226,9 +231,12 @@ impl_modifier! {
     /// use genco::prelude::*;
     /// use csharp::Modifier::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let toks: csharp::Tokens = quote!(#(vec![Async, Static, Public]));
     ///
-    /// assert_eq!("public async static", toks.to_string().unwrap());
+    /// assert_eq!("public async static", toks.to_string()?);
+    /// # Ok(())
+    /// # }
     /// ```
     pub enum Modifier<Csharp> {
         /// The `public` modifier.
@@ -636,6 +644,7 @@ impl Lang for Csharp {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let a = csharp::using("Foo.Bar", "A");
 /// let b = csharp::using("Foo.Bar", "B");
 /// let ob = csharp::using("Foo.Baz", "B");
@@ -657,8 +666,10 @@ impl Lang for Csharp {
 ///         "Foo.Baz.B",
 ///         "Foo.Baz.B<A>",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn using<P: Into<ItemStr>, N: Into<ItemStr>>(namespace: P, name: N) -> Type {
     Type {
@@ -690,6 +701,7 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Type {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let ty = csharp::array(csharp::using("Foo.Bar", "A"));
 ///
 /// let toks: Tokens<Csharp> = quote! {
@@ -702,8 +714,10 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Type {
 ///         "",
 ///         "A[]",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn array<I: Into<Any>>(value: I) -> Array {
     Array {
@@ -724,9 +738,9 @@ pub fn optional<I: Into<Any>>(value: I) -> Optional {
 ///
 /// ```rust
 /// use genco::prelude::*;
-///
 /// use std::iter;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     #(csharp::block_comment(vec!["Foo"]))
 ///     #(csharp::block_comment(iter::empty::<&str>()))
@@ -738,8 +752,10 @@ pub fn optional<I: Into<Any>>(value: I) -> Optional {
 ///         "/// Foo",
 ///         "/// Bar",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn block_comment<T>(comment: T) -> BlockComment<T>
 where
@@ -747,4 +763,35 @@ where
     T::Item: Into<ItemStr>,
 {
     BlockComment(comment)
+}
+
+/// Format a doc comment where each line is preceeded by `///`.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let toks = quote! {
+///     #(csharp::comment("Foo"))
+///     #(csharp::comment("Bar"))
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "// Foo",
+///         "// Bar",
+///     ],
+///     toks.to_file_vec()?
+/// );
+/// # Ok(())
+/// # }
+/// ```
+pub fn comment<T>(comment: T) -> Comment<T>
+where
+    T: IntoIterator,
+    T::Item: Into<ItemStr>,
+{
+    Comment(comment)
 }

@@ -252,11 +252,14 @@ where
     /// use genco::rust::{imported, Config};
     /// use genco::quote;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
     ///
     /// let tokens = quote!(#@(write_bytes_ext));
     ///
-    /// assert_eq!("use byteorder::WriteBytesExt as _;", tokens.to_file_string().unwrap());
+    /// assert_eq!("use byteorder::WriteBytesExt as _;", tokens.to_file_string()?);
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// [quote!]: genco_macros@quote!
@@ -293,6 +296,7 @@ where
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.space();
@@ -306,8 +310,10 @@ where
     ///     vec![
     ///         " hello world",
     ///     ],
-    ///     tokens.to_file_vec().unwrap()
+    ///     tokens.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn space(&mut self) {
         if let Some(Item::Space) = self.items.last() {
@@ -330,6 +336,7 @@ where
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.push();
@@ -343,8 +350,10 @@ where
     ///         "hello",
     ///         "world"
     ///     ],
-    ///     tokens.to_file_vec().unwrap()
+    ///     tokens.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn push(&mut self) {
         // Already a push or an empty line in the stream.
@@ -370,6 +379,7 @@ where
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.line();
@@ -384,8 +394,10 @@ where
     ///         "",
     ///         "world"
     ///     ],
-    ///     tokens.to_file_vec().unwrap()
+    ///     tokens.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn line(&mut self) {
         match self.items.pop() {
@@ -413,6 +425,7 @@ where
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.indent();
@@ -428,8 +441,10 @@ where
     ///         "        world",
     ///         "            😀",
     ///     ],
-    ///     tokens.to_file_vec().unwrap()
+    ///     tokens.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn indent(&mut self) {
         let n = match self.items.pop() {
@@ -467,6 +482,7 @@ where
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.indent();
@@ -488,8 +504,10 @@ where
     ///         "😁",
     ///         "    😂",
     ///     ],
-    ///     tokens.to_file_vec().unwrap()
+    ///     tokens.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn unindent(&mut self) {
         let n = match self.items.pop() {
@@ -741,6 +759,7 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let map = rust::imported("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
@@ -753,8 +772,10 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     ///         "let mut m = HashMap::new();",
     ///         "m.insert(1u32, 2u32);"
     ///     ],
-    ///     tokens.to_vec().unwrap()
+    ///     tokens.to_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn to_vec(self) -> fmt::Result<Vec<String>> {
         let mut w = fmt::VecWriter::new();

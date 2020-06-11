@@ -7,8 +7,11 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: java::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 mod block_comment;
@@ -270,9 +273,12 @@ impl_modifier! {
     /// use genco::prelude::*;
     /// use java::Modifier::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let toks: java::Tokens = quote!(#(vec![Public, Final, Static]));
     ///
-    /// assert_eq!("public static final", toks.to_string().unwrap());
+    /// assert_eq!("public static final", toks.to_string()?);
+    /// # Ok(())
+    /// # }
     /// ```
     pub enum Modifier<Java> {
         /// The `default` modifier.
@@ -559,6 +565,7 @@ impl Lang for Java {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let integer = java::imported("java.lang", "Integer");
 /// let a = java::imported("java.io", "A");
 /// let b = java::imported("java.io", "B");
@@ -584,8 +591,10 @@ impl Lang for Java {
 ///         "java.util.B",
 ///         "java.util.B<A>"
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn imported<P: Into<ItemStr>, N: Into<ItemStr>>(package: P, name: N) -> Type {
     Type {
@@ -615,9 +624,9 @@ pub fn optional<I: Into<Any>, F: Into<Any>>(value: I, field: F) -> Optional {
 ///
 /// ```rust
 /// use genco::prelude::*;
-///
 /// use std::iter;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     #(java::block_comment(vec!["first line", "second line"]))
 ///     #(java::block_comment(iter::empty::<&str>()))
@@ -634,8 +643,10 @@ pub fn optional<I: Into<Any>, F: Into<Any>>(value: I, field: F) -> Optional {
 ///         " * third line",
 ///         " */",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn block_comment<T>(comment: T) -> BlockComment<T>
 where

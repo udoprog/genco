@@ -7,8 +7,11 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: swift::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 use crate::fmt;
@@ -202,6 +205,7 @@ impl Lang for Swift {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!(#(swift::imported("Foo", "Debug")));
 ///
 /// assert_eq!(
@@ -210,8 +214,10 @@ impl Lang for Swift {
 ///         "",
 ///         "Debug",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
@@ -242,6 +248,7 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!(#(swift::map(swift::local("String"), swift::imported("Foo", "Debug"))));
 ///
 /// assert_eq!(
@@ -250,8 +257,10 @@ where
 ///         "",
 ///         "[String: Debug]",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn map<K, V>(key: K, value: V) -> Map
 where
@@ -271,6 +280,7 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!(#(swift::array(swift::imported("Foo", "Debug"))));
 ///
 /// assert_eq!(
@@ -279,8 +289,10 @@ where
 ///         "",
 ///         "[Debug]"
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn array<'a, I>(inner: I) -> Array
 where

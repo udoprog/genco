@@ -1,7 +1,7 @@
 use genco::prelude::*;
 
 #[test]
-fn test_register() {
+fn test_register() -> genco::fmt::Result {
     let import = rust::imported("std::iter", "FromIterator").alias("_");
 
     let tokens: Tokens<Rust> = quote! {
@@ -21,6 +21,8 @@ fn test_register() {
             "    42",
             "}"
         ],
-        tokens.to_file_vec().unwrap()
+        tokens.to_file_vec()?
     );
+
+    Ok(())
 }

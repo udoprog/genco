@@ -5,6 +5,7 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: rust::Tokens = quote! {
 //!     fn foo() -> u32 {
 //!         42
@@ -17,8 +18,10 @@
 //!         "    42",
 //!         "}",
 //!     ],
-//!     toks.to_file_vec().unwrap()
-//! )
+//!     toks.to_file_vec()?
+//! );
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! String quoting in Rust:
@@ -26,8 +29,11 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: rust::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 use crate::fmt;
@@ -239,6 +245,7 @@ impl Type {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::imported("std::fmt", "Debug").alias("FmtDebug");
     ///
     /// let toks = quote!(#ty);
@@ -249,8 +256,10 @@ impl Type {
     ///         "",
     ///         "FmtDebug",
     ///     ],
-    ///     toks.to_file_vec().unwrap()
+    ///     toks.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn alias<A: Into<ItemStr>>(self, alias: A) -> Self {
         Self {
@@ -269,6 +278,7 @@ impl Type {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::imported("std::fmt", "Debug").module_alias("other");
     ///
     /// let toks = quote!(#ty);
@@ -279,8 +289,10 @@ impl Type {
     ///         "",
     ///         "other::Debug",
     ///     ],
-    ///     toks.to_file_vec().unwrap()
+    ///     toks.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// [prefixed]: Self::prefixed()
@@ -303,6 +315,7 @@ impl Type {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::imported("std::fmt", "Debug").prefixed();
     ///
     /// let toks = quote!(#ty);
@@ -313,8 +326,10 @@ impl Type {
     ///         "",
     ///         "fmt::Debug",
     ///     ],
-    ///     toks.to_file_vec().unwrap()
+    ///     toks.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn prefixed(self) -> Type {
         Type {
@@ -330,6 +345,7 @@ impl Type {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::imported("std::collections", "HashMap")
     ///     .with_arguments((rust::local("u32"), rust::local("u32")));
     ///
@@ -341,13 +357,16 @@ impl Type {
     ///         "",
     ///         "HashMap<u32, u32>",
     ///     ],
-    ///     toks.to_file_vec().unwrap()
+    ///     toks.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     ///
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let dbg = rust::imported("std::collections", "HashMap")
     ///     .prefixed()
     ///     .with_arguments((rust::local("T"), rust::local("U")));
@@ -360,8 +379,10 @@ impl Type {
     ///        "",
     ///        "collections::HashMap<T, U>",
     ///     ],
-    ///     toks.to_file_vec().unwrap()
+    ///     toks.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn with_arguments(self, args: impl Args) -> Type {
         Type {
@@ -725,6 +746,7 @@ impl Lang for Rust {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let a = rust::imported("std::fmt", "Debug").prefixed();
 /// let b = rust::imported("std::fmt", "Debug").module_alias("fmt2");
 /// let c = rust::imported("std::fmt", "Debug");
@@ -746,8 +768,10 @@ impl Lang for Rust {
 ///         "Debug",
 ///         "FmtDebug",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Example with an alias
@@ -755,6 +779,7 @@ impl Lang for Rust {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let ty = rust::imported("std::fmt", "Debug").alias("FmtDebug");
 ///
 /// let toks = quote!{
@@ -767,8 +792,10 @@ impl Lang for Rust {
 ///         "",
 ///         "FmtDebug",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Example with a module alias
@@ -776,6 +803,7 @@ impl Lang for Rust {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let ty = rust::imported("std::fmt", "Debug").module_alias("fmt2");
 ///
 /// let toks = quote!{
@@ -788,8 +816,10 @@ impl Lang for Rust {
 ///         "",
 ///         "fmt2::Debug",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Example with multiple aliases
@@ -797,6 +827,7 @@ impl Lang for Rust {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let a = rust::imported("std::fmt", "Debug").alias("FmtDebug");
 /// let b = rust::imported("std::fmt", "Debug").alias("FmtDebug2");
 ///
@@ -812,8 +843,10 @@ impl Lang for Rust {
 ///         "FmtDebug",
 ///         "FmtDebug2",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
 where
@@ -842,8 +875,11 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!(#(rust::local("MyType")));
-/// assert_eq!(vec!["MyType"], toks.to_file_vec().unwrap());
+/// assert_eq!(vec!["MyType"], toks.to_file_vec()?);
+/// # Ok(())
+/// # }
 /// ```
 pub fn local<N>(name: N) -> Type
 where

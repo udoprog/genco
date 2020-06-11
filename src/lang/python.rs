@@ -7,8 +7,11 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: python::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 use crate as genco;
@@ -178,6 +181,7 @@ impl Lang for Python {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     #(python::imported("collections").name("named_tuple"))
 ///     #(python::imported("collections"))
@@ -195,8 +199,10 @@ impl Lang for Python {
 ///         "c.named_tuple",
 ///         "c",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn imported<M>(module: M) -> Type
 where
@@ -218,8 +224,11 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!(#(python::local("dict")));
-/// assert_eq!(vec!["dict"], toks.to_file_vec().unwrap());
+/// assert_eq!(vec!["dict"], toks.to_file_vec()?);
+/// # Ok(())
+/// # }
 /// ```
 pub fn local<N>(name: N) -> Type
 where

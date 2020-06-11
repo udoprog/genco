@@ -11,25 +11,25 @@ fn main() -> anyhow::Result<()> {
     // implement it).
     let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
     let read_bytes_ext = rust::imported("byteorder", "ReadBytesExt").alias("_");
+    let error = rust::imported("std::error", "Error");
 
     let tokens = quote! {
-        // Markup used for imports without an immediate use.
         #@(write_bytes_ext)
         #@(read_bytes_ext)
 
-        fn test() {
+        fn test() -> Result<(), Box<dyn #error>> {
             let mut wtr = vec![];
-            wtr.write_u16::<#little_endian>(517).unwrap();
-            wtr.write_u16::<#big_endian>(768).unwrap();
+            wtr.write_u16::<#little_endian>(517)?;
+            wtr.write_u16::<#big_endian>(768)?;
         }
     };
 
     let stdout = std::io::stdout();
     let mut w = fmt::IoWriter::new(stdout.lock());
-    let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
-    let mut formatter = w.as_formatter(fmt_config);
+
+    let fmt = fmt::Config::from_lang::<Rust>().with_indentation(2);
     let config = rust::Config::default();
 
-    tokens.format_file(&mut formatter, &config)?;
+    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
     Ok(())
 }

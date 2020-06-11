@@ -16,7 +16,7 @@ pub(crate) use self::encoder::{Control, Delimiter, Encoder, MatchArm};
 pub(crate) use self::item_buffer::ItemBuffer;
 
 /// Language neutral whitespace sensitive quasi-quoting.
-/// 
+///
 /// ```rust
 /// # use genco::prelude::*;
 ///
@@ -43,6 +43,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let field_ty = rust::imported("std::collections", "HashMap")
 ///     .with_arguments((rust::U32, rust::U32));
 ///
@@ -60,8 +61,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///         "    field: HashMap<u32, u32>,",
 ///         "}",
 ///     ],
-///     tokens.to_file_vec().unwrap(),
+///     tokens.to_file_vec()?,
 /// );
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -71,11 +74,14 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let world = "world";
 ///
 /// let tokens: genco::Tokens = quote!(hello #(world.to_uppercase()));
 ///
-/// assert_eq!("hello WORLD", tokens.to_string().unwrap());
+/// assert_eq!("hello WORLD", tokens.to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -124,11 +130,14 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote!(foo#<push>bar#<line>baz#<space>biz);
 ///
-/// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string().unwrap());
+/// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -152,13 +161,16 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
 ///     Your numbers are: #(for n in numbers => #n#<space>)
 /// };
 ///
-/// assert_eq!("Your numbers are: 3 4 5", tokens.to_string().unwrap());
+/// assert_eq!("Your numbers are: 3 4 5", tokens.to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -177,13 +189,16 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
 ///     Your numbers are: #(for n in numbers join (, ) => #n).
 /// };
 ///
-/// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string().unwrap());
+/// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -203,6 +218,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// fn greeting(hello: bool, name: &str) -> Tokens<()> {
 ///     quote!(Custom Greeting: #(if hello {
 ///         Hello #name
@@ -212,10 +228,12 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// }
 ///
 /// let tokens = greeting(true, "John");
-/// assert_eq!("Custom Greeting: Hello John", tokens.to_string().unwrap());
+/// assert_eq!("Custom Greeting: Hello John", tokens.to_string()?);
 ///
 /// let tokens = greeting(false, "John");
-/// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
+/// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -226,6 +244,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// fn greeting(hello: bool, name: &str) -> Tokens<()> {
 ///     quote!(Custom Greeting:#(if hello {
 ///         #<space>Hello #name
@@ -233,10 +252,12 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// }
 ///
 /// let tokens = greeting(true, "John");
-/// assert_eq!("Custom Greeting: Hello John", tokens.to_string().unwrap());
+/// assert_eq!("Custom Greeting: Hello John", tokens.to_string()?);
 ///
 /// let tokens = greeting(false, "John");
-/// assert_eq!("Custom Greeting:", tokens.to_string().unwrap());
+/// assert_eq!("Custom Greeting:", tokens.to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -251,6 +272,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// enum Greeting {
 ///     Hello,
 ///     Goodbye,
@@ -264,10 +286,12 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// }
 ///
 /// let tokens = greeting(Greeting::Hello, "John");
-/// assert_eq!("Custom Greeting: Hello John", tokens.to_string().unwrap());
+/// assert_eq!("Custom Greeting: Hello John", tokens.to_string()?);
 ///
 /// let tokens = greeting(Greeting::Goodbye, "John");
-/// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string().unwrap());
+/// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -290,6 +314,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// fn quote_greeting(surname: &str, lastname: Option<&str>) -> rust::Tokens {
 ///     quote! {
 ///         Hello #surname#(toks => {
@@ -301,8 +326,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///     }
 /// }
 ///
-/// assert_eq!("Hello John", quote_greeting("John", None).to_string().unwrap());
-/// assert_eq!("Hello John Doe", quote_greeting("John", Some("Doe")).to_string().unwrap());
+/// assert_eq!("Hello John", quote_greeting("John", None).to_string()?);
+/// assert_eq!("Hello John Doe", quote_greeting("John", Some("Doe")).to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -319,6 +346,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn     test()     {
 ///         println!("Hello... ");
@@ -335,8 +363,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///         "    println!(\"World!\");",
 ///         "}",
 ///     ],
-///     tokens.to_file_vec().unwrap(),
-/// )
+///     tokens.to_file_vec()?,
+/// );
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -348,6 +378,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn test() {
 ///         println!("Hello... ");
@@ -366,8 +397,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///         "    println!(\"World!\");",
 ///         "}",
 ///     ],
-///     tokens.to_file_vec().unwrap(),
-/// )
+///     tokens.to_file_vec()?,
+/// );
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// <br>
@@ -385,6 +418,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn test() {
 ///             println!("Hello... ");
@@ -401,8 +435,10 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///         "    println!(\"World!\");",
 ///         "}",
 ///     ],
-///     tokens.to_file_vec().unwrap(),
-/// )
+///     tokens.to_file_vec()?,
+/// );
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// A mismatched indentation would result in an error:
@@ -465,7 +501,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// ```rust
 /// # use genco::prelude::*;
-/// 
+///
 /// # fn generate() -> Tokens<()> {
 /// let mut tokens = Tokens::new();
 /// quote_in!(tokens => hello world);

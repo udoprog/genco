@@ -22,6 +22,7 @@ pub trait QuotedExt {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let map = rust::imported("std::collections", "HashMap");
     ///
     /// let tokens = quote! {
@@ -30,14 +31,16 @@ pub trait QuotedExt {
     /// };
     ///
     /// assert_eq!(
-    ///    vec![
+    ///     vec![
     ///        "use std::collections::HashMap;",
     ///        "",
     ///        "let mut m = HashMap::<u32, &str>::new();",
     ///        "m.insert(0, \"hello\\\" world\");",
     ///     ],
-    ///     tokens.to_file_vec().unwrap(),
+    ///     tokens.to_file_vec()?,
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     fn quoted(self) -> Quoted<Self>
     where
@@ -70,6 +73,7 @@ pub trait DisplayExt {
     /// use genco::prelude::*;
     /// use std::fmt;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// struct Foo(());
     ///
     /// impl fmt::Display for Foo {
@@ -88,14 +92,16 @@ pub trait DisplayExt {
     /// };
     ///
     /// assert_eq!(
-    ///    vec![
+    ///     vec![
     ///        "use std::collections::HashMap;",
     ///        "",
     ///        "let mut m = HashMap::<u32, &str>::new();",
     ///        "m.insert(0, Foo);",
     ///     ],
-    ///     tokens.to_file_vec().unwrap(),
+    ///     tokens.to_file_vec()?,
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     fn display(&self) -> Display<'_, Self>
     where

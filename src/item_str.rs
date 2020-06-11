@@ -84,6 +84,12 @@ impl<'a> From<&'a str> for ItemStr {
     }
 }
 
+impl<'a> From<&'a &'a str> for ItemStr {
+    fn from(value: &'a &'a str) -> Self {
+        Self::Box(value.to_string().into_boxed_str())
+    }
+}
+
 impl From<Rc<String>> for ItemStr {
     fn from(value: Rc<String>) -> Self {
         Self::Box(value.to_string().into_boxed_str())

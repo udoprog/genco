@@ -23,9 +23,10 @@ fn main() -> anyhow::Result<()> {
 
     let stdout = std::io::stdout();
     let mut w = fmt::IoWriter::new(stdout.lock());
-    let mut formatter = w.as_formatter(fmt::Config::from_lang::<Java>().with_newline("\n\r"));
+
+    let fmt = fmt::Config::from_lang::<Java>().with_newline("\n\r");
     let config = java::Config::default().with_package("se.tedro");
 
-    tokens.format_file(&mut formatter, &config)?;
+    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
     Ok(())
 }

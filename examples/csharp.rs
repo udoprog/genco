@@ -1,3 +1,5 @@
+use genco::csharp::comment;
+use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
@@ -12,32 +14,32 @@ fn main() -> anyhow::Result<()> {
 
     // Note: Comments have to be escaped as raw expressions, since they are
     // filtered out from procedural macros.
-    let test: Tokens<Csharp> = quote! {
+    let tokens = quote! {
         public class Test {
             public static void Main()  {
-                #("// Creates a new TestSimpleObject object.")
+                #(comment(&["Creates a new TestSimpleObject object."]))
                 #simple_object obj = new #simple_object();
 
                 #console.WriteLine("Before serialization the object contains: ");
                 obj.Print();
 
-                #("// Opens a file and serializes the object into it in binary format.")
+                #(comment(&["Opens a file and serializes the object into it in binary format."]))
                 #stream stream = #file.Open("data.xml", FileMode.Create);
                 #soap_formatter formatter = new #soap_formatter();
 
-                #("//BinaryFormatter formatter = new BinaryFormatter();")
+                #(comment(&["BinaryFormatter formatter = new BinaryFormatter();"]))
 
                 formatter.Serialize(stream, obj);
                 stream.Close();
 
-                #("// Empties obj.")
+                #(comment(&["Empties obj."]))
                 obj = null;
 
-                #("// Opens file \"data.xml\" and deserializes the object from it.")
+                #(comment(&["Opens file \"data.xml\" and deserializes the object from it."]))
                 stream = #file.Open("data.xml", FileMode.Open);
                 formatter = new #soap_formatter();
 
-                #("//formatter = new BinaryFormatter();")
+                #(comment(&["formatter = new BinaryFormatter();"]))
 
                 obj = (#simple_object)formatter.Deserialize(stream);
                 stream.Close();
@@ -49,6 +51,12 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
-    println!("{}", test.to_file_string()?);
+    let stdout = std::io::stdout();
+    let mut w = fmt::IoWriter::new(stdout.lock());
+
+    let fmt = fmt::Config::from_lang::<Csharp>().with_indentation(2);
+    let config = csharp::Config::default();
+
+    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
     Ok(())
 }

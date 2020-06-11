@@ -7,8 +7,11 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: dart::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 mod doc_comment;
@@ -68,9 +71,12 @@ impl_modifier! {
     /// use genco::prelude::*;
     /// use dart::Modifier::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let toks: dart::Tokens = quote!(#(vec![Final, Async]));
     ///
-    /// assert_eq!("async final", toks.to_string().unwrap());
+    /// assert_eq!("async final", toks.to_string()?);
+    /// # Ok(())
+    /// # }
     /// ```
     pub enum Modifier<Dart> {
         /// The `async` modifier.
@@ -95,9 +101,12 @@ pub struct Config {}
 /// ```rust
 /// use genco::prelude::*;
 ///
-/// assert_eq!("int", quote!(#(dart::INT)).to_string().unwrap());
-/// assert_eq!("double", quote!(#(dart::DOUBLE)).to_string().unwrap());
-/// assert_eq!("bool", quote!(#(dart::BOOL)).to_string().unwrap());
+/// # fn main() -> genco::fmt::Result {
+/// assert_eq!("int", quote!(#(dart::INT)).to_string()?);
+/// assert_eq!("double", quote!(#(dart::DOUBLE)).to_string()?);
+/// assert_eq!("bool", quote!(#(dart::BOOL)).to_string()?);
+/// # Ok(())
+/// # }
 /// ```
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct BuiltIn {
@@ -182,6 +191,7 @@ impl Type {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let import = dart::imported("dart:collection", "Map")
     ///     .with_arguments((dart::INT, dart::VOID));
     ///
@@ -195,8 +205,10 @@ impl Type {
     ///         "",
     ///         "Map<int, void>",
     ///     ],
-    ///     toks.to_file_vec().unwrap()
+    ///     toks.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn with_arguments(self, args: impl Args) -> Type {
         Self {
@@ -344,6 +356,7 @@ impl Lang for Dart {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let a = dart::imported("package:http/http.dart", "A");
 /// let b = dart::imported("package:http/http.dart", "B");
 /// let c = dart::imported("package:http/http.dart", "C").alias("h2");
@@ -367,7 +380,9 @@ impl Lang for Dart {
 ///     "D",
 /// ];
 ///
-/// assert_eq!(expected, toks.to_file_vec().unwrap());
+/// assert_eq!(expected, toks.to_file_vec()?);
+/// # Ok(())
+/// # }
 /// ```
 pub fn imported<P: Into<ItemStr>, N: Into<ItemStr>>(path: P, name: N) -> Type {
     Type {
@@ -389,9 +404,9 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Local {
 ///
 /// ```rust
 /// use genco::prelude::*;
-///
 /// use std::iter;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     #(dart::doc_comment(vec!["Foo"]))
 ///     #(dart::doc_comment(iter::empty::<&str>()))
@@ -403,8 +418,10 @@ pub fn local<N: Into<ItemStr>>(name: N) -> Local {
 ///         "/// Foo",
 ///         "/// Bar",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn doc_comment<T>(comment: T) -> DocComment<T>
 where

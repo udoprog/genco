@@ -1,7 +1,7 @@
 use genco::prelude::*;
 
 #[test]
-fn test_option() {
+fn test_option() -> genco::fmt::Result {
     let test1 = Some(quote!(println!("{}", #("one".quoted()))));
     let test2 = None::<rust::Tokens>;
 
@@ -22,6 +22,8 @@ fn test_option() {
             "    42",
             "}"
         ],
-        tokens.to_file_vec().unwrap()
+        tokens.to_file_vec()?
     );
+
+    Ok(())
 }

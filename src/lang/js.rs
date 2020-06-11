@@ -7,6 +7,7 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: js::Tokens = quote! {
 //!     function foo(v) {
 //!         return v + ", World";
@@ -23,8 +24,10 @@
 //!         "",
 //!         "foo(\"Hello\");",
 //!     ],
-//!     toks.to_file_vec().unwrap()
+//!     toks.to_file_vec()?
 //! );
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! String quoting in JavaScript:
@@ -32,8 +35,11 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
+//! # fn main() -> genco::fmt::Result {
 //! let toks: js::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! # Ok(())
+//! # }
 //! ```
 
 use crate::fmt;
@@ -96,6 +102,7 @@ impl Import {
     /// ```rust
     /// use genco::prelude::*;
     ///
+    /// # fn main() -> genco::fmt::Result {
     /// let a = js::import("collections", "vec");
     /// let b = js::import("collections", "vec").alias("list");
     ///
@@ -111,8 +118,10 @@ impl Import {
     ///         "vec",
     ///         "list",
     ///     ],
-    ///     toks.to_file_vec().unwrap()
+    ///     toks.to_file_vec()?
     /// );
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn alias<N: Into<ItemStr>>(self, alias: N) -> Self {
         Self {
@@ -321,6 +330,7 @@ impl Lang for JavaScript {
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let a = js::import("collections", "vec");
 /// let b = js::import("collections", "vec").alias("list");
 ///
@@ -336,8 +346,10 @@ impl Lang for JavaScript {
 ///         "vec",
 ///         "list",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn import<M, N>(module: M, name: N) -> Import
 where
@@ -361,6 +373,7 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let a = js::import_default("collections", "defaultVec");
 /// let b = js::import("collections", "vec");
 /// let c = js::import("collections", "vec").alias("list");
@@ -379,8 +392,10 @@ where
 ///         "vec",
 ///         "list",
 ///     ],
-///     toks.to_file_vec().unwrap()
+///     toks.to_file_vec()?
 /// );
+/// # Ok(())
+/// # }
 /// ```
 pub fn import_default<M, N>(module: M, name: N) -> ImportDefault
 where
@@ -400,8 +415,11 @@ where
 /// ```rust
 /// use genco::prelude::*;
 ///
+/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!(#(js::local("MyType")));
-/// assert_eq!(vec!["MyType"], toks.to_file_vec().unwrap());
+/// assert_eq!(vec!["MyType"], toks.to_file_vec()?);
+/// # Ok(())
+/// # }
 /// ```
 pub fn local<N>(name: N) -> Local
 where

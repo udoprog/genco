@@ -9,6 +9,10 @@ use std::num::NonZeroI16;
 use genco::prelude::*;
 use genco::{Item, Item::*, ItemStr::*};
 
+fn num(n: i16) -> NonZeroI16 {
+    NonZeroI16::new(n).expect("non-valid non-zero u16")
+}
+
 #[test]
 fn test_token_gen() {
     assert_eq! {
@@ -25,9 +29,9 @@ fn test_token_gen() {
             Literal(Static("bar")),
             Push,
             Literal(Static("baz")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("hello")),
-            Indentation(NonZeroI16::new(-1).unwrap()),
+            Indentation(num(-1)),
             Literal(Static("out?"))
         ] as Vec<Item<Rust>>
     }
@@ -121,9 +125,9 @@ fn test_indentation() {
         a,
         vec![
             Literal(Static("a")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("b")),
-            Indentation(NonZeroI16::new(-1).unwrap()),
+            Indentation(num(-1)),
             Literal(Static("c"))
         ] as Vec<Item<Rust>>
     };
@@ -141,9 +145,9 @@ fn test_indentation() {
         b,
         vec![
             Literal(Static("a")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("b")),
-            Indentation(NonZeroI16::new(-1).unwrap()),
+            Indentation(num(-1)),
             Literal(Static("c"))
         ] as Vec<Item<Rust>>
     };
@@ -418,17 +422,17 @@ fn test_indentation_management() {
             Literal(Static("if")),
             Space,
             Literal(Static("a:")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("if")),
             Space,
             Literal(Static("b:")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("foo")),
-            Indentation(NonZeroI16::new(-2).unwrap()),
+            Indentation(num(-2)),
             Literal(Static("else:")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("c")),
-            Indentation(NonZeroI16::new(-1).unwrap())
+            Indentation(num(-1))
         ] as Vec<Item<Rust>>
     };
 
@@ -444,13 +448,13 @@ fn test_indentation_management() {
             Literal(Static("if")),
             Space,
             Literal(Static("a:")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("if")),
             Space,
             Literal(Static("b:")),
-            Indentation(NonZeroI16::new(1).unwrap()),
+            Indentation(num(1)),
             Literal(Static("foo")),
-            Indentation(NonZeroI16::new(-2).unwrap()),
+            Indentation(num(-2)),
         ] as Vec<Item<Rust>>
     };
 }

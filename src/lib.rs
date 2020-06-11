@@ -1,7 +1,5 @@
-//! ## genco
-//!
-//! genco is a simple code generator and quasi quoter for Rust, written for use
-//! in [reproto].
+//! genco is a code generator and quasi quoter for Rust, written for use in
+//! [reproto].
 //!
 //! The workhorse of genco is the [quote!] and [quote_in!] macros. While tokens
 //! can be constructed manually, these make this process much easier.
@@ -38,9 +36,9 @@
 //! * [Java Example]
 //! * [C# Example]
 //! * [Go Example]
-//! * Dart Example (TODO)
-//! * JavaScript Example (TODO)
-//! * Python Example (TODO)
+//! * [Dart Example]
+//! * [JavaScript Example]
+//! * [Python Example]
 //!
 //! You can run one of the examples above using:
 //!
@@ -72,11 +70,10 @@
 //! let stdout = std::io::stdout();
 //! let mut w = fmt::IoWriter::new(stdout.lock());
 //!
-//! let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
-//! let mut formatter = w.as_formatter(fmt_config);
+//! let fmt = fmt::Config::from_lang::<Rust>().with_indentation(2);
 //! let config = rust::Config::default();
 //!
-//! tokens.format_file(&mut formatter, &config)?;
+//! tokens.format_file(&mut w.as_formatter(fmt), &config)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -100,6 +97,9 @@
 //! [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 //! [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
 //! [Go Example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
+//! [Dart Example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
+//! [JavaScript Example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
+//! [Python Example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 //! [quote!]: https://docs.rs/genco/0/genco/macro.quote.html
 //! [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
 //! [`<stmt>.quoted()`]: https://docs.rs/genco/0/genco/trait.QuotedExt.html
