@@ -16,8 +16,9 @@ mod doc_comment;
 pub use self::doc_comment::DocComment;
 
 use crate as genco;
-use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
-use std::fmt::{self, Write};
+use crate::fmt;
+use crate::{quote_in, ItemStr, Lang, LangItem};
+use std::fmt::Write as _;
 
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;
@@ -79,6 +80,10 @@ impl_modifier! {
     }
 }
 
+/// Format state for Dart.
+#[derive(Debug, Default)]
+pub struct Format {}
+
 /// Config data for Dart formatting.
 #[derive(Debug, Default)]
 pub struct Config {}
@@ -102,7 +107,7 @@ pub struct BuiltIn {
 
 impl_lang_item! {
     impl LangItem<Dart> for BuiltIn {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(self.name)
         }
     }
@@ -116,7 +121,7 @@ pub struct Local {
 
 impl_lang_item! {
     impl LangItem<Dart> for Local {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&*self.name)
         }
     }
@@ -128,7 +133,7 @@ pub struct Void(());
 
 impl_lang_item! {
     impl LangItem<Dart> for Void {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str("void")
         }
     }
@@ -140,7 +145,7 @@ pub struct Dynamic(());
 
 impl_lang_item! {
     impl LangItem<Dart> for Dynamic {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str("dynamic")
         }
     }
@@ -221,7 +226,7 @@ impl Type {
 
 impl_lang_item! {
     impl LangItem<Dart> for Type {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             if let Some(alias) = &self.alias {
                 out.write_str(alias.as_ref())?;
                 out.write_str(SEP)?;
@@ -235,7 +240,7 @@ impl_lang_item! {
                 let mut it = self.arguments.iter().peekable();
 
                 while let Some(argument) = it.next() {
-                    argument.format(out, config, level + 1)?;
+                    argument.format(out, config, format)?;
 
                     if it.peek().is_some() {
                         out.write_str(", ")?;
@@ -259,7 +264,7 @@ pub struct Dart(());
 
 impl Dart {
     /// Resolve all imports.
-    fn imports(input: &Tokens, output: &mut Tokens, _: &mut Config) {
+    fn imports(out: &mut Tokens, input: &Tokens, _: &Config) {
         use crate::ext::QuotedExt as _;
         use std::collections::BTreeSet;
 
@@ -279,23 +284,24 @@ impl Dart {
 
         for (name, alias) in modules {
             if let Some(alias) = alias {
-                quote_in!(*output => import #(name.quoted()) as #alias;);
+                quote_in!(*out => import #(name.quoted()) as #alias;);
             } else {
-                quote_in!(*output => import #(name.quoted()););
+                quote_in!(*out => import #(name.quoted()););
             }
 
-            output.push();
+            out.push();
         }
 
-        output.line();
+        out.line();
     }
 }
 
 impl Lang for Dart {
     type Config = Config;
+    type Format = Format;
     type Import = Type;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_char('"')?;
 
         for c in input.chars() {
@@ -317,16 +323,17 @@ impl Lang for Dart {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks: Tokens = Tokens::new();
-        Self::imports(&tokens, &mut toks, config);
-        toks.extend(tokens);
-        toks.format(out, config, level)
+        let mut imports: Tokens = Tokens::new();
+        Self::imports(&mut imports, tokens, config);
+        let format = Format::default();
+        imports.format(out, config, &format)?;
+        tokens.format(out, config, &format)?;
+        Ok(())
     }
 }
 

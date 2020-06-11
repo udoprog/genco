@@ -36,15 +36,19 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-use crate::{Formatter, ItemStr, Lang, LangItem};
+use crate::fmt;
+use crate::{ItemStr, Lang, LangItem};
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::{self, Write};
+use std::fmt::Write as _;
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
+/// Format state for JavaScript.
+#[derive(Debug, Default)]
+pub struct Format {}
 
 /// Configuration for JavaScript.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Config {}
 
 impl_dynamic_types! { JavaScript =>
@@ -120,7 +124,7 @@ impl Import {
 
 impl_lang_item! {
     impl LangItem<JavaScript> for Import {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             if let Some(alias) = &self.alias {
                 out.write_str(alias)?;
             } else {
@@ -149,7 +153,7 @@ pub struct ImportDefault {
 
 impl_lang_item! {
     impl LangItem<JavaScript> for ImportDefault {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&self.name)
         }
 
@@ -170,7 +174,7 @@ pub struct Local {
 
 impl_lang_item! {
     impl LangItem<JavaScript> for Local {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&self.name)
         }
 
@@ -185,7 +189,7 @@ pub struct JavaScript(());
 
 impl JavaScript {
     /// Translate imports into the necessary tokens.
-    fn imports(tokens: &Tokens, output: &mut Tokens) {
+    fn imports(out: &mut Tokens, tokens: &Tokens) {
         use crate as genco;
         use crate::prelude::*;
 
@@ -214,8 +218,8 @@ impl JavaScript {
         }
 
         for (name, module) in modules {
-            output.push();
-            quote_in! { *output =>
+            out.push();
+            quote_in! { *out =>
                 import #( tokens => {
                     if let Some(default) = module.default_import {
                         tokens.append(ItemStr::from(default));
@@ -253,7 +257,7 @@ impl JavaScript {
             };
         }
 
-        output.line();
+        out.line();
 
         #[derive(Default)]
         struct Module<'a> {
@@ -271,9 +275,10 @@ impl JavaScript {
 
 impl Lang for JavaScript {
     type Config = Config;
+    type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_char('"')?;
 
         for c in input.chars() {
@@ -295,16 +300,17 @@ impl Lang for JavaScript {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks = Tokens::new();
-        Self::imports(&tokens, &mut toks);
-        toks.extend(tokens);
-        toks.format(out, config, level)
+        let mut imports = Tokens::new();
+        Self::imports(&mut imports, tokens);
+        let format = Format::default();
+        imports.format(out, config, &format)?;
+        tokens.format(out, config, &format)?;
+        Ok(())
     }
 }
 

@@ -55,53 +55,47 @@
 //! The following is a simple program producing Rust code to stdout with custom
 //! configuration:
 //!
-//! ```rust
+//! ```rust,no_run
 //! use genco::prelude::*;
+//! use genco::fmt;
 //!
-//! use std::fmt;
+//! # fn main() -> fmt::Result {
+//! let map = rust::imported("std::collections", "HashMap");
 //!
-//! fn main() -> fmt::Result {
-//!     let little_endian = rust::imported("byteorder", "LittleEndian");
-//!     let big_endian = rust::imported("byteorder", "BigEndian").prefixed();
+//! let tokens: rust::Tokens = quote! {
+//!     fn main() {
+//!         let mut m = #map::new();
+//!         m.insert(1u32, 2u32);
+//!     }
+//! };
 //!
-//!     let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
+//! let stdout = std::io::stdout();
+//! let mut w = fmt::IoWriter::new(stdout.lock());
 //!
-//!     let tokens = quote! {
-//!         #@(write_bytes_ext)
+//! let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+//! let mut formatter = w.as_formatter(fmt_config);
+//! let config = rust::Config::default();
 //!
-//!         fn test() {
-//!             let mut wtr = vec![];
-//!             wtr.write_u16::<#little_endian>(517).unwrap();
-//!             wtr.write_u16::<#big_endian>(768).unwrap();
-//!         }
-//!     };
-//!
-//!     tokens.to_io_writer_with(
-//!         std::io::stdout().lock(),
-//!         rust::Config::default(),
-//!         FormatterConfig::from_lang::<Rust>().with_indentation(2),
-//!     )?;
-//!
-//!     Ok(())
-//! }
+//! tokens.format_file(&mut formatter, &config)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! This would produce:
 //!
-//! ```rust,ignore
-//! use byteorder::{self, LittleEndian, ReadBytesExt as _, WriteBytesExt as _};
+//! ```rust,no_run
+//! use std::collections::HashMap;
 //!
-//! fn test() {
-//!     let mut wtr = vec![];
-//!     wtr.write_u16::<LittleEndian>(517).unwrap();
-//!     wtr.write_u16::<byteorder::BigEndian>(768).unwrap();
+//! fn main() {
+//!     let mut m = HashMap::new();
+//!     m.insert(1u32, 2u32);
 //! }
 //! ```
 //!
 //! <br>
 //!
 //! [reproto]: https://github.com/reproto/reproto
-//! [whitespace detection]: https://github.com/udoprog/genco#whitespace-detection
+//! [whitespace detection]: https://docs.rs/genco/0/genco/macro.quote.html#whitespace-detection
 //! [Rust Example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
 //! [Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 //! [C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
@@ -119,8 +113,8 @@ pub use genco_macros::{quote, quote_in};
 #[macro_use]
 mod macros;
 pub mod ext;
+pub mod fmt;
 mod format_tokens;
-mod formatter;
 mod item;
 mod item_str;
 mod lang;
@@ -131,7 +125,6 @@ mod tokens;
 
 pub use self::ext::{Display, DisplayExt, Quoted, QuotedExt};
 pub use self::format_tokens::FormatTokens;
-pub use self::formatter::{Config as FormatterConfig, Formatter};
 pub use self::item::Item;
 pub use self::item_str::ItemStr;
 pub use self::lang::*;

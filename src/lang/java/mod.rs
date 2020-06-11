@@ -16,9 +16,9 @@ mod block_comment;
 pub use self::block_comment::BlockComment;
 
 use crate as genco;
-use crate::{quote, quote_in, Formatter, ItemStr, Lang, LangItem};
+use crate::fmt;
+use crate::{quote, quote_in, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap};
-use std::fmt;
 
 /// Tokens container specialized for Java.
 pub type Tokens = crate::Tokens<Java>;
@@ -40,6 +40,9 @@ impl_dynamic_types! { Java =>
 
         /// Process which kinds of imports to deal with.
         fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
+
+        /// Java-specific interior formatting.
+        fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result;
     }
 
     pub trait Args;
@@ -54,11 +57,27 @@ impl_dynamic_types! { Java =>
         fn package(&self) -> Option<&str> {
             Some(JAVA_LANG)
         }
+
+        fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
+            if level > 0 {
+                out.write_str(self.boxed)
+            } else {
+                out.write_str(self.primitive)
+            }
+        }
     }
 
     impl TypeTrait for Void {
         fn name(&self) -> &str {
             "void"
+        }
+
+        fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
+            if level > 0 {
+                out.write_str("Void")
+            } else {
+                out.write_str("void")
+            }
         }
     }
 
@@ -84,6 +103,48 @@ impl_dynamic_types! { Java =>
 
             modules.insert((self.package.clone(), self.name.clone()));
         }
+
+        fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
+            {
+                let file_package = config.package.as_ref().map(|p| p.as_ref());
+                let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
+                let pkg = Some(self.package.as_ref());
+
+                if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
+                    out.write_str(self.package.as_ref())?;
+                    out.write_str(SEP)?;
+                }
+            }
+
+            {
+                out.write_str(self.name.as_ref())?;
+
+                let mut it = self.path.iter();
+
+                while let Some(n) = it.next() {
+                    out.write_str(".")?;
+                    out.write_str(n.as_ref())?;
+                }
+            }
+
+            if !self.arguments.is_empty() {
+                out.write_str("<")?;
+
+                let mut it = self.arguments.iter().peekable();
+
+                while let Some(argument) = it.next() {
+                    argument.java_format(out, config, format, level + 1)?;
+
+                    if it.peek().is_some() {
+                        out.write_str(", ")?;
+                    }
+                }
+
+                out.write_str(">")?;
+            }
+
+            Ok(())
+        }
     }
 
     impl TypeTrait for Optional {
@@ -102,11 +163,19 @@ impl_dynamic_types! { Java =>
         fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
             self.value.type_imports(modules);
         }
+
+        fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
+            self.field.java_format(out, config, format, level)
+        }
     }
 
     impl TypeTrait for Local {
         fn name(&self) -> &str {
             &*self.name
+        }
+
+        fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, _: usize) -> fmt::Result {
+            out.write_str(&*self.name)
         }
     }
 }
@@ -165,14 +234,18 @@ pub const BYTE: Primitive = Primitive {
 /// Void type.
 pub const VOID: Void = Void(());
 
-/// Configuration for Java formatting.
-#[derive(Debug)]
+/// Formtat state for Java.
+#[derive(Debug, Default)]
+pub struct Format {
+    /// Types which has been imported into the local namespace.
+    imported: HashMap<String, String>,
+}
+
+/// Configuration for Java.
+#[derive(Debug, Default)]
 pub struct Config {
     /// Package to use.
     package: Option<ItemStr>,
-
-    /// Types which has been imported into the local namespace.
-    imported: HashMap<String, String>,
 }
 
 impl Config {
@@ -181,15 +254,6 @@ impl Config {
         Self {
             package: Some(package.into()),
             ..self
-        }
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            package: Default::default(),
-            imported: Default::default(),
         }
     }
 }
@@ -291,46 +355,8 @@ impl Type {
 
 impl_lang_item! {
     impl LangItem<Java> for Type {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-            {
-                let file_package = config.package.as_ref().map(|p| p.as_ref());
-                let imported = config.imported.get(self.name.as_ref()).map(String::as_str);
-                let pkg = Some(self.package.as_ref());
-
-                if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
-                    out.write_str(self.package.as_ref())?;
-                    out.write_str(SEP)?;
-                }
-            }
-
-            {
-                out.write_str(self.name.as_ref())?;
-
-                let mut it = self.path.iter();
-
-                while let Some(n) = it.next() {
-                    out.write_str(".")?;
-                    out.write_str(n.as_ref())?;
-                }
-            }
-
-            if !self.arguments.is_empty() {
-                out.write_str("<")?;
-
-                let mut it = self.arguments.iter().peekable();
-
-                while let Some(argument) = it.next() {
-                    argument.format(out, config, level + 1usize)?;
-
-                    if it.peek().is_some() {
-                        out.write_str(", ")?;
-                    }
-                }
-
-                out.write_str(">")?;
-            }
-
-            Ok(())
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            self.java_format(out, config, format, 0)
         }
 
         fn as_import(&self) -> Option<&dyn TypeTrait> {
@@ -345,12 +371,8 @@ pub struct Void(());
 
 impl_lang_item! {
     impl LangItem<Java> for Void {
-        fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
-            if level > 0 {
-                out.write_str("Void")
-            } else {
-                out.write_str("void")
-            }
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            self.java_format(out, config, format, 0)
         }
     }
 }
@@ -378,12 +400,8 @@ impl Primitive {
 
 impl_lang_item! {
     impl LangItem<Java> for Primitive {
-        fn format(&self, out: &mut Formatter, _: &mut Config, level: usize) -> fmt::Result {
-            if level > 0 {
-                out.write_str(self.boxed)
-            } else {
-                out.write_str(self.primitive)
-            }
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            self.java_format(out, config, format, 0)
         }
     }
 }
@@ -397,8 +415,8 @@ pub struct Local {
 
 impl_lang_item! {
     impl LangItem<Java> for Local {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
-            out.write_str(&*self.name)
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            self.java_format(out, config, format, 0)
         }
 
         fn as_import(&self) -> Option<&dyn TypeTrait> {
@@ -430,8 +448,8 @@ impl Optional {
 
 impl_lang_item! {
     impl LangItem<Java> for Optional {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-            self.field.format(out, config, level)
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            self.java_format(out, config, format, 0)
         }
 
         fn as_import(&self) -> Option<&dyn TypeTrait> {
@@ -444,7 +462,12 @@ impl_lang_item! {
 pub struct Java(());
 
 impl Java {
-    fn imports(tokens: &Tokens, config: &mut Config) -> Option<Tokens> {
+    fn imports(
+        out: &mut Tokens,
+        tokens: &Tokens,
+        config: &Config,
+        imported: &mut HashMap<String, String>,
+    ) {
         let mut modules = BTreeSet::new();
 
         let file_package = config.package.as_ref().map(|p| p.as_ref());
@@ -454,13 +477,11 @@ impl Java {
         }
 
         if modules.is_empty() {
-            return None;
+            return;
         }
 
-        let mut out = Tokens::new();
-
         for (package, name) in modules {
-            if config.imported.contains_key(&*name) {
+            if imported.contains_key(&*name) {
                 continue;
             }
 
@@ -475,20 +496,19 @@ impl Java {
             out.append(quote!(import #(package.clone())#(SEP)#(name.clone());));
             out.push();
 
-            config
-                .imported
-                .insert(name.to_string(), package.to_string());
+            imported.insert(name.to_string(), package.to_string());
         }
 
-        Some(out)
+        out.line();
     }
 }
 
 impl Lang for Java {
     type Config = Config;
+    type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         use std::fmt::Write as _;
 
         out.write_char('"')?;
@@ -512,26 +532,23 @@ impl Lang for Java {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks = Tokens::new();
+        let mut header = Tokens::new();
 
         if let Some(ref package) = config.package {
-            quote_in!(toks => package #package;);
-            toks.line();
+            quote_in!(header => package #package;);
+            header.line();
         }
 
-        if let Some(imports) = Self::imports(&tokens, config) {
-            toks.append(imports);
-            toks.line();
-        }
-
-        toks.extend(tokens);
-        toks.format(out, config, level)
+        let mut format = Format::default();
+        Self::imports(&mut header, tokens, config, &mut format.imported);
+        header.format(out, config, &format)?;
+        tokens.format(out, config, &format)?;
+        Ok(())
     }
 }
 

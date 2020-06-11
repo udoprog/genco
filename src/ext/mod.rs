@@ -1,4 +1,4 @@
-//! Extension traits provided by GenCo.
+//! Extension traits for working with genco.
 
 use crate::ItemStr;
 use std::fmt;

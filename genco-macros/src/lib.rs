@@ -16,6 +16,21 @@ pub(crate) use self::encoder::{Control, Delimiter, Encoder, MatchArm};
 pub(crate) use self::item_buffer::ItemBuffer;
 
 /// Language neutral whitespace sensitive quasi-quoting.
+/// 
+/// ```rust
+/// # use genco::prelude::*;
+///
+/// # fn generate() -> Tokens<()> {
+/// quote!(hello world)
+/// # }
+///
+/// # fn generate_multiline() -> Tokens<()> {
+/// quote! {
+///     hello...
+///     world!
+/// }
+/// # }
+/// ```
 ///
 /// # Interpolation
 ///
@@ -442,11 +457,28 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     gen.into()
 }
 
-/// Same as [quote!], except that it allows for quoting directly to a token
-/// stream.
+/// Behaves the same as [quote!] while quoting into an existing token stream
+/// with `<target> => <quoted>`.
 ///
-/// You specify the destination stream as the first argument, followed by a `=>`
-/// and then the code to generate.
+/// This macro takes a destination stream followed by an `=>` and the tokens to
+/// extend that stream with.
+///
+/// ```rust
+/// # use genco::prelude::*;
+/// 
+/// # fn generate() -> Tokens<()> {
+/// let mut tokens = Tokens::new();
+/// quote_in!(tokens => hello world);
+/// # tokens
+/// # }
+///
+/// # fn generate_into(tokens: &mut Tokens<()>) {
+/// quote_in! { *tokens =>
+///     hello...
+///     world!
+/// }
+/// # }
+/// ```
 ///
 /// [quote!]: macro.quote.html
 ///
@@ -486,8 +518,8 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// };
 /// ```
 ///
+/// [quote_in!] macro.quote_in.html
 /// [quote!]: macro.quote.html
-/// ```
 #[proc_macro]
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let quote_in_parser::QuoteInParser;

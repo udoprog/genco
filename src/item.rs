@@ -1,8 +1,8 @@
 //! A single element
 
-use crate::{Formatter, ItemStr, Lang, LangBox, LangItem as _};
+use crate::fmt;
+use crate::{ItemStr, Lang, LangBox, LangItem as _};
 use std::cmp;
-use std::fmt;
 use std::num::NonZeroI16;
 use std::rc::Rc;
 
@@ -41,31 +41,34 @@ where
     L: Lang,
 {
     /// Format the given element.
-    pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
-        use self::Item::*;
-
+    pub fn format(
+        &self,
+        out: &mut fmt::Formatter<'_>,
+        config: &L::Config,
+        format: &L::Format,
+    ) -> fmt::Result {
         match *self {
-            Registered(_) => {}
-            Literal(ref literal) => {
+            Self::Registered(_) => {}
+            Self::Literal(ref literal) => {
                 out.write_str(literal.as_ref())?;
             }
-            Quoted(ref literal) => {
+            Self::Quoted(ref literal) => {
                 L::quote_string(out, literal.as_ref())?;
             }
-            LangBox(ref lang) => {
-                lang.format(out, config, level)?;
+            Self::LangBox(ref lang) => {
+                lang.format(out, config, format)?;
             }
             // whitespace below
-            Push => {
+            Self::Push => {
                 out.push();
             }
-            Line => {
+            Self::Line => {
                 out.line();
             }
-            Space => {
+            Self::Space => {
                 out.space();
             }
-            Indentation(n) => {
+            Self::Indentation(n) => {
                 out.indentation(n);
             }
         }
@@ -74,11 +77,11 @@ where
     }
 }
 
-impl<L> fmt::Debug for Item<L>
+impl<L> std::fmt::Debug for Item<L>
 where
     L: Lang,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(s) => write!(fmt, "Literal({:?})", s),
             Self::Quoted(s) => write!(fmt, "Quoted({:?})", s),

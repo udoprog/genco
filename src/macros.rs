@@ -141,7 +141,7 @@ macro_rules! impl_dynamic_types {
         })*
     ) => {
         /// Trait implemented by all types
-        $type_trait_vis trait TypeTrait: 'static + fmt::Debug + crate::LangItem<$lang> {
+        $type_trait_vis trait TypeTrait: 'static + std::fmt::Debug + crate::LangItem<$lang> {
             /// Coerce trait into an enum that can be used for type-specific operations
             fn as_enum(&self) -> $any_type_ref<'_>;
 

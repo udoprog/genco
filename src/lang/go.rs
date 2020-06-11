@@ -37,9 +37,10 @@
 //! ```
 
 use crate as genco;
-use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
+use crate::fmt;
+use crate::{quote_in, ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
-use std::fmt::{self, Write};
+use std::fmt::Write as _;
 
 /// Tokens container specialization for Go.
 pub type Tokens = crate::Tokens<Go>;
@@ -94,7 +95,7 @@ pub struct Type {
 
 impl_lang_item! {
     impl LangItem<Go> for Type {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
                 out.write_str(module)?;
                 out.write_str(SEP)?;
@@ -121,11 +122,11 @@ pub struct Map {
 
 impl_lang_item! {
     impl LangItem<Go> for Map {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             out.write_str("map[")?;
-            self.key.format(out, config, level + 1)?;
+            self.key.format(out, config, format)?;
             out.write_str("]")?;
-            self.value.format(out, config, level + 1)?;
+            self.value.format(out, config, format)?;
             Ok(())
         }
 
@@ -144,10 +145,10 @@ pub struct Array {
 
 impl_lang_item! {
     impl LangItem<Go> for Array {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             out.write_str("[")?;
             out.write_str("]")?;
-            self.inner.format(out, config, level + 1)?;
+            self.inner.format(out, config, format)?;
             Ok(())
         }
 
@@ -163,7 +164,7 @@ pub struct Interface(());
 
 impl_lang_item! {
     impl LangItem<Go> for Interface {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str("interface{}")
         }
 
@@ -172,6 +173,10 @@ impl_lang_item! {
         }
     }
 }
+
+/// Format for Go.
+#[derive(Debug, Default)]
+pub struct Format {}
 
 /// Config data for Go.
 #[derive(Debug, Default)]
@@ -193,7 +198,7 @@ impl Config {
 pub struct Go(());
 
 impl Go {
-    fn imports(tokens: &Tokens) -> Option<Tokens> {
+    fn imports(out: &mut Tokens, tokens: &Tokens) {
         use crate::ext::QuotedExt as _;
 
         let mut modules = BTreeSet::new();
@@ -203,25 +208,24 @@ impl Go {
         }
 
         if modules.is_empty() {
-            return None;
+            return;
         }
 
-        let mut out = Tokens::new();
-
         for module in modules {
-            quote_in!(out => import #(module.quoted()));
+            quote_in!(*out => import #(module.quoted()));
             out.push();
         }
 
-        Some(out)
+        out.line();
     }
 }
 
 impl Lang for Go {
     type Config = Config;
+    type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_char('"')?;
 
         for c in input.chars() {
@@ -240,27 +244,23 @@ impl Lang for Go {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks = Tokens::new();
+        let mut header = Tokens::new();
 
         if let Some(package) = &config.package {
-            quote_in!(toks => package #package);
-            toks.line();
+            quote_in!(header => package #package);
+            header.line();
         }
 
-        if let Some(imports) = Self::imports(&tokens) {
-            toks.append(imports);
-            toks.line();
-        }
-
-        toks.line();
-        toks.extend(tokens);
-        toks.format(out, config, level)
+        Self::imports(&mut header, tokens);
+        let format = Format::default();
+        header.format(out, config, &format)?;
+        tokens.format(out, config, &format)?;
+        Ok(())
     }
 }
 
@@ -279,17 +279,11 @@ impl Lang for Go {
 ///
 /// assert_eq!(
 ///     vec![
-///        "package foo",
-///        "",
 ///        "import \"foo\"",
 ///        "",
 ///        "foo.Debug",
 ///     ],
-///     toks.to_file_vec_with(
-///         go::Config::default().with_package("foo"),
-///         FormatterConfig::from_lang::<Go>()
-///     )
-///     .unwrap()
+///     toks.to_file_vec().unwrap()
 /// );
 /// ```
 pub fn imported<M, N>(module: M, name: N) -> Type
@@ -338,16 +332,11 @@ where
 ///
 /// assert_eq!(
 ///     vec![
-///         "package foo",
-///         "",
 ///         "import \"foo\"",
 ///         "",
 ///         "map[foo.Debug]interface{}",
 ///     ],
-///     toks.to_file_vec_with(
-///         go::Config::default().with_package("foo"),
-///         FormatterConfig::from_lang::<Go>()
-///     )
+///     toks.to_file_vec()
 ///     .unwrap()
 /// );
 /// ```
@@ -375,17 +364,11 @@ where
 ///
 /// assert_eq!(
 ///     vec![
-///         "package foo",
-///         "",
 ///         "import \"foo\"",
 ///         "",
 ///         "[]foo.Debug",
 ///     ],
-///     toks.to_file_vec_with(
-///         go::Config::default().with_package("foo"),
-///         FormatterConfig::from_lang::<Go>()
-///     )
-///     .unwrap()
+///     toks.to_file_vec().unwrap()
 /// );
 /// ```
 pub fn array<I>(inner: I) -> Array

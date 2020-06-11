@@ -12,14 +12,19 @@
 //! ```
 
 use crate as genco;
-use crate::{quote_in, Formatter, ItemStr, Lang};
+use crate::fmt;
+use crate::{quote_in, ItemStr, Lang};
 use std::collections::BTreeSet;
-use std::fmt::{self, Write};
+use std::fmt::Write as _;
 
 /// Tokens container specialization for Python.
 pub type Tokens = crate::Tokens<Python>;
+
+/// Formatting state for python.
+#[derive(Debug, Default)]
+pub struct Format {}
 /// Configuration for python.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct Config {}
 
 static SEP: &'static str = ".";
@@ -44,7 +49,7 @@ impl_lang_item! {
     impl From<Type> for LangBox<Python>;
 
     impl LangItem<Python> for Type {
-        fn format(&self, out: &mut Formatter, _extra: &mut Config, _level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             write!(out, "{}", self)
         }
 
@@ -54,8 +59,8 @@ impl_lang_item! {
     }
 }
 
-impl fmt::Display for Type {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+impl std::fmt::Display for Type {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let has_module = match self.module {
             Some(ref module) => match self.alias {
                 Some(ref alias) => {
@@ -127,9 +132,10 @@ impl Python {
 
 impl Lang for Python {
     type Config = Config;
+    type Format = Format;
     type Import = Type;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_char('"')?;
 
         for c in input.chars() {
@@ -151,16 +157,17 @@ impl Lang for Python {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks = Tokens::new();
-        Self::imports(&mut toks, &tokens);
-        toks.extend(tokens);
-        toks.format(out, config, level)
+        let mut imports = Tokens::new();
+        Self::imports(&mut imports, tokens);
+        let format = Format::default();
+        imports.format(out, config, &format)?;
+        tokens.format(out, config, &format)?;
+        Ok(())
     }
 }
 

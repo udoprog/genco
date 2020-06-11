@@ -14,9 +14,9 @@
 mod block_comment;
 
 use crate as genco;
-use crate::{quote_in, Formatter, ItemStr, Lang, LangItem};
+use crate::fmt;
+use crate::{quote_in, ItemStr, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::fmt;
 
 pub use self::block_comment::BlockComment;
 
@@ -270,14 +270,21 @@ impl_modifier! {
     }
 }
 
+/// State using during formatting of C# language items.
+#[derive(Debug, Default)]
+pub struct Format {
+    /// Keeping track of names which have been imported, do determine whether
+    /// their use has to be qualified or not.
+    ///
+    /// A missing name means that it has to be used in a qualified manner.
+    imported_names: HashMap<String, String>,
+}
+
 /// Config data for Csharp formatting.
 #[derive(Debug, Default)]
 pub struct Config {
     /// namespace to use.
     namespace: Option<ItemStr>,
-
-    /// Names which have been imported (namespace + name).
-    imported_names: HashMap<String, String>,
 }
 
 impl Config {
@@ -301,8 +308,8 @@ pub struct Optional {
 
 impl_lang_item! {
     impl LangItem<Csharp> for Optional {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-            self.inner.format(out, config, level)?;
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            self.inner.format(out, config, format)?;
 
             if !self.inner.is_nullable() {
                 out.write_str("?")?;
@@ -399,13 +406,13 @@ impl Type {
 
 impl_lang_item! {
     impl LangItem<Csharp> for Type {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             {
                 let qualified = match self.qualified {
                     true => true,
                     false => {
                         let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
-                        let imported = config
+                        let imported = format
                             .imported_names
                             .get(self.name.as_ref())
                             .map(String::as_str);
@@ -439,7 +446,7 @@ impl_lang_item! {
                 let mut it = self.arguments.iter().peekable();
 
                 while let Some(argument) = it.next() {
-                    argument.format(out, config, level + 1usize)?;
+                    argument.format(out, config, format)?;
 
                     if it.peek().is_some() {
                         out.write_str(", ")?;
@@ -469,7 +476,7 @@ pub struct Simple {
 
 impl_lang_item! {
     impl LangItem<Csharp> for Simple {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(self.alias)?;
             Ok(())
         }
@@ -488,8 +495,8 @@ pub struct Array {
 
 impl_lang_item! {
     impl LangItem<Csharp> for Array {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
-            self.inner.format(out, config, level)?;
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            self.inner.format(out, config, format)?;
             out.write_str("[]")?;
             Ok(())
         }
@@ -506,7 +513,7 @@ pub struct Void(());
 
 impl_lang_item! {
     impl LangItem<Csharp> for Void {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str("void")?;
             Ok(())
         }
@@ -521,7 +528,12 @@ impl_lang_item! {
 pub struct Csharp(());
 
 impl Csharp {
-    fn imports(tokens: &Tokens, output: &mut Tokens, config: &mut Config) {
+    fn imports(
+        out: &mut Tokens,
+        tokens: &Tokens,
+        config: &Config,
+        imported_names: &mut HashMap<String, String>,
+    ) {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
@@ -539,7 +551,7 @@ impl Csharp {
                 continue;
             }
 
-            match config.imported_names.get(&*name) {
+            match imported_names.get(&*name) {
                 // already imported...
                 Some(existing) if existing == &*namespace => continue,
                 // already imported, as something else...
@@ -548,25 +560,24 @@ impl Csharp {
             }
 
             if !imported.contains(&*namespace) {
-                quote_in!(*output => using #(&namespace););
-                output.push();
+                quote_in!(*out => using #(&namespace););
+                out.push();
                 imported.insert(namespace.to_string());
             }
 
-            config
-                .imported_names
-                .insert(name.to_string(), namespace.to_string());
+            imported_names.insert(name.to_string(), namespace.to_string());
         }
 
-        output.line();
+        out.line();
     }
 }
 
 impl Lang for Csharp {
     type Config = Config;
+    type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         use std::fmt::Write as _;
 
         out.write_char('"')?;
@@ -590,29 +601,31 @@ impl Lang for Csharp {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks: Tokens = Tokens::new();
+        let mut file: Tokens = Tokens::new();
 
-        Self::imports(&tokens, &mut toks, config);
+        let mut format = Format::default();
+
+        Self::imports(&mut file, tokens, config, &mut format.imported_names);
 
         if let Some(namespace) = &config.namespace {
-            quote_in! { toks =>
+            quote_in! { file =>
                 namespace #namespace {
                     #tokens
                 }
             }
 
-            toks.push()
+            file.format(out, config, &format)?;
         } else {
-            toks.append(tokens);
+            file.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
         }
 
-        toks.format(out, config, level)
+        Ok(())
     }
 }
 

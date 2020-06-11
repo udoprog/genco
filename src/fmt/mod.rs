@@ -1,3 +1,52 @@
+//! Code formatting utilities.
+//!
+//! So you have a token stream and it's time to format it into a
+//! file/string/whatever? You've come to the right place!
+//!
+//! Formatting is done through the following utilities:
+//!
+//! * [fmt::VecWriter][VecWriter] - To write result into a vector.
+//! * [fmt::FmtWriter][FmtWriter] - To write the result into something
+//!   implementing [fmt::Write][std::fmt::Write].
+//! * [fmt::IoWriter][IoWriter]- To write the result into something implementing
+//!   [io::Write][std::io::Write].
+//!
+//! # Examples
+//!
+//! The following is an example, showcasing how you can format directly to
+//! [stdout].
+//!
+//! [stdout]: std::io::stdout
+//!
+//! # Examples
+//!
+//! ```rust,no_run
+//! use genco::prelude::*;
+//! use genco::fmt;
+//!
+//! # fn main() -> fmt::Result {
+//! let map = rust::imported("std::collections", "HashMap");
+//!
+//! let tokens: rust::Tokens = quote! {
+//!     let mut m = #map::new();
+//!     m.insert(1u32, 2u32);
+//! };
+//!
+//! let stdout = std::io::stdout();
+//! let mut w = fmt::IoWriter::new(stdout.lock());
+//!
+//! let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+//! let mut formatter = w.as_formatter(fmt_config);
+//! let config = rust::Config::default();
+//!
+//! // Default format state for Rust.
+//! let format = rust::Format::default();
+//!
+//! tokens.format(&mut formatter, &config, &format)?;
+//! # Ok(())
+//! # }
+//! ```
+
 use std::fmt;
 use std::num::NonZeroI16;
 
@@ -7,22 +56,25 @@ mod io_writer;
 mod vec_writer;
 
 pub use self::config::Config;
-pub(crate) use self::fmt_writer::FmtWriter;
-pub(crate) use self::io_writer::IoWriter;
-pub(crate) use self::vec_writer::VecWriter;
+pub use self::fmt_writer::FmtWriter;
+pub use self::io_writer::IoWriter;
+pub use self::vec_writer::VecWriter;
+
+/// Result type for the `fmt` module.
+pub type Result<T = ()> = std::result::Result<T, std::fmt::Error>;
 
 /// Buffer used as indentation source.
 static INDENTATION: &str = "                                                                                                    ";
 
 /// Trait that defines a line writer.
-pub(crate) trait Write: fmt::Write {
-    fn write_line(&mut self, config: &Config) -> fmt::Result;
+pub(crate) trait Write: std::fmt::Write {
+    fn write_line(&mut self, config: &Config) -> Result;
 }
 
 /// Token stream formatter. Keeps track of everything we need to know in order
 /// to enforce genco's indentation and whitespace rules.
-pub struct Formatter<'write> {
-    write: &'write mut dyn Write,
+pub struct Formatter<'a> {
+    write: &'a mut (dyn Write + 'a),
     /// How many lines we want to add to the output stream.
     ///
     /// This will only be realized if we push non-whitespace.
@@ -41,9 +93,9 @@ pub struct Formatter<'write> {
     config: Config,
 }
 
-impl<'write> Formatter<'write> {
+impl<'a> Formatter<'a> {
     /// Create a new write formatter.
-    pub(crate) fn new(write: &mut dyn Write, config: Config) -> Formatter {
+    pub(crate) fn new(write: &'a mut (dyn Write + 'a), config: Config) -> Formatter<'a> {
         Formatter {
             write,
             lines: 0usize,
@@ -103,14 +155,6 @@ impl<'write> Formatter<'write> {
         self.indent += n.get();
     }
 
-    /// Force the writing of a new line.
-    ///
-    /// Usually done at the end of a file.
-    pub(crate) fn force_new_line(&mut self) -> fmt::Result {
-        self.write.write_line(&self.config)?;
-        Ok(())
-    }
-
     // Realize any pending whitespace just prior to writing a non-whitespace
     // item.
     fn flush_whitespace(&mut self) -> fmt::Result {
@@ -138,7 +182,7 @@ impl<'write> Formatter<'write> {
     }
 }
 
-impl<'write> fmt::Write for Formatter<'write> {
+impl<'a> fmt::Write for Formatter<'a> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         if s.len() > 0 {
             Formatter::write_str(self, s)?;

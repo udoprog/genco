@@ -1,7 +1,7 @@
-use anyhow::Result;
+use genco::fmt;
 use genco::prelude::*;
 
-fn main() -> Result<()> {
+fn main() -> anyhow::Result<()> {
     let car = &java::imported("se.tedro", "Car");
     let list = &java::imported("java.util", "List");
     let array_list = &java::imported("java.util", "ArrayList");
@@ -21,11 +21,11 @@ fn main() -> Result<()> {
         }
     };
 
-    tokens.to_io_writer_with(
-        std::io::stdout().lock(),
-        java::Config::default().with_package("se.tedro"),
-        FormatterConfig::from_lang::<Java>().with_newline("\n\r"),
-    )?;
+    let stdout = std::io::stdout();
+    let mut w = fmt::IoWriter::new(stdout.lock());
+    let mut formatter = w.as_formatter(fmt::Config::from_lang::<Java>().with_newline("\n\r"));
+    let config = java::Config::default().with_package("se.tedro");
 
+    tokens.format_file(&mut formatter, &config)?;
     Ok(())
 }

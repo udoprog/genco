@@ -1,3 +1,4 @@
+use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
@@ -19,11 +20,11 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
-    tokens.to_io_writer_with(
-        std::io::stdout().lock(),
-        go::Config::default().with_package("main"),
-        FormatterConfig::from_lang::<Go>(),
-    )?;
+    let stdout = std::io::stdout();
+    let mut w = fmt::IoWriter::new(stdout.lock());
+    let mut formatter = w.as_formatter(fmt::Config::from_lang::<Go>());
+    let config = go::Config::default().with_package("main");
 
+    tokens.format_file(&mut formatter, &config)?;
     Ok(())
 }

@@ -16,9 +16,9 @@ pub use self::python::Python;
 pub use self::rust::Rust;
 pub use self::swift::Swift;
 
-use crate::{Formatter, Tokens};
+use crate::fmt;
+use crate::Tokens;
 use std::any::Any;
-use std::fmt;
 use std::rc::Rc;
 
 /// Trait to implement for language specialization.
@@ -28,6 +28,8 @@ where
 {
     /// Configuration associated with building a formatting element.
     type Config;
+    /// State being used during formatting.
+    type Format: Default;
     /// The type used when resolving imports.
     type Import: ?Sized;
 
@@ -37,24 +39,25 @@ where
     }
 
     /// Performing quoting according to convention set by custom element.
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_str(input)
     }
 
     /// Write a file according to convention by custom element.
-    fn write_file(
-        tokens: Tokens<Self>,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens<Self>,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        tokens.format(out, config, level)
+        let format = Self::Format::default();
+        tokens.format(out, config, &format)
     }
 }
 
 /// Dummy implementation for unit.
 impl Lang for () {
     type Config = ();
+    type Format = ();
     type Import = ();
 }
 
@@ -69,7 +72,12 @@ where
     L: Lang,
 {
     /// Format the language item appropriately.
-    fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result;
+    fn format(
+        &self,
+        out: &mut fmt::Formatter<'_>,
+        config: &L::Config,
+        format: &L::Format,
+    ) -> fmt::Result;
 
     /// Check equality.
     fn eq(&self, other: &dyn LangItem<L>) -> bool;
@@ -101,11 +109,11 @@ where
     }
 }
 
-impl<L> fmt::Debug for LangBox<L>
+impl<L> std::fmt::Debug for LangBox<L>
 where
     L: Lang,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "LangBox")
     }
 }
@@ -114,8 +122,13 @@ impl<L> LangItem<L> for LangBox<L>
 where
     L: Lang,
 {
-    fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
-        self.inner.format(out, config, level)
+    fn format(
+        &self,
+        out: &mut fmt::Formatter<'_>,
+        config: &L::Config,
+        format: &L::Format,
+    ) -> fmt::Result {
+        self.inner.format(out, config, format)
     }
 
     fn eq(&self, other: &dyn LangItem<L>) -> bool {

@@ -11,15 +11,20 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-use crate::{Formatter, ItemStr, Lang, LangItem};
+use crate::fmt;
+use crate::{ItemStr, Lang, LangItem};
 use std::collections::BTreeSet;
-use std::fmt::{self, Write};
+use std::fmt::Write as _;
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Swift>;
 
+/// Format state for Swift code.
+#[derive(Debug, Default)]
+pub struct Format {}
+
 /// Configuration for formatting Swift code.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Config {}
 
 impl_dynamic_types! { Swift =>
@@ -68,7 +73,7 @@ pub struct Type {
 
 impl_lang_item! {
     impl LangItem<Swift> for Type {
-        fn format(&self, out: &mut Formatter, _: &mut Config, _: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&self.name)
         }
 
@@ -89,11 +94,11 @@ pub struct Map {
 
 impl_lang_item! {
     impl LangItem<Swift> for Map {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             out.write_str("[")?;
-            self.key.format(out, config, level + 1)?;
+            self.key.format(out, config, format)?;
             out.write_str(": ")?;
-            self.value.format(out, config, level + 1)?;
+            self.value.format(out, config, format)?;
             out.write_str("]")?;
             Ok(())
         }
@@ -113,9 +118,9 @@ pub struct Array {
 
 impl_lang_item! {
     impl LangItem<Swift> for Array {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             out.write_str("[")?;
-            self.inner.format(out, config, level + 1)?;
+            self.inner.format(out, config, format)?;
             out.write_str("]")?;
             Ok(())
         }
@@ -127,7 +132,7 @@ impl_lang_item! {
 }
 
 impl Swift {
-    fn imports(tokens: &Tokens) -> Option<Tokens> {
+    fn imports(out: &mut Tokens, tokens: &Tokens) {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
@@ -135,10 +140,8 @@ impl Swift {
         }
 
         if modules.is_empty() {
-            return None;
+            return;
         }
-
-        let mut out = Tokens::new();
 
         for module in modules {
             let mut s = Tokens::new();
@@ -150,15 +153,16 @@ impl Swift {
             out.push();
         }
 
-        Some(out)
+        out.line();
     }
 }
 
 impl Lang for Swift {
     type Config = Config;
+    type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_char('"')?;
 
         for c in input.chars() {
@@ -177,21 +181,17 @@ impl Lang for Swift {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks = Tokens::new();
-
-        if let Some(imports) = Self::imports(&tokens) {
-            toks.append(imports);
-            toks.line();
-        }
-
-        toks.extend(tokens);
-        toks.format(out, config, level)
+        let mut imports = Tokens::new();
+        Self::imports(&mut imports, tokens);
+        let format = Format::default();
+        imports.format(out, config, &format)?;
+        tokens.format(out, config, &format)?;
+        Ok(())
     }
 }
 

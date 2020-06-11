@@ -8,14 +8,11 @@
 //! toks.append("foo");
 //! ```
 
-use crate::formatter::{FmtWriter, IoWriter, VecWriter};
-use crate::{FormatTokens, Formatter, FormatterConfig, Item, Lang, LangItem, RegisterTokens};
+use crate::fmt;
+use crate::{FormatTokens, Item, Lang, LangItem, RegisterTokens};
 use std::cmp;
-use std::fmt;
-use std::io;
 use std::iter::FromIterator;
 use std::num::NonZeroI16;
-use std::result;
 use std::slice;
 use std::vec;
 
@@ -53,11 +50,11 @@ where
     items: Vec<Item<L>>,
 }
 
-impl<L> fmt::Debug for Tokens<L>
+impl<L> std::fmt::Debug for Tokens<L>
 where
     L: Lang,
 {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_list().entries(self.items.iter()).finish()
     }
 }
@@ -77,18 +74,52 @@ where
     ///
     /// assert!(tokens.is_empty());
     /// ```
-    pub fn new() -> Tokens<L> {
+    pub fn new() -> Self {
         Tokens { items: Vec::new() }
     }
 
     /// Construct an iterator over the token stream.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::{ItemStr, Item};
+    ///
+    /// let tokens: Tokens<()> = quote!(foo bar baz);
+    /// let mut it = tokens.iter();
+    ///
+    /// assert_eq!(Some(&Item::Literal(ItemStr::Static("foo"))), it.next());
+    /// assert_eq!(Some(&Item::Space), it.next());
+    /// assert_eq!(Some(&Item::Literal(ItemStr::Static("bar"))), it.next());
+    /// assert_eq!(Some(&Item::Space), it.next());
+    /// assert_eq!(Some(&Item::Literal(ItemStr::Static("baz"))), it.next());
+    /// assert_eq!(None, it.next());
+    /// ```
     pub fn iter(&self) -> Iter<'_, L> {
         Iter {
             iter: self.items.iter(),
         }
     }
 
-    /// Construct an iterator that owns all items in token stream.
+    /// Construct an owned iterator over the token stream.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::{ItemStr, Item};
+    ///
+    /// let tokens: Tokens<()> = quote!(foo bar baz);
+    /// let mut it = tokens.into_iter();
+    ///
+    /// assert_eq!(Some(Item::Literal(ItemStr::Static("foo"))), it.next());
+    /// assert_eq!(Some(Item::Space), it.next());
+    /// assert_eq!(Some(Item::Literal(ItemStr::Static("bar"))), it.next());
+    /// assert_eq!(Some(Item::Space), it.next());
+    /// assert_eq!(Some(Item::Literal(ItemStr::Static("baz"))), it.next());
+    /// assert_eq!(None, it.next());
+    /// ```
     pub fn into_iter(self) -> IntoIter<L> {
         IntoIter {
             iter: self.items.into_iter(),
@@ -126,6 +157,22 @@ where
 
     /// Push a single item to the stream while checking for structural
     /// guarantees.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::{Item, ItemStr};
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.item(Item::Literal(ItemStr::Static("foo")));
+    /// tokens.item(Item::Space);
+    /// tokens.item(Item::Space); // Note: second space ignored
+    /// tokens.item(Item::Literal(ItemStr::Static("bar")));
+    ///
+    /// assert_eq!(tokens, quote!(foo bar));
+    /// ```
     pub fn item(&mut self, item: Item<L>) {
         match item {
             Item::Push => self.push(),
@@ -135,7 +182,7 @@ where
         }
     }
 
-    /// Extend with another set of tokens.
+    /// Extend with another stream of tokens.
     ///
     /// This respects the structural requirements of adding one element at a
     /// time, like you would get by calling [space], [push], or [line].
@@ -143,13 +190,23 @@ where
     /// [space]: Self::space()
     /// [push]: Self::push()
     /// [line]: Self::line()
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::{Item, ItemStr};
+    ///
+    /// let mut tokens: Tokens<()> = quote!(foo bar);
+    /// tokens.extend(quote!(#<space>baz));
+    ///
+    /// assert_eq!(tokens, quote!(foo bar baz));
+    /// ```
     pub fn extend<I>(&mut self, it: I)
     where
         I: IntoIterator<Item = Item<L>>,
     {
-        let mut it = it.into_iter();
-
-        while let Some(item) = it.next() {
+        for item in it {
             self.item(item);
         }
     }
@@ -199,7 +256,7 @@ where
     ///
     /// let tokens = quote!(#@(write_bytes_ext));
     ///
-    /// assert_eq!("use byteorder::WriteBytesExt as _;\n", tokens.to_file_string().unwrap());
+    /// assert_eq!("use byteorder::WriteBytesExt as _;", tokens.to_file_string().unwrap());
     /// ```
     ///
     /// [quote!]: genco_macros@quote!
@@ -225,6 +282,9 @@ where
 
     /// Add a single spacing to the token stream.
     ///
+    /// Note that due to structural guarantees two consequent spaces may not
+    /// follow each other in the same token stream.
+    ///
     /// A space operation has no effect unless it's followed by a non-whitespace
     /// token.
     ///
@@ -238,6 +298,7 @@ where
     /// tokens.space();
     /// tokens.append("hello");
     /// tokens.space();
+    /// tokens.space(); // Note: ignored
     /// tokens.append("world");
     /// tokens.space();
     ///
@@ -249,6 +310,10 @@ where
     /// );
     /// ```
     pub fn space(&mut self) {
+        if let Some(Item::Space) = self.items.last() {
+            return;
+        }
+
         self.items.push(Item::Space);
     }
 
@@ -453,155 +518,263 @@ where
         }
     }
 
-    /// Low-level function to format tokens.
-    pub fn format(&self, out: &mut Formatter, config: &mut L::Config, level: usize) -> fmt::Result {
+    /// Formatting function for token streams that gives full control over the
+    /// formatting environment.
+    ///
+    /// The configurations and `format` arguments will be provided to all
+    /// registered language items as well, and can be used to customize
+    /// formatting through [LangItem::format].
+    ///
+    /// The `format` argument is primarily used internally by
+    /// [Lang::format_file] to provide intermediate state that can be affect how
+    /// language items are formatter. So formatting something as a file might
+    /// yield different results than using this raw formatting function.
+    ///
+    /// Available formatters:
+    ///
+    /// * [fmt::VecWriter] - To write result into a vector.
+    /// * [fmt::FmtWriter] - To write the result into something implementing
+    ///   [fmt::Write][std::fmt::Write].
+    /// * [fmt::IoWriter]- To write the result into something implementing
+    ///   [io::Write][std::io::Write].
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use genco::prelude::*;
+    /// use genco::fmt;
+    ///
+    /// # fn main() -> fmt::Result {
+    /// let map = rust::imported("std::collections", "HashMap");
+    ///
+    /// let tokens: rust::Tokens = quote! {
+    ///     let mut m = #map::new();
+    ///     m.insert(1u32, 2u32);
+    /// };
+    ///
+    /// let stdout = std::io::stdout();
+    /// let mut w = fmt::IoWriter::new(stdout.lock());
+    ///
+    /// let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+    /// let mut formatter = w.as_formatter(fmt_config);
+    /// let config = rust::Config::default();
+    ///
+    /// // Default format state for Rust.
+    /// let format = rust::Format::default();
+    ///
+    /// tokens.format(&mut formatter, &config, &format)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn format(
+        &self,
+        out: &mut fmt::Formatter<'_>,
+        config: &L::Config,
+        format: &L::Format,
+    ) -> fmt::Result {
         for element in &self.items {
-            element.format(out, config, level)?;
+            element.format(out, config, format)?;
         }
 
         Ok(())
     }
 
-    /// Format the token stream as a file for the given target language to a
-    /// string. Using the specified `config`.
-    pub fn to_file_string_with(
-        self,
-        mut config: L::Config,
-        format_config: FormatterConfig,
-    ) -> result::Result<String, fmt::Error> {
-        let mut w = FmtWriter::new(String::new());
-
-        {
-            let mut formatter = Formatter::new(&mut w, format_config);
-            L::write_file(self, &mut formatter, &mut config, 0usize)?;
-            formatter.force_new_line()?;
-        }
-
-        Ok(w.into_writer())
-    }
-
-    /// Format only the current token stream as a string. Using the specified
-    /// `config`.
-    pub fn to_string_with(
-        self,
-        mut config: L::Config,
-        format_config: FormatterConfig,
-    ) -> result::Result<String, fmt::Error> {
-        let mut w = FmtWriter::new(String::new());
-
-        {
-            let mut formatter = Formatter::new(&mut w, format_config);
-            self.format(&mut formatter, &mut config, 0usize)?;
-        }
-
-        Ok(w.into_writer())
-    }
-
-    /// Format tokens into a vector, where each entry equals a line in the
-    /// resulting file. Using the specified `config`.
-    pub fn to_file_vec_with(
-        self,
-        mut config: L::Config,
-        format_config: FormatterConfig,
-    ) -> result::Result<Vec<String>, fmt::Error> {
-        let mut w = VecWriter::new();
-
-        {
-            let mut formatter = Formatter::new(&mut w, format_config);
-            L::write_file(self, &mut formatter, &mut config, 0usize)?;
-        }
-
-        Ok(w.into_vec())
-    }
-
-    /// Format the token stream as a file for the given target language to the
-    /// given `writer`. Using the specified `config`.
-    pub fn to_fmt_writer_with<W>(
-        self,
-        writer: W,
-        mut config: L::Config,
-        format_config: FormatterConfig,
-    ) -> result::Result<(), fmt::Error>
-    where
-        W: fmt::Write,
-    {
-        let mut w = FmtWriter::new(writer);
-
-        {
-            let mut formatter = Formatter::new(&mut w, format_config);
-            L::write_file(self, &mut formatter, &mut config, 0usize)?;
-            formatter.force_new_line()?;
-        }
-
-        Ok(())
-    }
-
-    /// Format the token stream as a file for the given target language to the
-    /// given `writer`. Using the specified `config`.
-    pub fn to_io_writer_with<W>(
-        self,
-        writer: W,
-        mut config: L::Config,
-        format_config: FormatterConfig,
-    ) -> result::Result<(), fmt::Error>
-    where
-        W: io::Write,
-    {
-        let mut w = IoWriter::new(writer);
-
-        {
-            let mut formatter = Formatter::new(&mut w, format_config);
-            L::write_file(self, &mut formatter, &mut config, 0usize)?;
-            formatter.force_new_line()?;
-        }
-
+    /// File formatting function for token streams that gives full control over the
+    /// formatting environment.
+    ///
+    /// File formatting will render preambles like namespace declarations and
+    /// imports.
+    ///
+    /// Available formatters:
+    ///
+    /// * [fmt::VecWriter] - To write result into a vector.
+    /// * [fmt::FmtWriter] - To write the result into something implementing
+    ///   [fmt::Write][std::fmt::Write].
+    /// * [fmt::IoWriter]- To write the result into something implementing
+    ///   [io::Write][std::io::Write].
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use genco::prelude::*;
+    /// use genco::fmt;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let map = rust::imported("std::collections", "HashMap");
+    ///
+    /// let tokens: rust::Tokens = quote! {
+    ///     let mut m = #map::new();
+    ///     m.insert(1u32, 2u32);
+    /// };
+    ///
+    /// let stdout = std::io::stdout();
+    /// let mut w = fmt::IoWriter::new(stdout.lock());
+    ///
+    /// let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+    /// let mut formatter = w.as_formatter(fmt_config);
+    /// let config = rust::Config::default();
+    ///
+    /// tokens.format_file(&mut formatter, &config)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn format_file(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result {
+        L::format_file(self, out, &config)?;
         Ok(())
     }
 }
 
 impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// Format the token stream as a file for the given target language to a
-    /// string. Using the default configuration.
-    pub fn to_file_string(self) -> result::Result<String, fmt::Error> {
-        self.to_file_string_with(L::Config::default(), FormatterConfig::from_lang::<L>())
+    /// string using the default configuration.
+    ///
+    /// This is a shorthand to using [FmtWriter][fmt::FmtWriter] directly in
+    /// combination with [format][Self::format_file].
+    ///
+    /// This function will render imports.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::fmt;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let map = rust::imported("std::collections", "HashMap");
+    ///
+    /// let tokens: rust::Tokens = quote! {
+    ///     let mut m = #map::new();
+    ///     m.insert(1u32, 2u32);
+    /// };
+    ///
+    /// assert_eq!(
+    ///     "use std::collections::HashMap;\n\nlet mut m = HashMap::new();\nm.insert(1u32, 2u32);",
+    ///     tokens.to_file_string()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_file_string(&self) -> fmt::Result<String> {
+        let mut w = fmt::FmtWriter::new(String::new());
+        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let config = L::Config::default();
+        self.format_file(&mut formatter, &config)?;
+        Ok(w.into_inner())
     }
 
-    /// Format only the current token stream as a string. Using the default
+    /// Format only the current token stream as a string using the default
     /// configuration.
-    pub fn to_string(self) -> result::Result<String, fmt::Error> {
-        self.to_string_with(L::Config::default(), FormatterConfig::from_lang::<L>())
+    ///
+    /// This is a shorthand to using [FmtWriter][fmt::FmtWriter] directly in
+    /// combination with [format][Self::format].
+    ///
+    /// This function _will not_ render imports.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let map = rust::imported("std::collections", "HashMap");
+    ///
+    /// let tokens: rust::Tokens = quote! {
+    ///     let mut m = #map::new();
+    ///     m.insert(1u32, 2u32);
+    /// };
+    ///
+    /// assert_eq!(
+    ///     "let mut m = HashMap::new();\nm.insert(1u32, 2u32);",
+    ///     tokens.to_string()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_string(self) -> fmt::Result<String> {
+        let mut w = fmt::FmtWriter::new(String::new());
+        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let config = L::Config::default();
+        let format = L::Format::default();
+        self.format(&mut formatter, &config, &format)?;
+        Ok(w.into_inner())
     }
 
     /// Format tokens into a vector, where each entry equals a line in the
-    /// resulting file. Using the default configuration.
-    pub fn to_file_vec(self) -> result::Result<Vec<String>, fmt::Error> {
-        self.to_file_vec_with(L::Config::default(), FormatterConfig::from_lang::<L>())
+    /// resulting file using the default configuration.
+    ///
+    /// This is a shorthand to using [VecWriter][fmt::VecWriter] directly in
+    /// combination with [format][Self::format_file].
+    ///
+    /// This function will render imports.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let map = rust::imported("std::collections", "HashMap");
+    ///
+    /// let tokens: rust::Tokens = quote! {
+    ///     let mut m = #map::new();
+    ///     m.insert(1u32, 2u32);
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "use std::collections::HashMap;",
+    ///         "",
+    ///         "let mut m = HashMap::new();",
+    ///         "m.insert(1u32, 2u32);"
+    ///     ],
+    ///     tokens.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_file_vec(&self) -> fmt::Result<Vec<String>> {
+        let mut w = fmt::VecWriter::new();
+        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let config = L::Config::default();
+        self.format_file(&mut formatter, &config)?;
+        Ok(w.into_vec())
     }
 
-    /// Format the token stream as a file for the given target language to the
-    /// given writer. Using the default configuration.
-    pub fn to_fmt_writer<W>(self, writer: W) -> result::Result<(), fmt::Error>
-    where
-        W: fmt::Write,
-    {
-        self.to_fmt_writer_with(
-            writer,
-            L::Config::default(),
-            FormatterConfig::from_lang::<L>(),
-        )
-    }
-
-    /// Format the token stream as a file for the given target language to the
-    /// given writer. Using the default configuration.
-    pub fn to_io_writer<W>(self, writer: W) -> result::Result<(), fmt::Error>
-    where
-        W: io::Write,
-    {
-        self.to_io_writer_with(
-            writer,
-            L::Config::default(),
-            FormatterConfig::from_lang::<L>(),
-        )
+    /// Helper function to format tokens into a vector, where each entry equals
+    /// a line using the default configuration.
+    ///
+    /// This is a shorthand to using [VecWriter][fmt::VecWriter] directly in
+    /// combination with [format][Self::format].
+    ///
+    /// This function _will not_ render imports.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let map = rust::imported("std::collections", "HashMap");
+    ///
+    /// let tokens: rust::Tokens = quote! {
+    ///     let mut m = #map::new();
+    ///     m.insert(1u32, 2u32);
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "let mut m = HashMap::new();",
+    ///         "m.insert(1u32, 2u32);"
+    ///     ],
+    ///     tokens.to_vec().unwrap()
+    /// );
+    /// ```
+    pub fn to_vec(self) -> fmt::Result<Vec<String>> {
+        let mut w = fmt::VecWriter::new();
+        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let config = L::Config::default();
+        let format = L::Format::default();
+        self.format(&mut formatter, &config, &format)?;
+        Ok(w.into_vec())
     }
 }
 
@@ -787,8 +960,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate as genco;
-    use crate::{quote, Formatter, Tokens};
-    use std::fmt;
+    use crate::fmt;
+    use crate::{quote, Tokens};
 
     /// Own little custom language for this test.
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -799,7 +972,7 @@ mod tests {
         impl From<Import> for LangBox<Lang>;
 
         impl LangItem<Lang> for Import {
-            fn format(&self, out: &mut Formatter, _: &mut (), _: usize) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
                 use std::fmt::Write as _;
                 write!(out, "{}", self.0)
             }
@@ -815,6 +988,7 @@ mod tests {
 
     impl crate::Lang for Lang {
         type Config = ();
+        type Format = ();
         type Import = Import;
     }
 

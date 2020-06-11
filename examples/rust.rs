@@ -1,8 +1,7 @@
+use genco::fmt;
 use genco::prelude::*;
 
-use std::fmt;
-
-fn main() -> fmt::Result {
+fn main() -> anyhow::Result<()> {
     // Import the LittleEndian item, without referencing it through the last
     // module component it is part of.
     let little_endian = rust::imported("byteorder", "LittleEndian");
@@ -25,14 +24,12 @@ fn main() -> fmt::Result {
         }
     };
 
-    // Simpler printing with default indentation:
-    // println!("{}", tokens.to_file_string()?);
+    let stdout = std::io::stdout();
+    let mut w = fmt::IoWriter::new(stdout.lock());
+    let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+    let mut formatter = w.as_formatter(fmt_config);
+    let config = rust::Config::default();
 
-    tokens.to_io_writer_with(
-        std::io::stdout().lock(),
-        rust::Config::default(),
-        FormatterConfig::from_lang::<Rust>().with_indentation(2),
-    )?;
-
+    tokens.format_file(&mut formatter, &config)?;
     Ok(())
 }

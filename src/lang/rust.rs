@@ -30,9 +30,10 @@
 //! assert_eq!("\"hello \\n world\"", toks.to_string().unwrap());
 //! ```
 
-use crate::{Formatter, ItemStr, Lang};
+use crate::fmt;
+use crate::{ItemStr, Lang};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::fmt::{self, Write};
+use std::fmt::Write as _;
 use std::rc::Rc;
 
 /// Tokens container specialization for Rust.
@@ -116,6 +117,9 @@ impl From<&'static str> for Reference {
     }
 }
 
+/// Format state for Rust.
+#[derive(Debug, Default)]
+pub struct Format {}
 /// Language configuration for Rust.
 #[derive(Debug)]
 pub struct Config {
@@ -383,7 +387,7 @@ impl Type {
     }
 
     /// Write the direct name of the type.
-    fn write_direct(&self, out: &mut Formatter) -> fmt::Result {
+    fn write_direct(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(alias) = &self.alias {
             out.write_str(alias)
         } else {
@@ -392,7 +396,7 @@ impl Type {
     }
 
     /// Write the prefixed name of the type.
-    fn write_prefixed(&self, out: &mut Formatter, module: &ItemStr) -> fmt::Result {
+    fn write_prefixed(&self, out: &mut fmt::Formatter<'_>, module: &ItemStr) -> fmt::Result {
         if let Some(module) = module.rsplit("::").next() {
             out.write_str(module)?;
             out.write_str(SEP)?;
@@ -408,7 +412,7 @@ impl_lang_item! {
     impl From<Type> for LangBox<Rust>;
 
     impl LangItem<Rust> for Type {
-        fn format(&self, out: &mut Formatter, config: &mut Config, level: usize) -> fmt::Result {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             if let Some(reference) = &self.reference {
                 match reference {
                     Reference::StaticRef => {
@@ -465,7 +469,7 @@ impl_lang_item! {
                 out.write_str("<")?;
 
                 while let Some(n) = it.next() {
-                    n.format(out, config, level + 1)?;
+                    n.format(out, config, format)?;
 
                     if it.peek().is_some() {
                         out.write_str(", ")?;
@@ -485,7 +489,7 @@ impl_lang_item! {
 }
 
 impl Rust {
-    fn imports(out: &mut Tokens, config: &mut Config, tokens: &Tokens) {
+    fn imports(out: &mut Tokens, config: &Config, tokens: &Tokens) {
         use crate as genco;
         use crate::quote_in;
         use std::collections::btree_set;
@@ -677,9 +681,10 @@ pub struct Rust(());
 
 impl Lang for Rust {
     type Config = Config;
+    type Format = Format;
     type Import = Type;
 
-    fn quote_string(out: &mut Formatter, input: &str) -> fmt::Result {
+    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_char('"')?;
 
         for c in input.chars() {
@@ -698,18 +703,18 @@ impl Lang for Rust {
         Ok(())
     }
 
-    fn write_file(
-        tokens: Tokens,
-        out: &mut Formatter,
-        config: &mut Self::Config,
-        level: usize,
+    fn format_file(
+        tokens: &Tokens,
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
     ) -> fmt::Result {
-        let mut toks: Tokens = Tokens::new();
+        let mut imports: Tokens = Tokens::new();
+        Self::imports(&mut imports, config, tokens);
 
-        Self::imports(&mut toks, config, &tokens);
-
-        toks.extend(tokens);
-        toks.format(out, config, level)
+        let format = Format::default();
+        imports.format(out, config, &format)?;
+        tokens.format(out, config, &format)?;
+        Ok(())
     }
 }
 
