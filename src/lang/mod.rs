@@ -176,3 +176,54 @@ where
         Self { inner: value }
     }
 }
+
+/// Escape the given string according to a C-family escape sequence.
+///
+/// See https://en.wikipedia.org/wiki/Escape_sequences_in_C
+///
+/// This is one of the more common escape sequences and is provided here so you
+/// can use it if a language you've implemented requires it.
+pub fn c_family_escape(out: &mut fmt::Formatter, input: &str) -> fmt::Result {
+    use std::fmt::Write as _;
+
+    out.write_char('"')?;
+
+    for c in input.chars() {
+        match c {
+            // alert (bell)
+            '\u{0007}' => out.write_str("\\a")?,
+            // backspace
+            '\u{0008}' => out.write_str("\\b")?,
+            // form feed
+            '\u{0012}' => out.write_str("\\f")?,
+            // new line
+            '\n' => out.write_str("\\n")?,
+            // carriage return
+            '\r' => out.write_str("\\r")?,
+            // horizontal tab
+            '\t' => out.write_str("\\t")?,
+            // vertical tab
+            '\u{0011}' => out.write_str("\\v")?,
+            '\'' => out.write_str("\\'")?,
+            '"' => out.write_str("\\\"")?,
+            '\\' => out.write_str("\\\\")?,
+            ' ' => out.write_char(' ')?,
+            c if c.is_ascii() => {
+                if !c.is_control() {
+                    out.write_char(c)?
+                } else {
+                    write!(out, "\\x{:02x}", c as u32)?;
+                }
+            }
+            c if (c as u32) < 0x10000 => {
+                write!(out, "\\u{:04x}", c as u32)?;
+            }
+            c => {
+                write!(out, "\\U{:08x}", c as u32)?;
+            }
+        };
+    }
+
+    out.write_char('"')?;
+    Ok(())
+}

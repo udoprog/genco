@@ -1,15 +1,16 @@
 //! Specialization for Dart code generation.
 //!
-//! # Examples
+//! # String Quoting in Dart
 //!
-//! String quoting in Dart:
+//! Since Java uses UTF-16 internally, string quoting for high unicode
+//! characters is done through surrogate pairs, as seen with the 😊 below.
 //!
 //! ```rust
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: dart::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: dart::Tokens = quote!("start π 😊 \n \x7f ÿ $ end");
+//! assert_eq!("\"start π 😊 \\n \\x7f ÿ \\$ end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
 //! ```
@@ -22,7 +23,7 @@ use crate as genco;
 use crate::fmt;
 use crate::lang::{Lang, LangItem};
 use crate::quote_in;
-use crate::tokens::ItemStr;
+use crate::tokens::{quoted, ItemStr};
 use std::fmt::Write as _;
 
 /// Tokens container specialization for Dart.
@@ -279,7 +280,6 @@ pub struct Dart(());
 impl Dart {
     /// Resolve all imports.
     fn imports(out: &mut Tokens, input: &Tokens, _: &Config) {
-        use crate::ext::QuotedExt as _;
         use std::collections::BTreeSet;
 
         let mut modules = BTreeSet::new();
@@ -298,9 +298,9 @@ impl Dart {
 
         for (name, alias) in modules {
             if let Some(alias) = alias {
-                quote_in!(*out => import #(name.quoted()) as #alias;);
+                quote_in!(*out => import #(quoted(name)) as #alias;);
             } else {
-                quote_in!(*out => import #(name.quoted()););
+                quote_in!(*out => import #(quoted(name)););
             }
 
             out.push();
@@ -316,20 +316,39 @@ impl Lang for Dart {
     type Import = Type;
 
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+        // Note: Dart is like C escape, but since it supports string
+        // interpolation, `$` also needs to be escaped!
         out.write_char('"')?;
 
         for c in input.chars() {
             match c {
-                '\t' => out.write_str("\\t")?,
-                '\u{0007}' => out.write_str("\\b")?,
+                // backspace
+                '\u{0008}' => out.write_str("\\b")?,
+                // form feed
+                '\u{0012}' => out.write_str("\\f")?,
+                // new line
                 '\n' => out.write_str("\\n")?,
+                // carriage return
                 '\r' => out.write_str("\\r")?,
-                '\u{0014}' => out.write_str("\\f")?,
-                '\'' => out.write_str("\\'")?,
+                // horizontal tab
+                '\t' => out.write_str("\\t")?,
+                // vertical tab
+                '\u{0011}' => out.write_str("\\v")?,
+                // Note: only relevant if we were to use single-quoted strings.
+                // '\'' => out.write_str("\\'")?,
                 '"' => out.write_str("\\\"")?,
                 '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
-            }
+                '$' => out.write_str("\\$")?,
+                c if !c.is_control() => out.write_char(c)?,
+                c if (c as u32) < 0x100 => {
+                    write!(out, "\\x{:02x}", c as u32)?;
+                }
+                c => {
+                    for c in c.encode_utf16(&mut [0u16; 2]) {
+                        write!(out, "\\u{:04x}", c)?;
+                    }
+                }
+            };
         }
 
         out.write_char('"')?;

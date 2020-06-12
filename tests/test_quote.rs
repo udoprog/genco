@@ -2,7 +2,7 @@ use genco::prelude::*;
 
 #[test]
 fn test_quote() -> genco::fmt::Result {
-    let test = "one".quoted();
+    let test = quoted("one");
 
     let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
@@ -19,7 +19,7 @@ fn test_quote() -> genco::fmt::Result {
 
     let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
-            println!("{}", #("two".quoted()));
+            println!("{}", #(quoted("two")));
 
             42
         }
@@ -32,14 +32,14 @@ fn test_quote() -> genco::fmt::Result {
 
     let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
-            println!("{}", ##("two".quoted()));
+            println!("{}", ##(quoted("two")));
 
             42
         }
     };
 
     assert_eq!(
-        "fn test() -> u32 {\n    println!(\"{}\", #(\"two\".quoted()));\n\n    42\n}",
+        "fn test() -> u32 {\n    println!(\"{}\", #(quoted(\"two\")));\n\n    42\n}",
         tokens.to_string()?
     );
 

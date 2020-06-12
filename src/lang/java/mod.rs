@@ -1,15 +1,16 @@
 //! Specialization for Java code generation.
 //!
-//! # Examples
+//! # String Quoting in Java
 //!
-//! String quoting in Java:
+//! Since Java uses UTF-16 internally, string quoting for high unicode
+//! characters is done through surrogate pairs, as seen with the 😊 below.
 //!
 //! ```rust
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: java::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: java::Tokens = quote!("start π 😊 \n \x7f end");
+//! assert_eq!("\"start \\u03c0 \\ud83d\\ude0a \\n \\u007f end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
 //! ```
@@ -517,6 +518,7 @@ impl Lang for Java {
     type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+        // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html
         use std::fmt::Write as _;
 
         out.write_char('"')?;
@@ -531,7 +533,13 @@ impl Lang for Java {
                 '\'' => out.write_str("\\'")?,
                 '"' => out.write_str("\\\"")?,
                 '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
+                ' ' => out.write_char(' ')?,
+                c if c.is_ascii() && !c.is_control() => out.write_char(c)?,
+                c => {
+                    for c in c.encode_utf16(&mut [0u16; 2]) {
+                        write!(out, "\\u{:04x}", c)?;
+                    }
+                }
             }
         }
 

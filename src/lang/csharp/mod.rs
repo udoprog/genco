@@ -1,15 +1,18 @@
 //! Specialization for Csharp code generation.
 //!
-//! # Examples
+//! # String Quoting in C#
 //!
-//! String quoting in Dart:
+//! Since C# uses UTF-16 internally, but literal strings support C-style family
+//! of escapes.
+//!
+//! See [c_family_escape][super::c_family_escape].
 //!
 //! ```rust
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: csharp::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: csharp::Tokens = quote!("start π 😊 \n \x7f end");
+//! assert_eq!("\"start \\u03c0 \\U0001f60a \\n \\x7f end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
 //! ```
@@ -588,27 +591,8 @@ impl Lang for Csharp {
     type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        use std::fmt::Write as _;
-
-        out.write_char('"')?;
-
-        for c in input.chars() {
-            match c {
-                '\t' => out.write_str("\\t")?,
-                '\u{0007}' => out.write_str("\\b")?,
-                '\n' => out.write_str("\\n")?,
-                '\r' => out.write_str("\\r")?,
-                '\u{0014}' => out.write_str("\\f")?,
-                '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
-            }
-        }
-
-        out.write_char('"')?;
-
-        Ok(())
+        // From: https://csharpindepth.com/articles/Strings
+        super::c_family_escape(out, input)
     }
 
     fn format_file(

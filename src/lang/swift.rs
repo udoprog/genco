@@ -1,18 +1,18 @@
 //! Specialization for Swift code generation.
 //!
-//! # Examples
+//! # String Quoting in Swift
 //!
-//! String quoting in Swift:
+//! Swift uses UTF-8 internally, string quoting is with the exception of escape
+//! sequences a one-to-one translation.
 //!
 //! ```rust
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: swift::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: swift::Tokens = quote!("start π 😊 \n \x7f ÿ $ end");
+//! assert_eq!("\"start π 😊 \\n \\u{7f} ÿ $ end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
-//! ```
 
 use crate::fmt;
 use crate::lang::{Lang, LangItem};
@@ -167,17 +167,23 @@ impl Lang for Swift {
     type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+        // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
+
         out.write_char('"')?;
 
         for c in input.chars() {
             match c {
+                '\0' => out.write_str("\\0")?,
+                '\\' => out.write_str("\\\\")?,
                 '\t' => out.write_str("\\t")?,
                 '\n' => out.write_str("\\n")?,
                 '\r' => out.write_str("\\r")?,
                 '\'' => out.write_str("\\'")?,
                 '"' => out.write_str("\\\"")?,
-                '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
+                c if !c.is_control() => out.write_char(c)?,
+                c => {
+                    write!(out, "\\u{{{:x}}}", c as u32)?;
+                }
             };
         }
 

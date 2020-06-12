@@ -24,17 +24,19 @@
 //! # }
 //! ```
 //!
-//! String quoting in Rust:
+//! # String Quoting in Rust
+//!
+//! Rust uses UTF-8 internally, string quoting is with the exception of escape
+//! sequences a one-to-one translation.
 //!
 //! ```rust
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: rust::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: rust::Tokens = quote!("start π 😊 \n \x7f ÿ $ end");
+//! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
-//! ```
 
 use crate::fmt;
 use crate::lang::Lang;
@@ -707,17 +709,32 @@ impl Lang for Rust {
     type Import = Type;
 
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+        // From: https://doc.rust-lang.org/reference/tokens.html#literals
+
         out.write_char('"')?;
 
         for c in input.chars() {
             match c {
-                '\t' => out.write_str("\\t")?,
+                // new line
                 '\n' => out.write_str("\\n")?,
+                // carriage return
                 '\r' => out.write_str("\\r")?,
-                '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
+                // horizontal tab
+                '\t' => out.write_str("\\t")?,
+                // backslash
                 '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
+                // null
+                '\0' => out.write_str("\\0")?,
+                // Note: only relevant if we were to use single-quoted strings.
+                // '\'' => out.write_str("\\'")?,
+                '"' => out.write_str("\\\"")?,
+                c if !c.is_control() => out.write_char(c)?,
+                c if (c as u32) < 0x80 => {
+                    write!(out, "\\x{:02x}", c as u32)?;
+                }
+                c => {
+                    write!(out, "\\u{{{:04x}}}", c as u32)?;
+                }
             };
         }
 

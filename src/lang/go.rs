@@ -36,8 +36,8 @@
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: go::Tokens = quote!(#("hello \n world".quoted()));
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: go::Tokens = quote!("start π 😊 \n \x7f end");
+//! assert_eq!("\"start \\u03c0 \\U0001f60a \\n \\x7f end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
 //! ```
@@ -46,9 +46,8 @@ use crate as genco;
 use crate::fmt;
 use crate::lang::{Lang, LangItem};
 use crate::quote_in;
-use crate::tokens::ItemStr;
+use crate::tokens::{quoted, ItemStr};
 use std::collections::BTreeSet;
-use std::fmt::Write as _;
 
 /// Tokens container specialization for Go.
 pub type Tokens = crate::Tokens<Go>;
@@ -207,8 +206,6 @@ pub struct Go(());
 
 impl Go {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
-        use crate::ext::QuotedExt as _;
-
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
@@ -220,7 +217,7 @@ impl Go {
         }
 
         for module in modules {
-            quote_in!(*out => import #(module.quoted()));
+            quote_in!(*out => import #(quoted(module)));
             out.push();
         }
 
@@ -234,22 +231,8 @@ impl Lang for Go {
     type Import = dyn TypeTrait;
 
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        out.write_char('"')?;
-
-        for c in input.chars() {
-            match c {
-                '\t' => out.write_str("\\t")?,
-                '\n' => out.write_str("\\n")?,
-                '\r' => out.write_str("\\r")?,
-                '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
-            };
-        }
-
-        out.write_char('"')?;
-        Ok(())
+        // From: https://golang.org/src/strconv/quote.go
+        super::c_family_escape(out, input)
     }
 
     fn format_file(

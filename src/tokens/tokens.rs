@@ -297,7 +297,7 @@ where
     /// # fn main() -> genco::fmt::Result {
     /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
     ///
-    /// let tokens = quote!(#(write_bytes_ext.register()));
+    /// let tokens = quote!(#(register(write_bytes_ext)));
     ///
     /// assert_eq!("use byteorder::WriteBytesExt as _;", tokens.to_file_string()?);
     /// # Ok(())

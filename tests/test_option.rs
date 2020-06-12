@@ -2,7 +2,7 @@ use genco::prelude::*;
 
 #[test]
 fn test_option() -> genco::fmt::Result {
-    let test1 = Some(quote!(println!("{}", #("one".quoted()))));
+    let test1 = Some(quote!(println!("{}", #(quoted("one")))));
     let test2 = None::<rust::Tokens>;
 
     let tokens: rust::Tokens = quote! {

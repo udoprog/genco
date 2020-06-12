@@ -12,7 +12,7 @@
 //!
 //! * **String Quoting** — Strings can be quoted in a language specific way
 //!   either by including them literally in the token stream using
-//!   `quote!("hello")`, or by using the [`<stmt>.quoted()`] trait function.
+//!   `quote!("hello")`, or by through the [quoted()] function.
 //!
 //! * **Structural Indentation** — genco's quasi quoting utilizes
 //!   [whitespace detection] to structurally sort out spaces and indentation.
@@ -104,7 +104,7 @@
 //! [Python Example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 //! [quote!]: https://docs.rs/genco/0/genco/macro.quote.html
 //! [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
-//! [`<stmt>.quoted()`]: https://docs.rs/genco/0/genco/trait.QuotedExt.html
+//! [quoted()]: https://docs.rs/genco/0/genco/method.quoted.html
 
 #![doc(html_root_url = "https://docs.rs/genco/0.5.0")]
 #![deny(missing_docs)]
@@ -114,11 +114,9 @@ pub use genco_macros::{quote, quote_in};
 
 #[macro_use]
 mod macros;
-pub mod ext;
 pub mod fmt;
 pub mod lang;
 pub mod prelude;
 pub mod tokens;
 
-pub use self::ext::{Display, DisplayExt, Quoted, QuotedExt, Register, RegisterExt};
 pub use self::tokens::Tokens;

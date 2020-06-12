@@ -8,7 +8,10 @@
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: python::Tokens = quote!(#("hello \n world".quoted()));
+//! let toks: python::Tokens = quote!("hello \n world");
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//!
+//! let toks: python::Tokens = quote!(#(quoted("hello \n world")));
 //! assert_eq!("\"hello \\n world\"", toks.to_string()?);
 //! # Ok(())
 //! # }
@@ -141,25 +144,8 @@ impl Lang for Python {
     type Import = Type;
 
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        out.write_char('"')?;
-
-        for c in input.chars() {
-            match c {
-                '\t' => out.write_str("\\t")?,
-                '\u{0007}' => out.write_str("\\b")?,
-                '\n' => out.write_str("\\n")?,
-                '\r' => out.write_str("\\r")?,
-                '\u{0014}' => out.write_str("\\f")?,
-                '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
-            };
-        }
-
-        out.write_char('"')?;
-
-        Ok(())
+        // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
+        super::c_family_escape(out, input)
     }
 
     fn format_file(

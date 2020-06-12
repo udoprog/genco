@@ -36,7 +36,10 @@
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: js::Tokens = quote!(#("hello \n world".quoted()));
+//! let toks: js::Tokens = quote!("hello \n world");
+//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//!
+//! let toks: js::Tokens = quote!(#(quoted("hello \n world")));
 //! assert_eq!("\"hello \\n world\"", toks.to_string()?);
 //! # Ok(())
 //! # }
@@ -263,7 +266,7 @@ impl JavaScript {
 
                         tokens.append("}");
                     }
-                }) from #(name.quoted());
+                }) from #(quoted(name));
             };
         }
 

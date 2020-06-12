@@ -205,8 +205,7 @@ fn test_tight_quote() {
         vec![
             Literal(Static("You")),
             Space,
-            Literal(Static("are:")),
-            Literal("fine".into()),
+            Literal(Static("are:fine")),
         ] as Vec<Item<Rust>>
     };
 }
