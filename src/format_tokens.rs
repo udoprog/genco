@@ -1,24 +1,44 @@
-//! Converter traits for things that can be converted into tokens.
-
 use super::{Item, Lang, Tokens};
 use std::rc::Rc;
 
-/// Helper trait to convert something into tokens.
+/// Trait for formatting something as a stream of tokens.
+///
+/// Things implementing [FormatTokens] can be used as arguments for
+/// [interpolation] in the [quote!] macro.
+///
+/// [quote!]: macro.quote.html
+/// [interpolation]: macro.quote.html#interpolation
 pub trait FormatTokens<L>
 where
     L: Lang,
 {
-    /// Convert the type into tokens.
+    /// Convert the type into tokens in-place.
+    ///
+    /// # Examples
     fn format_tokens(self, tokens: &mut Tokens<L>);
+}
 
-    /// Convert into tokens.
-    fn into_tokens(self) -> Tokens<L>
-    where
-        Self: Sized,
-    {
-        let mut tokens = Tokens::new();
-        self.format_tokens(&mut tokens);
-        tokens
+/// Construct a formatter from a function.
+pub fn from_fn<F, L>(f: F) -> FormatFn<F>
+where
+    F: FnOnce(&mut Tokens<L>),
+    L: Lang,
+{
+    FormatFn { f }
+}
+
+/// A captured function used for formatting.
+pub struct FormatFn<F> {
+    f: F,
+}
+
+impl<L, F> FormatTokens<L> for FormatFn<F>
+where
+    L: Lang,
+    F: FnOnce(&mut Tokens<L>),
+{
+    fn format_tokens(self, tokens: &mut Tokens<L>) {
+        (self.f)(tokens);
     }
 }
 

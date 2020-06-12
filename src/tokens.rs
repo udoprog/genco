@@ -262,7 +262,7 @@ where
     /// # }
     /// ```
     ///
-    /// [quote!]: genco_macros@quote!
+    /// [quote!]: macro.quote.html
     pub fn register<T>(&mut self, tokens: T)
     where
         T: RegisterTokens<L>,

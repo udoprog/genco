@@ -55,11 +55,13 @@ mod config;
 mod fmt_writer;
 mod io_writer;
 mod vec_writer;
+mod from_fn;
 
 pub use self::config::Config;
 pub use self::fmt_writer::FmtWriter;
 pub use self::io_writer::IoWriter;
 pub use self::vec_writer::VecWriter;
+pub use self::from_fn::{from_fn, FromFn};
 
 /// Result type for the `fmt` module.
 pub type Result<T = ()> = std::result::Result<T, std::fmt::Error>;
