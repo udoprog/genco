@@ -230,7 +230,7 @@ impl JavaScript {
         for (name, module) in modules {
             out.push();
             quote_in! { *out =>
-                import #( tokens => {
+                import #(ref tokens => {
                     if let Some(default) = module.default_import {
                         tokens.append(ItemStr::from(default));
 

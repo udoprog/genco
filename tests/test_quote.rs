@@ -70,7 +70,7 @@ fn test_escape() -> genco::fmt::Result {
 fn test_scope() -> genco::fmt::Result {
     let tokens: rust::Tokens = quote! {
         // Nested factory.
-        #(tokens => {
+        #(ref tokens {
             quote_in!(*tokens => fn test() -> u32 { 42 });
         })
     };

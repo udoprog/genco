@@ -578,12 +578,12 @@ impl Rust {
                 // imported.
                 if let Some(second) = render.next() {
                     quote_in! { *out =>
-                        use #m::{#( o =>
+                        use #m::{#(ref o =>
                             first.render(o);
-                            quote_in!(*o => , #(o => second.render(o)));
+                            quote_in!(*o => , #(ref o => second.render(o)));
 
                             for item in render {
-                                quote_in!(*o => , #(o => item.render(o)));
+                                quote_in!(*o => , #(ref o => item.render(o)));
                             }
                         )};
                     };

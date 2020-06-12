@@ -363,12 +363,12 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// # Scopes
 ///
-/// You can use `#(<binding> => { <quoted> })` to gain mutable access to the current
+/// You can use `#(ref <binding> { <quoted> })` to gain mutable access to the current
 /// token stream. This is an alternative to existing control flow operators if
 /// you want to execute more complex logic during evaluation.
 ///
 /// For a more compact version, you can also omit the braces by doing
-/// `#(<binding> => <quoted>)`.
+/// `#(ref <binding> => <quoted>)`.
 ///
 /// Note that this can cause borrowing issues if the underlying stream is
 /// already a mutable reference. To work around this you can specify
@@ -382,7 +382,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// # fn main() -> genco::fmt::Result {
 /// fn quote_greeting(surname: &str, lastname: Option<&str>) -> rust::Tokens {
 ///     quote! {
-///         Hello #surname#(toks => {
+///         Hello #surname#(ref toks {
 ///             if let Some(lastname) = lastname {
 ///                 toks.space();
 ///                 toks.append(lastname);
@@ -606,7 +606,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// let tokens: rust::Tokens = quote! {
 ///     fn foo(v: bool) -> u32 {
-///         #(out => {
+///         #(ref out {
 ///             quote_in! { *out =>
 ///                 if v {
 ///                     1

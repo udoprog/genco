@@ -20,7 +20,7 @@ fn test_token_gen() {
             foo
             bar
             baz
-                #(tokens => quote_in! { *tokens => hello })
+                #(ref tokens => quote_in! { *tokens => hello })
             out?
         },
         vec![
@@ -41,7 +41,7 @@ fn test_token_gen() {
 fn test_iterator_gen() {
     assert_eq! {
         quote! {
-            #(t => for n in 0..3 {
+            #(ref t => for n in 0..3 {
                 t.push();
                 t.append(n);
             })
@@ -58,7 +58,7 @@ fn test_iterator_gen() {
 
     assert_eq! {
         quote! {
-            #(t => {
+            #(ref t {
                 for n in 0..3 {
                     t.push();
                     t.append(n);
@@ -84,7 +84,7 @@ fn test_tricky_continuation() {
 
     quote_in! {
         &mut output =>
-        foo, #(output => {
+        foo, #(ref output {
             output.append(&bar);
             output.append(Static(","));
             output.space();
@@ -395,7 +395,7 @@ fn test_indentation_empty() {
 
     let tokens: rust::Tokens = quote! {
         a
-            #(_tokens =>)
+            #(ref _tokens =>)
         b
     };
 

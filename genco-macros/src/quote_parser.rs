@@ -429,8 +429,8 @@ fn parse_match(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
 
 /// Parse evaluation: `[*]<binding> => <expr>`.
 fn parse_scope(input: ParseStream) -> Result<Item> {
+    input.parse::<token::Ref>()?;
     let binding = input.parse()?;
-    input.parse::<Token![=>]>()?;
 
     let content;
 
@@ -438,6 +438,7 @@ fn parse_scope(input: ParseStream) -> Result<Item> {
         syn::braced!(content in input);
         &content
     } else {
+        input.parse::<Token![=>]>()?;
         input
     };
 
@@ -475,7 +476,7 @@ fn parse_expression(input: ParseStream, receiver: &syn::Ident) -> Result<QueueIt
         parse_loop(&scope, receiver)?
     } else if scope.peek(Token![match]) {
         parse_match(&scope, receiver)?
-    } else if scope.peek(syn::Ident) && scope.peek2(Token![=>]) {
+    } else if scope.peek(token::Ref) {
         parse_scope(&scope)?
     } else {
         Item::Eval {
