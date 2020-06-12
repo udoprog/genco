@@ -6,9 +6,9 @@ use std::fmt;
 /// Struct containing a type that implements [Display][fmt::Display] and can be
 /// tokenized into a stream.
 ///
-/// This is constructed with the [display] function.
+/// This is constructed with the [DisplayExt::display()] function.
 ///
-/// [display]: crate::DisplayExt::display
+/// [DisplayExt::display()]: crate::DisplayExt::display()
 #[derive(Clone, Copy)]
 pub struct Display<'a, T> {
     inner: &'a T,

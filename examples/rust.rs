@@ -14,8 +14,7 @@ fn main() -> anyhow::Result<()> {
     let error = rust::imported("std::error", "Error");
 
     let tokens = quote! {
-        #@(write_bytes_ext)
-        #@(read_bytes_ext)
+        #((write_bytes_ext, read_bytes_ext).register())
 
         fn test() -> Result<(), Box<dyn #error>> {
             let mut wtr = vec![];

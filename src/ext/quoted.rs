@@ -4,7 +4,9 @@ use crate::Tokens;
 
 /// Struct containing a type that is quoted.
 ///
-/// This is constructed with the [quoted][super::QuotedExt::quoted] function.
+/// This is constructed with the [QuotedExt::quoted()] function.
+///
+/// [QuotedExt::quoted()]: crate::QuotedExt::quoted()
 #[derive(Clone, Copy)]
 pub struct Quoted<T> {
     inner: T,

@@ -10,6 +10,7 @@ mod encoder;
 mod item_buffer;
 mod quote_in_parser;
 mod quote_parser;
+mod token;
 
 pub(crate) use self::cursor::Cursor;
 pub(crate) use self::encoder::{Control, Delimiter, Encoder, MatchArm};
@@ -67,7 +68,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// The items produced in the token stream above are however subtly different.
 ///
 /// The first one is a static *quoted string*. The second one is a boxed *quoted
-/// string*, who's content is stored on the heap. And the third one is a boxed
+/// string*, who's content is stored on the heap. And the third one is a static
 /// *literal* which bypasses language quoting entirely.
 ///
 /// ```rust
@@ -87,7 +88,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///         Item::Push,
 ///         Item::Quoted(ItemStr::Box("hello world".into())),
 ///         Item::Push,
-///         Item::Literal(ItemStr::Box("\"hello world\"".into())),
+///         Item::Literal(ItemStr::Static("\"hello world\"")),
 ///     ],
 ///     tokens,
 /// );

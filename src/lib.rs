@@ -120,5 +120,5 @@ pub mod lang;
 pub mod prelude;
 pub mod tokens;
 
-pub use self::ext::{Display, DisplayExt, Quoted, QuotedExt};
+pub use self::ext::{Display, DisplayExt, Quoted, QuotedExt, Register, RegisterExt};
 pub use self::tokens::Tokens;

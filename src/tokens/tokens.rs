@@ -285,9 +285,9 @@ where
     /// # Examples
     ///
     /// The `register` functionality is available through the [quote!] macro
-    /// by using the [register] function.
+    /// by using the [register] extension.
     ///
-    /// [register]: Tokens::register
+    /// [register]: crate::ext::RegisterExt::register
     ///
     /// ```rust
     ///
@@ -297,7 +297,7 @@ where
     /// # fn main() -> genco::fmt::Result {
     /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
     ///
-    /// let tokens = quote!(#@(write_bytes_ext));
+    /// let tokens = quote!(#(write_bytes_ext.register()));
     ///
     /// assert_eq!("use byteorder::WriteBytesExt as _;", tokens.to_file_string()?);
     /// # Ok(())

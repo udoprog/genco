@@ -1,5 +1,5 @@
 use crate::{Cursor, ItemBuffer};
-use proc_macro2::{LineColumn, Span, TokenStream, TokenTree};
+use proc_macro2::{LineColumn, Span, TokenStream};
 use syn::parse::{Parse, ParseStream};
 use syn::Result;
 
@@ -142,12 +142,6 @@ impl<'a> Encoder<'a> {
         self.last = Some(last);
     }
 
-    // Reset cursor, so that registers don't count as items to be offset from.
-    // This allows imports to be grouped without affecting formatting.
-    pub(crate) fn reset(&mut self) {
-        self.last = None;
-    }
-
     pub(crate) fn step(&mut self, next: Cursor, to_span: Span) -> Result<()> {
         if let Some(from) = self.from() {
             // Insert spacing if appropriate.
@@ -168,8 +162,8 @@ impl<'a> Encoder<'a> {
         d.encode_end(&mut self.item_buffer);
     }
 
-    pub(crate) fn encode_tree(&mut self, tt: TokenTree) {
-        self.item_buffer.push_str(&tt.to_string());
+    pub(crate) fn encode_literal(&mut self, string: &str) {
+        self.item_buffer.push_str(string);
     }
 
     pub(crate) fn encode_quoted(&mut self, s: syn::LitStr) {

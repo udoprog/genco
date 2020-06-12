@@ -17,8 +17,9 @@ enum Item {
     Quoted {
         s: syn::LitStr,
     },
-    Register {
-        expr: syn::Expr,
+    /// A literal value embedded in the stream.
+    Literal {
+        string: String,
     },
     DelimiterClose {
         delimiter: Delimiter,
@@ -139,8 +140,6 @@ impl<'a> QuoteParser<'a> {
     ) -> Result<TokenStream> {
         let receiver = self.receiver;
 
-        let mut registers = Vec::new();
-
         let mut queued = Vec::new();
         let mut queue = VecDeque::new();
 
@@ -195,10 +194,13 @@ impl<'a> QuoteParser<'a> {
                     }
                 }
                 Item::Tree { tt, .. } => {
-                    encoder.encode_tree(tt);
+                    encoder.encode_literal(&tt.to_string());
                 }
                 Item::Quoted { s } => {
                     encoder.encode_quoted(s);
+                }
+                Item::Literal { string } => {
+                    encoder.encode_literal(&string);
                 }
                 Item::Control { control, .. } => {
                     encoder.encode_control(control);
@@ -223,10 +225,6 @@ impl<'a> QuoteParser<'a> {
                 } => {
                     encoder.encode_repeat(pattern, expr, join, stream);
                 }
-                Item::Register { expr, .. } => {
-                    registers.push(quote::quote_spanned!(expr.span() => #receiver.register(#expr)));
-                    encoder.reset();
-                }
                 Item::DelimiterClose { delimiter, .. } => {
                     encoder.encode_end_delimiter(delimiter);
                 }
@@ -249,7 +247,6 @@ impl<'a> QuoteParser<'a> {
         let output = encoder.into_output()?;
 
         Ok(quote::quote! {
-            #(#registers;)*
             #output
         })
     }
@@ -264,22 +261,6 @@ fn parse_tree_iterator(
     let parser = |input: ParseStream| parse_inner(queue, input, receiver, |_| false);
     parser.parse2(stream)?;
     Ok(())
-}
-
-fn parse_register(start: Span, input: ParseStream) -> Result<QueueItem> {
-    let (cursor, expr) = if input.peek(token::Paren) {
-        let content;
-        let delim = syn::parenthesized!(content in input);
-        let expr = content.parse::<syn::Expr>()?;
-        let cursor = Cursor::join(start, delim.span);
-        (cursor, expr)
-    } else {
-        let expr = input.parse::<syn::Expr>()?;
-        let cursor = Cursor::join(start, expr.span());
-        (cursor, expr)
-    };
-
-    Ok(QueueItem::with_span(start, cursor, Item::Register { expr }))
 }
 
 /// Parse `if <condition> { <quoted> } [else { <quoted> }]`.
@@ -429,7 +410,7 @@ fn parse_match(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
 
 /// Parse evaluation: `[*]<binding> => <expr>`.
 fn parse_scope(input: ParseStream) -> Result<Item> {
-    input.parse::<token::Ref>()?;
+    input.parse::<Token![ref]>()?;
     let binding = input.parse()?;
 
     let content;
@@ -476,8 +457,12 @@ fn parse_expression(input: ParseStream, receiver: &syn::Ident) -> Result<QueueIt
         parse_loop(&scope, receiver)?
     } else if scope.peek(Token![match]) {
         parse_match(&scope, receiver)?
-    } else if scope.peek(token::Ref) {
+    } else if scope.peek(Token![ref]) {
         parse_scope(&scope)?
+    } else if scope.peek(syn::LitStr) && scope.peek2(crate::token::Eof) {
+        let string = scope.parse::<syn::LitStr>()?.value();
+
+        Item::Literal { string }
     } else {
         Item::Eval {
             expr: scope.parse()?,
@@ -493,17 +478,10 @@ fn parse_inner(
     receiver: &syn::Ident,
     until: impl Fn(ParseStream) -> bool + Copy,
 ) -> Result<()> {
-    syn::custom_punctuation!(Register, #@);
     syn::custom_punctuation!(Escape, ##);
     syn::custom_punctuation!(ControlStart, #<);
 
     while !input.is_empty() && !until(input) {
-        if input.peek(Register) {
-            let register = input.parse::<Register>()?;
-            queue(parse_register(register.spans[0], input)?);
-            continue;
-        }
-
         // Escape sequence.
         if input.peek(Escape) {
             let escape = input.parse::<Escape>()?;
