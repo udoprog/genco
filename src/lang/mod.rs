@@ -34,8 +34,8 @@ where
     type Import: ?Sized;
 
     /// The default indentation for the current language.
-    fn default_indentation() -> usize {
-        4
+    fn default_indentation() -> fmt::Indentation {
+        fmt::Indentation::Space(4)
     }
 
     /// Performing quoting according to convention set by custom element.

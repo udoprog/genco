@@ -35,7 +35,8 @@
 //! let stdout = std::io::stdout();
 //! let mut w = fmt::IoWriter::new(stdout.lock());
 //!
-//! let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+//! let fmt_config = fmt::Config::from_lang::<Rust>()
+//!     .with_indentation(fmt::Indentation::Space(2));
 //! let mut formatter = w.as_formatter(fmt_config);
 //! let config = rust::Config::default();
 //!
@@ -56,7 +57,7 @@ mod fmt_writer;
 mod io_writer;
 mod vec_writer;
 
-pub use self::config::Config;
+pub use self::config::{Config, Indentation};
 pub use self::fmt_writer::FmtWriter;
 pub use self::io_writer::IoWriter;
 pub use self::vec_writer::VecWriter;
@@ -66,6 +67,9 @@ pub type Result<T = ()> = std::result::Result<T, std::fmt::Error>;
 
 /// Buffer used as indentation source.
 static SPACES: &str = "                                                                                                    ";
+
+static TABS: &str =
+    "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
 /// Trait that defines a line writer.
 pub(crate) trait Write: std::fmt::Write {
@@ -183,7 +187,22 @@ impl<'a> Formatter<'a> {
                 self.write.write_line(&self.config)?;
             }
 
-            spaces += i16::max(self.indent, 0) as usize * self.config.indentation;
+            let level = i16::max(self.indent, 0) as usize;
+
+            match self.config.indentation {
+                Indentation::Space(n) => {
+                    spaces += level * n;
+                }
+                Indentation::Tab => {
+                    let mut tabs = level;
+
+                    while tabs > 0 {
+                        let len = usize::min(tabs, TABS.len());
+                        self.write.write_str(&TABS[0..len])?;
+                        tabs -= len;
+                    }
+                }
+            }
         }
 
         while spaces > 0 {

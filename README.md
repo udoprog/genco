@@ -74,7 +74,8 @@ let tokens: rust::Tokens = quote! {
 let stdout = std::io::stdout();
 let mut w = fmt::IoWriter::new(stdout.lock());
 
-let fmt = fmt::Config::from_lang::<Rust>().with_indentation(2);
+let fmt = fmt::Config::from_lang::<Rust>()
+    .with_indentation(fmt::Indentation::Space(2));
 let config = rust::Config::default();
 
 tokens.format_file(&mut w.as_formatter(fmt), &config)?;

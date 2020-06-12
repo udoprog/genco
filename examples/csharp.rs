@@ -54,7 +54,8 @@ fn main() -> anyhow::Result<()> {
     let stdout = std::io::stdout();
     let mut w = fmt::IoWriter::new(stdout.lock());
 
-    let fmt = fmt::Config::from_lang::<Csharp>().with_indentation(2);
+    let fmt = fmt::Config::from_lang::<Csharp>()
+        .with_indentation(fmt::Indentation::Space(4));
     let config = csharp::Config::default();
 
     tokens.format_file(&mut w.as_formatter(fmt), &config)?;

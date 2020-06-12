@@ -1,10 +1,50 @@
 use crate::Lang;
 
+/// Indentation configuration.
+/// 
+/// ```rust
+/// use genco::prelude::*;
+/// use genco::fmt;
+/// 
+/// # fn main() -> genco::fmt::Result {
+/// let tokens: rust::Tokens = quote! {
+///     fn foo() -> u32 {
+///         42u32
+///     }
+/// };
+///
+/// let mut w = fmt::VecWriter::new();
+///
+/// let fmt = fmt::Config::from_lang::<Rust>()
+///     .with_indentation(fmt::Indentation::Tab);
+/// let config = rust::Config::default();
+///
+/// tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+///
+/// assert_eq! {
+///     vec![
+///         "fn foo() -> u32 {",
+///         "\t42u32",
+///         "}",
+///     ],
+///     w.into_vec(),
+/// };
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub enum Indentation {
+    /// Each indentation is the given number of spaces.
+    Space(usize),
+    /// Each indentation is a tab.
+    Tab,
+}
+
 /// Configuration to use for formatting output.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Config {
     /// Indentation level to use.
-    pub(super) indentation: usize,
+    pub(super) indentation: Indentation,
     /// What to use as a newline.
     pub(super) newline: &'static str,
 }
@@ -23,7 +63,7 @@ impl Config {
     }
 
     /// Modify indentation to use.
-    pub fn with_indentation(self, indentation: usize) -> Self {
+    pub fn with_indentation(self, indentation: Indentation) -> Self {
         Self {
             indentation,
             ..self

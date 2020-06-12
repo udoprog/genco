@@ -563,7 +563,8 @@ where
     /// let stdout = std::io::stdout();
     /// let mut w = fmt::IoWriter::new(stdout.lock());
     ///
-    /// let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+    /// let fmt_config = fmt::Config::from_lang::<Rust>()
+    ///     .with_indentation(fmt::Indentation::Space(2));
     /// let mut formatter = w.as_formatter(fmt_config);
     /// let config = rust::Config::default();
     ///
@@ -618,7 +619,8 @@ where
     /// let stdout = std::io::stdout();
     /// let mut w = fmt::IoWriter::new(stdout.lock());
     ///
-    /// let fmt_config = fmt::Config::from_lang::<Rust>().with_indentation(2);
+    /// let fmt_config = fmt::Config::from_lang::<Rust>()
+    ///     .with_indentation(fmt::Indentation::Space(2));
     /// let mut formatter = w.as_formatter(fmt_config);
     /// let config = rust::Config::default();
     ///
