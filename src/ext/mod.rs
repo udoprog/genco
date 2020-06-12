@@ -13,6 +13,9 @@ pub use self::quoted::Quoted;
 pub trait QuotedExt {
     /// Trait to provide string quoting through `<stmt>.quoted()`.
     ///
+    /// Note that quoting is applied automatically for literal strings inside of
+    /// the [quote!] macro, like: `quote!("hello")`.
+    ///
     /// This is used to generated quoted strings, in the language of choice.
     ///
     /// # Examples
@@ -42,6 +45,8 @@ pub trait QuotedExt {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [quote!]: macro.quote.html
     fn quoted(self) -> Quoted<Self>
     where
         Self: Into<ItemStr>,

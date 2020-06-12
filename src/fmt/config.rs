@@ -1,11 +1,11 @@
 use crate::Lang;
 
 /// Indentation configuration.
-/// 
+///
 /// ```rust
 /// use genco::prelude::*;
 /// use genco::fmt;
-/// 
+///
 /// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn foo() -> u32 {

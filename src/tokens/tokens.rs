@@ -9,7 +9,7 @@
 //! ```
 
 use crate::fmt;
-use crate::tokens::{FormatInto, Item, RegisterTokens};
+use crate::tokens::{FormatInto, Item, ItemStr, RegisterTokens};
 use crate::{Lang, LangItem};
 use std::cmp;
 use std::iter::FromIterator;
@@ -168,10 +168,10 @@ where
     ///
     /// let mut tokens = Tokens::<()>::new();
     ///
-    /// tokens.item(Item::Literal(ItemStr::Static("foo")));
+    /// tokens.literal(ItemStr::Static("foo"));
     /// tokens.item(Item::Space);
     /// tokens.item(Item::Space); // Note: second space ignored
-    /// tokens.item(Item::Literal(ItemStr::Static("bar")));
+    /// tokens.literal(ItemStr::Static("bar"));
     ///
     /// assert_eq!(tokens, quote!(foo bar));
     /// ```
@@ -182,6 +182,54 @@ where
             Item::Space => self.space(),
             other => self.items.push(other),
         }
+    }
+
+    /// Push the given string as a literal.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::tokens::{Item, ItemStr};
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.literal(ItemStr::Static("foo"));
+    /// tokens.item(Item::Space);
+    /// tokens.item(Item::Space); // Note: second space ignored
+    /// tokens.literal(ItemStr::Static("bar"));
+    ///
+    /// assert_eq!(tokens, quote!(foo bar));
+    /// ```
+    pub fn literal<S>(&mut self, s: S)
+    where
+        S: Into<ItemStr>,
+    {
+        self.item(Item::Literal(s.into()));
+    }
+
+    /// Push the given string as a quoted.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::tokens::{Item, ItemStr};
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.quoted(ItemStr::Static("foo"));
+    /// tokens.item(Item::Space);
+    /// tokens.item(Item::Space); // Note: second space ignored
+    /// tokens.quoted(ItemStr::Static("bar"));
+    ///
+    /// assert_eq!(tokens, quote!("foo" "bar"));
+    /// ```
+    pub fn quoted<S>(&mut self, s: S)
+    where
+        S: Into<ItemStr>,
+    {
+        self.item(Item::Quoted(s.into()));
     }
 
     /// Extend with another stream of tokens.

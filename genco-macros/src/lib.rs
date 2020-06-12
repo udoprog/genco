@@ -32,6 +32,67 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// # }
 /// ```
 ///
+/// # String Quoting
+///
+/// Literal strings are automatically quoted according to language
+/// configuration. To avoid this, you will have to use an expression
+/// interpolation, like: `#("\"hello world\"")`.
+///
+/// These all produce the same result:
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let tokens: rust::Tokens = quote! {
+///     "hello world"
+///     #("hello world".quoted())
+///     #("\"hello world\"")
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "\"hello world\"",
+///         "\"hello world\"",
+///         "\"hello world\"",
+///     ],
+///     tokens.to_file_vec()?,
+/// );
+/// # Ok(())
+/// # }
+/// ```
+///
+/// The items produced in the token stream are however subtly different. Note
+/// how the first item is referenced statically, while the second need to be
+/// boxed, and the third is simply a boxed literal encoded as-is.
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use genco::tokens::{Item, ItemStr};
+///
+/// # fn main() -> genco::fmt::Result {
+/// let tokens: rust::Tokens = quote! {
+///     "hello world"
+///     #("hello world".quoted())
+///     #("\"hello world\"")
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         Item::Quoted(ItemStr::Static("hello world")),
+///         Item::Push,
+///         Item::Quoted(ItemStr::Box("hello world".into())),
+///         Item::Push,
+///         Item::Literal(ItemStr::Box("\"hello world\"".into())),
+///     ],
+///     tokens,
+/// );
+/// # Ok(())
+/// # }
+/// ```
+///
+/// <br>
+///
 /// # Interpolation
 ///
 /// Elements are interpolated using `#`, so to include the variable `test`,

@@ -9,8 +9,13 @@ use crate::{Control, Cursor, Delimiter, Encoder, MatchArm};
 
 /// Items to process from the queue.
 enum Item {
+    /// A raw token tree.
     Tree {
         tt: TokenTree,
+    },
+    /// A quoted string.
+    Quoted {
+        s: syn::LitStr,
     },
     Register {
         expr: syn::Expr,
@@ -191,6 +196,9 @@ impl<'a> QuoteParser<'a> {
                 }
                 Item::Tree { tt, .. } => {
                     encoder.encode_tree(tt);
+                }
+                Item::Quoted { s } => {
+                    encoder.encode_quoted(s);
                 }
                 Item::Control { control, .. } => {
                     encoder.encode_control(control);
@@ -528,6 +536,14 @@ fn parse_inner(
 
         if input.peek(Token![#]) && start_expression {
             queue(parse_expression(input, receiver)?);
+            continue;
+        }
+
+        if input.peek(syn::LitStr) {
+            let s = input.parse::<syn::LitStr>()?;
+            let cursor = Cursor::from(s.span());
+            let span = s.span();
+            queue(QueueItem::with_span(span, cursor, Item::Quoted { s }));
             continue;
         }
 

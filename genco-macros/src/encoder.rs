@@ -172,6 +172,13 @@ impl<'a> Encoder<'a> {
         self.item_buffer.push_str(&tt.to_string());
     }
 
+    pub(crate) fn encode_quoted(&mut self, s: syn::LitStr) {
+        let receiver = self.receiver;
+        self.item_buffer.flush(&mut self.output);
+        self.output
+            .extend(quote::quote!(#receiver.quoted(genco::tokens::ItemStr::Static(#s));));
+    }
+
     pub(crate) fn encode_control(&mut self, control: Control) {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);

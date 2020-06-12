@@ -10,8 +10,9 @@
 //! * **Imports** — genco generates and groups import statements according to
 //!   conventions for the language being generated for.
 //!
-//! * **String Quoting** — Strings can be quoted using the [`<stmt>.quoted()`]
-//!   trait function.
+//! * **String Quoting** — Strings can be quoted in a language specific way
+//!   either by including them literally in the token stream using
+//!   `quote!("hello")`, or by using the [`<stmt>.quoted()`] trait function.
 //!
 //! * **Structural Indentation** — genco's quasi quoting utilizes
 //!   [whitespace detection] to structurally sort out spaces and indentation.
