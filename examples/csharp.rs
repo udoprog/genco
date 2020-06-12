@@ -1,4 +1,4 @@
-use genco::csharp::comment;
+use csharp::comment;
 use genco::fmt;
 use genco::prelude::*;
 

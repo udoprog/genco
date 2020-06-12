@@ -1,5 +1,6 @@
+use crate::lang::Lang;
 use crate::tokens;
-use crate::{Lang, Tokens};
+use crate::Tokens;
 use std::fmt;
 
 /// Struct containing a type that implements [Display][fmt::Display] and can be

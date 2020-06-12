@@ -37,8 +37,8 @@
 //! ```
 
 use crate::fmt;
+use crate::lang::Lang;
 use crate::tokens::ItemStr;
-use crate::Lang;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::Write as _;
 use std::rc::Rc;
@@ -46,7 +46,7 @@ use std::rc::Rc;
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Rust>;
 /// Language box specialization for Rust.
-pub type LangBox = crate::LangBox<Rust>;
+pub type LangBox = crate::lang::LangBox<Rust>;
 
 impl_plain_variadic_args!(Args, Type);
 

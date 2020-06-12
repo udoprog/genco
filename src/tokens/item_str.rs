@@ -1,7 +1,8 @@
 //! Helper trait to take ownership of strings.
 
+use crate::lang::Lang;
 use crate::tokens;
-use crate::{Lang, Tokens};
+use crate::Tokens;
 use std::borrow::Cow;
 use std::fmt;
 use std::ops::Deref;

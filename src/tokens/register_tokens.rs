@@ -1,5 +1,6 @@
+use crate::lang::{Lang, LangBox};
 use crate::tokens::Item;
-use crate::{Lang, LangBox, Tokens};
+use crate::Tokens;
 
 mod private {
     pub trait Sealed<L> {}

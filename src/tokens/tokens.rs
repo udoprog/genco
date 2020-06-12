@@ -3,14 +3,15 @@
 //! ## Example
 //!
 //! ```rust
-//! use genco::{Tokens, Java};
-//! let mut toks: Tokens<Java> = Tokens::new();
+//! use genco::prelude::*;
+//!
+//! let mut toks = java::Tokens::new();
 //! toks.append("foo");
 //! ```
 
 use crate::fmt;
+use crate::lang::{Lang, LangItem};
 use crate::tokens::{FormatInto, Item, ItemStr, RegisterTokens};
-use crate::{Lang, LangItem};
 use std::cmp;
 use std::iter::FromIterator;
 use std::num::NonZeroI16;
@@ -50,15 +51,6 @@ where
     L: Lang,
 {
     items: Vec<Item<L>>,
-}
-
-impl<L> std::fmt::Debug for Tokens<L>
-where
-    L: Lang,
-{
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt.debug_list().entries(self.items.iter()).finish()
-    }
 }
 
 impl<L> Tokens<L>
@@ -299,8 +291,8 @@ where
     ///
     /// ```rust
     ///
-    /// use genco::rust::{imported, Config};
-    /// use genco::quote;
+    /// use genco::prelude::*;
+    /// use rust::{imported, Config};
     ///
     /// # fn main() -> genco::fmt::Result {
     /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
@@ -839,6 +831,15 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     }
 }
 
+impl<L> std::fmt::Debug for Tokens<L>
+where
+    L: Lang,
+{
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fmt.debug_list().entries(self.items.iter()).finish()
+    }
+}
+
 impl<L> Clone for Tokens<L>
 where
     L: Lang,
@@ -1047,7 +1048,7 @@ mod tests {
     #[derive(Clone, Copy)]
     struct Lang(());
 
-    impl crate::Lang for Lang {
+    impl crate::lang::Lang for Lang {
         type Config = ();
         type Format = ();
         type Import = Import;

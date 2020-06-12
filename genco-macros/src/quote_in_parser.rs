@@ -18,10 +18,12 @@ impl QuoteInParser {
         let output = parser.parse(input)?;
 
         // Give the assignment its own span to improve diagnostics.
-        let assign_mut = quote::quote_spanned! { expr.span() => &mut #expr };
+        let assign_mut = quote::quote_spanned! { expr.span() =>
+            let #receiver: &mut genco::Tokens<_> = &mut #expr
+        };
 
         Ok(quote::quote! {
-            let #receiver = #assign_mut;
+            #assign_mut;
             #output
         })
     }

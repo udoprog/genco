@@ -24,26 +24,26 @@ macro_rules! impl_lang_item {
         )?
 
         $(
-        impl From<$box_from_ty> for crate::LangBox<$from_lang> {
+        impl From<$box_from_ty> for crate::lang::LangBox<$from_lang> {
             fn from(value: $box_from_ty) -> Self {
                 use std::rc::Rc;
-                crate::LangBox::from(Rc::new(value) as Rc<dyn crate::LangItem<$from_lang>>)
+                crate::lang::LangBox::from(Rc::new(value) as Rc<dyn crate::lang::LangItem<$from_lang>>)
             }
         }
 
-        impl<'a> From<&'a $box_from_ty> for crate::LangBox<$from_lang> {
+        impl<'a> From<&'a $box_from_ty> for crate::lang::LangBox<$from_lang> {
             fn from(value: &'a $box_from_ty) -> Self {
                 use std::rc::Rc;
-                crate::LangBox::from(Rc::new(value.clone()) as Rc<dyn crate::LangItem<$from_lang>>)
+                crate::lang::LangBox::from(Rc::new(value.clone()) as Rc<dyn crate::lang::LangItem<$from_lang>>)
             }
         }
         )?
 
         $(
-            impl crate::LangItem<$lang> for $ty {
+            impl crate::lang::LangItem<$lang> for $ty {
                 $($item)*
 
-                fn eq(&self, other: &dyn crate::LangItem<$lang>) -> bool {
+                fn eq(&self, other: &dyn crate::lang::LangItem<$lang>) -> bool {
                     other
                         .as_any()
                         .downcast_ref::<Self>()
@@ -141,7 +141,7 @@ macro_rules! impl_dynamic_types {
         })*
     ) => {
         /// Trait implemented by all types
-        $type_trait_vis trait TypeTrait: 'static + std::fmt::Debug + crate::LangItem<$lang> {
+        $type_trait_vis trait TypeTrait: 'static + std::fmt::Debug + crate::lang::LangItem<$lang> {
             /// Coerce trait into an enum that can be used for type-specific operations
             fn as_enum(&self) -> $any_type_ref<'_>;
 

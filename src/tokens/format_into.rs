@@ -1,4 +1,5 @@
-use crate::{Lang, Tokens};
+use crate::lang::Lang;
+use crate::Tokens;
 use std::rc::Rc;
 
 /// Trait for types that can be formatted in-place into a token stream.
@@ -17,8 +18,9 @@ use std::rc::Rc;
 ///
 /// ```rust
 /// # fn main() -> genco::fmt::Result {
-/// use genco::{quote_in, Lang};
+/// use genco::quote_in;
 /// use genco::tokens::{ItemStr, FormatInto, from_fn, static_literal};
+/// use genco::lang::Lang;
 ///
 /// fn comment<L>(s: impl Into<ItemStr>) -> impl FormatInto<L>
 /// where

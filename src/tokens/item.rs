@@ -1,8 +1,9 @@
 //! A single element
 
 use crate::fmt;
+use crate::lang::{Lang, LangBox, LangItem as _};
 use crate::tokens;
-use crate::{Lang, LangBox, LangItem as _, Tokens};
+use crate::Tokens;
 use std::cmp;
 use std::num::NonZeroI16;
 use std::rc::Rc;

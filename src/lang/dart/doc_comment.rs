@@ -1,5 +1,6 @@
+use crate::lang::Dart;
 use crate::tokens;
-use crate::{Dart, Tokens};
+use crate::Tokens;
 
 /// Format a doc comment where each line is preceeded by `///`.
 ///

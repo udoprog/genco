@@ -6,8 +6,9 @@
 //! # Examples
 //!
 //! ```rust
-//! use genco::{Lang, quote_in};
+//! use genco::quote_in;
 //! use genco::tokens::{from_fn, ItemStr, FormatInto, static_literal};
+//! use genco::lang::Lang;
 //!
 //! /// Format a block comment, starting with `/**`, and ending in `*/`.
 //! pub fn block_comment<I, L>(text: I) -> impl FormatInto<L>

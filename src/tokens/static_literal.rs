@@ -1,5 +1,5 @@
+use crate::lang;
 use crate::tokens;
-use crate::Lang;
 
 /// Construct a formatter from a static string.
 ///
@@ -22,7 +22,7 @@ use crate::Lang;
 /// [append()]: crate::Tokens::append()
 pub fn static_literal<L>(s: &'static str) -> impl tokens::FormatInto<L>
 where
-    L: Lang,
+    L: lang::Lang,
 {
     tokens::from_fn(move |t| {
         t.item(tokens::Item::Literal(tokens::ItemStr::Static(s)));

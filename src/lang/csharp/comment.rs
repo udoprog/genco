@@ -1,5 +1,6 @@
+use crate::lang::Csharp;
 use crate::tokens;
-use crate::{Csharp, Tokens};
+use crate::Tokens;
 
 /// Format a doc comment where each line is preceeded by `//`.
 ///

@@ -1,4 +1,4 @@
-use crate::Lang;
+use crate::lang::Lang;
 
 /// Indentation configuration.
 ///

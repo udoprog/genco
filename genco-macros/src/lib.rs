@@ -34,11 +34,13 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// # String Quoting
 ///
-/// Literal strings are automatically quoted according to language
-/// configuration. To avoid this, you will have to use an expression
-/// interpolation, like: `#("\"hello world\"")`.
+/// Literal strings like `quote!("hello")` are automatically quoted for the
+/// target language according to its [Lang::quote_string] implementation.
 ///
-/// These all produce the same result:
+/// To avoid this, you would have to produce a string literal. This can be done
+/// through interpolation as shown below in the third example.
+///
+/// [Lang::quote_string]: https://docs.rs/genco/0/genco/trait.Lang.html#method.quote_string
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -62,20 +64,22 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// # }
 /// ```
 ///
-/// The items produced in the token stream are however subtly different. Note
-/// how the first item is referenced statically, while the second need to be
-/// boxed, and the third is simply a boxed literal encoded as-is.
+/// The items produced in the token stream above are however subtly different.
+///
+/// The first one is a static *quoted string*. The second one is a boxed *quoted
+/// string*, who's content is stored on the heap. And the third one is a boxed
+/// *literal* which bypasses language quoting entirely.
 ///
 /// ```rust
-/// use genco::prelude::*;
-/// use genco::tokens::{Item, ItemStr};
-///
+/// # use genco::prelude::*;
 /// # fn main() -> genco::fmt::Result {
-/// let tokens: rust::Tokens = quote! {
-///     "hello world"
-///     #("hello world".quoted())
-///     #("\"hello world\"")
-/// };
+/// # let tokens: rust::Tokens = quote! {
+/// #     "hello world"
+/// #     #("hello world".quoted())
+/// #     #("\"hello world\"")
+/// # };
+/// #
+/// use genco::tokens::{Item, ItemStr};
 ///
 /// assert_eq!(
 ///     vec![

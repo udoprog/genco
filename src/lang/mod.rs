@@ -1,3 +1,22 @@
+//! Language specialization for genco
+//!
+//! This module contains sub-modules which provide implementations of the [Lang]
+//! trait to configure genco for various programming languages.
+//!
+//! This module also provides a dummy [Lang] implementation for `()`.
+//!
+//! This allows `()` to be used as a quick and dirty way to do formatting,
+//! usually for examples.
+//!
+//! ```rust
+//! use genco::prelude::*;
+//!
+//! # fn main() -> genco::fmt::Result {
+//! let tokens: Tokens = quote!(hello world);
+//! # Ok(())
+//! # }
+//! ```
+
 pub mod csharp;
 pub mod dart;
 pub mod go;
@@ -22,6 +41,9 @@ use std::any::Any;
 use std::rc::Rc;
 
 /// Trait to implement for language specialization.
+///
+/// The various language implementations can be found in the [lang][self]
+/// module.
 pub trait Lang
 where
     Self: 'static + Sized,
@@ -33,17 +55,17 @@ where
     /// The type used when resolving imports.
     type Import: ?Sized;
 
-    /// The default indentation for the current language.
+    /// Provide the default indentation.
     fn default_indentation() -> fmt::Indentation {
         fmt::Indentation::Space(4)
     }
 
-    /// Performing quoting according to convention set by custom element.
+    /// Performing string quoting according to language convention.
     fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_str(input)
     }
 
-    /// Write a file according to convention by custom element.
+    /// Write a file according to the specified language convention.
     fn format_file(
         tokens: &Tokens<Self>,
         out: &mut fmt::Formatter<'_>,
@@ -54,7 +76,6 @@ where
     }
 }
 
-/// Dummy implementation for unit.
 impl Lang for () {
     type Config = ();
     type Format = ();
@@ -94,7 +115,10 @@ where
 }
 
 /// A box containing a lang item.
-pub struct LangBox<L> {
+pub struct LangBox<L>
+where
+    L: Lang,
+{
     inner: Rc<dyn LangItem<L>>,
 }
 

@@ -1,5 +1,6 @@
+use crate::lang::Java;
 use crate::tokens;
-use crate::{Java, Tokens};
+use crate::Tokens;
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 ///

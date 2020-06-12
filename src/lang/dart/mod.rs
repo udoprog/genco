@@ -20,8 +20,9 @@ pub use self::doc_comment::DocComment;
 
 use crate as genco;
 use crate::fmt;
+use crate::lang::{Lang, LangItem};
+use crate::quote_in;
 use crate::tokens::ItemStr;
-use crate::{quote_in, Lang, LangItem};
 use std::fmt::Write as _;
 
 /// Tokens container specialization for Dart.

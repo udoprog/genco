@@ -1,5 +1,6 @@
+use crate::lang::Lang;
 use crate::tokens;
-use crate::{Lang, Tokens};
+use crate::Tokens;
 
 /// Struct containing a type that is quoted.
 ///

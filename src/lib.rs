@@ -116,10 +116,9 @@ pub use genco_macros::{quote, quote_in};
 mod macros;
 pub mod ext;
 pub mod fmt;
-mod lang;
+pub mod lang;
 pub mod prelude;
 pub mod tokens;
 
 pub use self::ext::{Display, DisplayExt, Quoted, QuotedExt};
-pub use self::lang::*;
 pub use self::tokens::Tokens;

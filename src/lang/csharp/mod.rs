@@ -19,8 +19,9 @@ mod comment;
 
 use crate as genco;
 use crate::fmt;
+use crate::lang::{Lang, LangItem};
+use crate::quote_in;
 use crate::tokens::ItemStr;
-use crate::{quote_in, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 pub use self::block_comment::BlockComment;
