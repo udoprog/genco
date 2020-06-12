@@ -37,7 +37,8 @@
 //! ```
 
 use crate::fmt;
-use crate::{ItemStr, Lang};
+use crate::tokens::ItemStr;
+use crate::Lang;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::Write as _;
 use std::rc::Rc;
@@ -429,7 +430,7 @@ impl Type {
 }
 
 impl_lang_item! {
-    impl FormatTokens<Rust> for Type;
+    impl FormatInto<Rust> for Type;
     impl From<Type> for LangBox<Rust>;
 
     impl LangItem<Rust> for Type {

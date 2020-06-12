@@ -1,4 +1,5 @@
-use crate::{FormatTokens, Item, Lang, Tokens};
+use crate::tokens;
+use crate::{Lang, Tokens};
 use std::fmt;
 
 /// Struct containing a type that implements [Display][fmt::Display] and can be
@@ -18,13 +19,13 @@ impl<'a, T> Display<'a, T> {
     }
 }
 
-impl<'a, T, L> FormatTokens<L> for Display<'a, T>
+impl<'a, T, L> tokens::FormatInto<L> for Display<'a, T>
 where
     L: Lang,
     T: fmt::Display,
 {
-    fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        tokens.item(tokens::Item::Literal(
             self.inner.to_string().into_boxed_str().into(),
         ));
     }

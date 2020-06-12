@@ -9,7 +9,8 @@
 //! ```
 
 use crate::fmt;
-use crate::{FormatTokens, Item, Lang, LangItem, RegisterTokens};
+use crate::tokens::{FormatInto, Item, RegisterTokens};
+use crate::{Lang, LangItem};
 use std::cmp;
 use std::iter::FromIterator;
 use std::num::NonZeroI16;
@@ -29,7 +30,8 @@ use std::vec;
 /// * Every [line] must be preceeded by a [push].
 ///
 /// ```rust
-/// use genco::{Tokens, Item};
+/// use genco::Tokens;
+/// use genco::tokens::Item;
 ///
 /// let mut tokens = Tokens::<()>::new();
 ///
@@ -84,7 +86,7 @@ where
     ///
     /// ```rust
     /// use genco::prelude::*;
-    /// use genco::{ItemStr, Item};
+    /// use genco::tokens::{ItemStr, Item};
     ///
     /// let tokens: Tokens<()> = quote!(foo bar baz);
     /// let mut it = tokens.iter();
@@ -108,7 +110,7 @@ where
     ///
     /// ```rust
     /// use genco::prelude::*;
-    /// use genco::{ItemStr, Item};
+    /// use genco::tokens::{ItemStr, Item};
     ///
     /// let tokens: Tokens<()> = quote!(foo bar baz);
     /// let mut it = tokens.into_iter();
@@ -128,11 +130,11 @@ where
 
     /// Append the given tokens.
     ///
-    /// This append function takes anything implementing [FormatTokens] making
+    /// This append function takes anything implementing [FormatInto] making
     /// the argument's behavior customizable. Most primitive types have built-in
-    /// implementations of [FormatTokens] treating them as raw tokens.
+    /// implementations of [FormatInto] treating them as raw tokens.
     ///
-    /// Most notabley, things implementing [FormatTokens] can be used as
+    /// Most notabley, things implementing [FormatInto] can be used as
     /// arguments for [interpolation] in the [quote!] macro.
     ///
     /// [quote!]: macro.quote.html
@@ -150,9 +152,9 @@ where
     /// ```
     pub fn append<T>(&mut self, tokens: T)
     where
-        T: FormatTokens<L>,
+        T: FormatInto<L>,
     {
-        tokens.format_tokens(self)
+        tokens.format_into(self)
     }
 
     /// Push a single item to the stream while checking for structural
@@ -162,7 +164,7 @@ where
     ///
     /// ```rust
     /// use genco::prelude::*;
-    /// use genco::{Item, ItemStr};
+    /// use genco::tokens::{Item, ItemStr};
     ///
     /// let mut tokens = Tokens::<()>::new();
     ///
@@ -195,7 +197,7 @@ where
     ///
     /// ```rust
     /// use genco::prelude::*;
-    /// use genco::{Item, ItemStr};
+    /// use genco::tokens::{Item, ItemStr};
     ///
     /// let mut tokens: Tokens<()> = quote!(foo bar);
     /// tokens.extend(quote!(#<space>baz));
@@ -977,7 +979,7 @@ mod tests {
     struct Import(u32);
 
     impl_lang_item! {
-        impl FormatTokens<Lang> for Import;
+        impl FormatInto<Lang> for Import;
         impl From<Import> for LangBox<Lang>;
 
         impl LangItem<Lang> for Import {

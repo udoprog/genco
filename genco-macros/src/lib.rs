@@ -35,7 +35,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// # Interpolation
 ///
 /// Elements are interpolated using `#`, so to include the variable `test`,
-/// you could write `#test`. Returned elements must implement [FormatTokens].
+/// you could write `#test`. Returned elements must implement [FormatInto].
 ///
 /// **Note:** `#` can be escaped by repeating it twice. So `##` would produce a
 /// single `#` token.
@@ -103,7 +103,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// }
 /// ```
 ///
-/// [FormatTokens]: https://docs.rs/genco/0/genco/trait.FormatTokens.html
+/// [FormatInto]: https://docs.rs/genco/0/genco/tokens/trait.FormatInto.html
 ///
 /// # Escape Sequences
 ///

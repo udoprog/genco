@@ -16,7 +16,8 @@
 
 use crate as genco;
 use crate::fmt;
-use crate::{quote_in, ItemStr, Lang};
+use crate::tokens::ItemStr;
+use crate::{quote_in, Lang};
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
@@ -48,7 +49,7 @@ pub struct Type {
 }
 
 impl_lang_item! {
-    impl FormatTokens<Python> for Type;
+    impl FormatInto<Python> for Type;
     impl From<Type> for LangBox<Python>;
 
     impl LangItem<Python> for Type {

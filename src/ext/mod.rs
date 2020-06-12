@@ -1,6 +1,6 @@
 //! Extension traits for working with genco.
 
-use crate::ItemStr;
+use crate::tokens::ItemStr;
 use std::fmt;
 
 mod display;
@@ -56,13 +56,14 @@ impl<T> QuotedExt for T where T: Into<ItemStr> {}
 pub trait DisplayExt {
     /// Trait to provide string quoting through `<stmt>.display()`.
     ///
-    /// This is an alternative to manually implementing [FormatTokens], since it
-    /// can tokenize anything that implements [Display][fmt::Display] directly.
+    /// This is an alternative to manually implementing [tokens::FormatInto], since
+    /// it can tokenize anything that implements [Display][fmt::Display]
+    /// directly.
     ///
-    /// On the other hand, things implementing [FormatTokens] have access to the
+    /// On the other hand, things implementing [tokens::FormatInto] have access to the
     /// full range of the [Tokens] api, allowing it to work more efficiently.
     ///
-    /// [FormatTokens]: crate::FormatTokens
+    /// [tokens::FormatInto]: crate::tokens::FormatInto
     /// [Tokens]: crate::Tokens
     ///
     /// # Examples

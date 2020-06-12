@@ -20,7 +20,8 @@ pub use self::block_comment::BlockComment;
 
 use crate as genco;
 use crate::fmt;
-use crate::{quote, quote_in, ItemStr, Lang, LangItem};
+use crate::tokens::ItemStr;
+use crate::{quote, quote_in, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap};
 
 /// Tokens container specialized for Java.

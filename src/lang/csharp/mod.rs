@@ -19,7 +19,8 @@ mod comment;
 
 use crate as genco;
 use crate::fmt;
-use crate::{quote_in, ItemStr, Lang, LangItem};
+use crate::tokens::ItemStr;
+use crate::{quote_in, Lang, LangItem};
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 pub use self::block_comment::BlockComment;
@@ -774,8 +775,8 @@ where
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(csharp::comment("Foo"))
-///     #(csharp::comment("Bar"))
+///     #(csharp::comment(&["Foo"]))
+///     #(csharp::comment(&["Bar"]))
 /// };
 ///
 /// assert_eq!(

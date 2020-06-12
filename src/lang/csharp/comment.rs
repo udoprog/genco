@@ -1,19 +1,20 @@
-use crate::{Csharp, FormatTokens, ItemStr, Tokens};
+use crate::tokens;
+use crate::{Csharp, Tokens};
 
 /// Format a doc comment where each line is preceeded by `//`.
 ///
 /// This struct is created by the [comment][super::comment()] function.
 pub struct Comment<T>(pub(super) T);
 
-impl<T> FormatTokens<Csharp> for Comment<T>
+impl<T> tokens::FormatInto<Csharp> for Comment<T>
 where
     T: IntoIterator,
-    T::Item: Into<ItemStr>,
+    T::Item: Into<tokens::ItemStr>,
 {
-    fn format_tokens(self, tokens: &mut Tokens<Csharp>) {
+    fn format_into(self, tokens: &mut Tokens<Csharp>) {
         for line in self.0 {
             tokens.push();
-            tokens.append(ItemStr::Static("//"));
+            tokens.append(tokens::static_literal("//"));
             tokens.space();
             tokens.append(line.into());
         }

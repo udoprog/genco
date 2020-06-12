@@ -2,7 +2,7 @@
 
 macro_rules! impl_lang_item {
     (
-        $(impl FormatTokens<$from_lang:ty> for $from_ty:ident;)?
+        $(impl FormatInto<$from_lang:ty> for $from_ty:ident;)?
         $(impl From<$box_from_ty:ident> for LangBox<$box_lang:ty>;)?
 
         $(impl LangItem<$lang:ty> for $ty:ident {
@@ -10,15 +10,15 @@ macro_rules! impl_lang_item {
         })?
     ) => {
         $(
-        impl crate::FormatTokens<$from_lang> for $from_ty {
-            fn format_tokens(self, tokens: &mut crate::Tokens<$from_lang>) {
-                tokens.item(crate::Item::LangBox(self.into()));
+        impl crate::tokens::FormatInto<$from_lang> for $from_ty {
+            fn format_into(self, tokens: &mut crate::Tokens<$from_lang>) {
+                tokens.item(crate::tokens::Item::LangBox(self.into()));
             }
         }
 
-        impl<'a> crate::FormatTokens<$from_lang> for &'a $from_ty {
-            fn format_tokens(self, tokens: &mut crate::Tokens<$from_lang>) {
-                tokens.item(crate::Item::LangBox(self.into()));
+        impl<'a> crate::tokens::FormatInto<$from_lang> for &'a $from_ty {
+            fn format_into(self, tokens: &mut crate::Tokens<$from_lang>) {
+                tokens.item(crate::tokens::Item::LangBox(self.into()));
             }
         }
         )?
@@ -173,23 +173,23 @@ macro_rules! impl_dynamic_types {
             }
         )*
 
-        impl crate::FormatTokens<$lang> for $any_type {
-            fn format_tokens(self, tokens: &mut $crate::Tokens<$lang>) {
+        impl crate::tokens::FormatInto<$lang> for $any_type {
+            fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
                 let value = match self.inner {
                     $(AnyInner::$ty(value) => value as std::rc::Rc<dyn LangItem<$lang>>,)*
                 };
 
-                tokens.item(crate::Item::LangBox(value.into()));
+                tokens.item(crate::tokens::Item::LangBox(value.into()));
             }
         }
 
-        impl<'a> crate::FormatTokens<$lang> for &'a $any_type {
-            fn format_tokens(self, tokens: &mut $crate::Tokens<$lang>) {
+        impl<'a> crate::tokens::FormatInto<$lang> for &'a $any_type {
+            fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
                 let value = match &self.inner {
                     $(AnyInner::$ty(value) => value.clone() as std::rc::Rc<dyn LangItem<$lang>>,)*
                 };
 
-                tokens.item(crate::Item::LangBox(value.into()));
+                tokens.item(crate::tokens::Item::LangBox(value.into()));
             }
         }
 
@@ -254,7 +254,7 @@ macro_rules! impl_dynamic_types {
             }
 
             impl_lang_item! {
-                impl FormatTokens<$lang> for $ty;
+                impl FormatInto<$lang> for $ty;
                 impl From<$ty> for LangBox<$lang>;
             }
         )*
@@ -288,25 +288,25 @@ macro_rules! impl_modifier {
             }
         }
 
-        impl crate::FormatTokens<$lang> for $name {
-            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
+        impl crate::tokens::FormatInto<$lang> for $name {
+            fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
                 tokens.append(self.name());
             }
         }
 
-        impl crate::FormatTokens<$lang> for Vec<$name> {
-            fn format_tokens(self, tokens: &mut crate::Tokens<$lang>) {
+        impl crate::tokens::FormatInto<$lang> for Vec<$name> {
+            fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
                 use std::collections::BTreeSet;
 
                 let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();
 
                 if let Some(modifier) = it.next() {
-                    modifier.format_tokens(tokens);
+                    modifier.format_into(tokens);
                 }
 
                 for modifier in it {
                     tokens.space();
-                    modifier.format_tokens(tokens);
+                    modifier.format_into(tokens);
                 }
             }
         }

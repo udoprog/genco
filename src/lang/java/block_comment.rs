@@ -1,16 +1,17 @@
-use crate::{FormatTokens, ItemStr, Java, Tokens};
+use crate::tokens;
+use crate::{Java, Tokens};
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 ///
 /// This struct is created by the [block_comment][super::block_comment()] function.
 pub struct BlockComment<T>(pub(super) T);
 
-impl<T> FormatTokens<Java> for BlockComment<T>
+impl<T> tokens::FormatInto<Java> for BlockComment<T>
 where
     T: IntoIterator,
-    T::Item: Into<ItemStr>,
+    T::Item: Into<tokens::ItemStr>,
 {
-    fn format_tokens(self, tokens: &mut Tokens<Java>) {
+    fn format_into(self, tokens: &mut Tokens<Java>) {
         let mut it = self.0.into_iter().peekable();
 
         if it.peek().is_none() {
@@ -18,12 +19,12 @@ where
         }
 
         tokens.push();
-        tokens.append(ItemStr::Static("/**"));
+        tokens.append(tokens::static_literal("/**"));
         tokens.push();
 
         for line in it {
             tokens.space();
-            tokens.append(ItemStr::Static("*"));
+            tokens.append(tokens::static_literal("*"));
             tokens.space();
             tokens.append(line.into());
             tokens.push();

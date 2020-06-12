@@ -43,7 +43,8 @@
 //! ```
 
 use crate::fmt;
-use crate::{ItemStr, Lang, LangItem};
+use crate::tokens::ItemStr;
+use crate::{Lang, LangItem};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 

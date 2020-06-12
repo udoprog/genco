@@ -1,4 +1,5 @@
-use crate::{FormatTokens, Item, ItemStr, Lang, Tokens};
+use crate::tokens;
+use crate::{Lang, Tokens};
 
 /// Struct containing a type that is quoted.
 ///
@@ -14,12 +15,12 @@ impl<T> Quoted<T> {
     }
 }
 
-impl<T, L> FormatTokens<L> for Quoted<T>
+impl<T, L> tokens::FormatInto<L> for Quoted<T>
 where
     L: Lang,
-    T: Into<ItemStr>,
+    T: Into<tokens::ItemStr>,
 {
-    fn format_tokens(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Quoted(self.inner.into()));
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        tokens.item(tokens::Item::Quoted(self.inner.into()));
     }
 }

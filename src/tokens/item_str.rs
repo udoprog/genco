@@ -1,6 +1,7 @@
 //! Helper trait to take ownership of strings.
 
-use crate::{FormatTokens, Lang, Tokens};
+use crate::tokens;
+use crate::{Lang, Tokens};
 use std::borrow::Cow;
 use std::fmt;
 use std::ops::Deref;
@@ -16,20 +17,20 @@ pub enum ItemStr {
 }
 
 /// Convert stringy things.
-impl<L> FormatTokens<L> for ItemStr
+impl<L> tokens::FormatInto<L> for ItemStr
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<L>) {
+    fn format_into(self, tokens: &mut Tokens<L>) {
         tokens.item(self.into());
     }
 }
 
-impl<'a, L> FormatTokens<L> for &'a ItemStr
+impl<'a, L> tokens::FormatInto<L> for &'a ItemStr
 where
     L: Lang,
 {
-    fn format_tokens(self, tokens: &mut Tokens<L>) {
+    fn format_into(self, tokens: &mut Tokens<L>) {
         tokens.item(self.clone().into());
     }
 }

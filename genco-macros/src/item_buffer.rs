@@ -29,7 +29,7 @@ impl<'a> ItemBuffer<'a> {
         if !self.buffer.is_empty() {
             let receiver = self.receiver;
             let s = syn::LitStr::new(&self.buffer, Span::call_site());
-            tokens.extend(quote::quote!(#receiver.append(genco::ItemStr::Static(#s));));
+            tokens.extend(quote::quote!(#receiver.append(genco::tokens::ItemStr::Static(#s));));
             self.buffer.clear();
         }
     }

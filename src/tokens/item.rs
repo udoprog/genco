@@ -1,7 +1,8 @@
 //! A single element
 
 use crate::fmt;
-use crate::{ItemStr, Lang, LangBox, LangItem as _};
+use crate::tokens;
+use crate::{Lang, LangBox, LangItem as _, Tokens};
 use std::cmp;
 use std::num::NonZeroI16;
 use std::rc::Rc;
@@ -13,12 +14,12 @@ where
 {
     /// A literal item.
     /// Is added as a raw string to the stream of tokens.
-    Literal(ItemStr),
+    Literal(tokens::ItemStr),
     /// A quoted string.
     ///
     /// The string content is quoted with the language-specific [quoting method].
     /// [quoting method]: Lang::quote_string
-    Quoted(ItemStr),
+    Quoted(tokens::ItemStr),
     /// A language-specific boxed item.
     LangBox(LangBox<L>),
     /// A language-specific boxed item that is not rendered.
@@ -77,6 +78,15 @@ where
     }
 }
 
+impl<L> tokens::FormatInto<L> for Item<L>
+where
+    L: Lang,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        tokens.item(self);
+    }
+}
+
 impl<L> std::fmt::Debug for Item<L>
 where
     L: Lang,
@@ -122,11 +132,11 @@ where
     }
 }
 
-impl<L> From<ItemStr> for Item<L>
+impl<L> From<tokens::ItemStr> for Item<L>
 where
     L: Lang,
 {
-    fn from(value: ItemStr) -> Self {
+    fn from(value: tokens::ItemStr) -> Self {
         Item::Literal(value)
     }
 }

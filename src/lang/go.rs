@@ -44,7 +44,8 @@
 
 use crate as genco;
 use crate::fmt;
-use crate::{quote_in, ItemStr, Lang, LangItem};
+use crate::tokens::ItemStr;
+use crate::{quote_in, Lang, LangItem};
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 

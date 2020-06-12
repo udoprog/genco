@@ -7,7 +7,7 @@
 use std::num::NonZeroI16;
 
 use genco::prelude::*;
-use genco::{Item, Item::*, ItemStr::*};
+use genco::tokens::{Item, Item::*, ItemStr::*};
 
 fn num(n: i16) -> NonZeroI16 {
     NonZeroI16::new(n).expect("non-valid non-zero u16")
