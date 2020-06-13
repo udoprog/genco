@@ -48,6 +48,7 @@
 use crate::fmt;
 use crate::lang::{Lang, LangItem};
 use crate::tokens::ItemStr;
+use relative_path::RelativePathBuf;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
@@ -59,7 +60,66 @@ pub struct Format {}
 
 /// Configuration for JavaScript.
 #[derive(Debug, Default)]
-pub struct Config {}
+pub struct Config {
+    module_path: Option<RelativePathBuf>,
+}
+
+impl Config {
+    /// Configure the path to the current module being renderer.
+    ///
+    /// This setting will determine what path imports are renderer relative
+    /// towards. So importing a module from `"foo/bar.js"`, and setting this to
+    /// `"foo/baz.js"` will cause the import to be rendered relatively as
+    /// `"../bar.js"`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::fmt;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let foo1 = js::import(js::Module::Path("foo/bar.js".into()), "Foo1");
+    /// let foo2 = js::import(js::Module::Path("foo/bar.js".into()), "Foo2");
+    /// let react = js::import_default("react", "React");
+    ///
+    /// let toks: js::Tokens = quote! {
+    ///     #foo1
+    ///     #foo2
+    ///     #react
+    /// };
+    ///
+    /// let mut w = fmt::VecWriter::new();
+    ///
+    /// let config = js::Config::default().with_module_path("foo/baz.js");
+    /// let fmt = fmt::Config::from_lang::<JavaScript>();
+    ///
+    /// toks.format_file(&mut w.as_formatter(fmt), &config)?;
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import {Foo1, Foo2} from \"../bar.js\";",
+    ///         "import React from \"react\";",
+    ///         "",
+    ///         "Foo1",
+    ///         "Foo2",
+    ///         "React"
+    ///     ],
+    ///     w.into_vec()
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_module_path<M>(self, module_path: M) -> Self
+    where
+        M: Into<RelativePathBuf>,
+    {
+        Self {
+            module_path: Some(module_path.into()),
+            ..self
+        }
+    }
+}
 
 impl_dynamic_types! { JavaScript =>
     pub trait TypeTrait {}
@@ -79,7 +139,7 @@ impl_dynamic_types! { JavaScript =>
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// Module of the imported name.
-    module: ItemStr,
+    module: Module,
     /// Name imported.
     name: ItemStr,
     /// Alias of an imported item.
@@ -153,13 +213,37 @@ impl_lang_item! {
     }
 }
 
+/// A module being imported.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub enum Module {
+    /// A module imported from a specific path.
+    ///
+    /// The path will be relativized according to the module specified in the
+    /// [Config::with_module_path].
+    Path(RelativePathBuf),
+    /// A globally imported module.
+    Global(ItemStr),
+}
+
+impl<'a> From<&'a str> for Module {
+    fn from(value: &'a str) -> Self {
+        Self::Global(value.into())
+    }
+}
+
+impl From<String> for Module {
+    fn from(value: String) -> Self {
+        Self::Global(value.into())
+    }
+}
+
 /// The default imported item.
 ///
 /// Created using the [import_default()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct ImportDefault {
     /// Module of the imported name.
-    module: ItemStr,
+    module: Module,
     /// Name imported.
     name: ItemStr,
 }
@@ -202,11 +286,11 @@ pub struct JavaScript(());
 
 impl JavaScript {
     /// Translate imports into the necessary tokens.
-    fn imports(out: &mut Tokens, tokens: &Tokens) {
+    fn imports(out: &mut Tokens, tokens: &Tokens, config: &Config) {
         use crate as genco;
         use crate::prelude::*;
 
-        let mut modules = BTreeMap::<&ItemStr, Module<'_>>::new();
+        let mut modules = BTreeMap::<&Module, ResolvedModule<'_>>::new();
 
         for import in tokens.walk_imports() {
             match import.as_enum() {
@@ -266,14 +350,18 @@ impl JavaScript {
 
                         tokens.append("}");
                     }
-                }) from #(quoted(name));
+                }) from #(match (&config.module_path, name) {
+                    (_, Module::Global(from)) => #(quoted(from)),
+                    (None, Module::Path(path)) => #(quoted(path.as_str())),
+                    (Some(module_path), Module::Path(path)) => #(quoted(module_path.relative(path).as_str())),
+                });
             };
         }
 
         out.line();
 
         #[derive(Default)]
-        struct Module<'a> {
+        struct ResolvedModule<'a> {
             default_import: Option<&'a ItemStr>,
             set: BTreeSet<ImportedElement<'a>>,
         }
@@ -319,7 +407,7 @@ impl Lang for JavaScript {
         config: &Self::Config,
     ) -> fmt::Result {
         let mut imports = Tokens::new();
-        Self::imports(&mut imports, tokens);
+        Self::imports(&mut imports, tokens, config);
         let format = Format::default();
         imports.format(out, config, &format)?;
         tokens.format(out, config, &format)?;
@@ -357,7 +445,7 @@ impl Lang for JavaScript {
 /// ```
 pub fn import<M, N>(module: M, name: N) -> Import
 where
-    M: Into<ItemStr>,
+    M: Into<Module>,
     N: Into<ItemStr>,
 {
     Import {
@@ -403,7 +491,7 @@ where
 /// ```
 pub fn import_default<M, N>(module: M, name: N) -> ImportDefault
 where
-    M: Into<ItemStr>,
+    M: Into<Module>,
     N: Into<ItemStr>,
 {
     ImportDefault {

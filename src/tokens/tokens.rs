@@ -284,11 +284,6 @@ where
     ///
     /// # Examples
     ///
-    /// The `register` functionality is available through the [quote!] macro
-    /// by using the [register] extension.
-    ///
-    /// [register]: crate::ext::RegisterExt::register
-    ///
     /// ```rust
     ///
     /// use genco::prelude::*;
