@@ -56,6 +56,7 @@
 //! # }
 //! ```
 
+mod cursor;
 mod display;
 mod format_into;
 mod from_fn;

@@ -60,8 +60,63 @@ where
         fmt::Indentation::Space(4)
     }
 
+    /// Start a string quote.
+    fn open_quote(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+        _has_eval: bool,
+    ) -> fmt::Result {
+        use std::fmt::Write as _;
+        out.write_char('"')?;
+        Ok(())
+    }
+
+    /// End a string quote.
+    fn close_quote(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+        _has_eval: bool,
+    ) -> fmt::Result {
+        use std::fmt::Write as _;
+        out.write_char('"')?;
+        Ok(())
+    }
+
+    /// A simple, single-literal string evaluation.
+    fn string_eval_literal(
+        out: &mut fmt::Formatter<'_>,
+        config: &Self::Config,
+        format: &Self::Format,
+        literal: &str,
+    ) -> fmt::Result {
+        Self::start_string_eval(out, config, format)?;
+        out.write_str(literal)?;
+        Self::end_string_eval(out, config, format)?;
+        Ok(())
+    }
+
+    /// Start a string-interpolated eval.
+    fn start_string_eval(
+        _out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+    ) -> fmt::Result {
+        Ok(())
+    }
+
+    /// End a string interpolated eval.
+    fn end_string_eval(
+        _out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+    ) -> fmt::Result {
+        Ok(())
+    }
+
     /// Performing string quoting according to language convention.
-    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         out.write_str(input)
     }
 
@@ -183,10 +238,8 @@ where
 ///
 /// This is one of the more common escape sequences and is provided here so you
 /// can use it if a language you've implemented requires it.
-pub fn c_family_escape(out: &mut fmt::Formatter, input: &str) -> fmt::Result {
+pub fn c_family_write_quoted(out: &mut fmt::Formatter, input: &str) -> fmt::Result {
     use std::fmt::Write as _;
-
-    out.write_char('"')?;
 
     for c in input.chars() {
         match c {
@@ -224,6 +277,5 @@ pub fn c_family_escape(out: &mut fmt::Formatter, input: &str) -> fmt::Result {
         };
     }
 
-    out.write_char('"')?;
     Ok(())
 }

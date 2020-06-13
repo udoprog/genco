@@ -166,6 +166,17 @@ impl<'a> Encoder<'a> {
         self.item_buffer.push_str(string);
     }
 
+    pub(crate) fn encode_string(&mut self, has_eval: bool, stream: TokenStream) {
+        self.item_buffer.flush(&mut self.output);
+        let receiver = self.receiver;
+
+        self.output.extend(quote::quote! {
+            #receiver.item(genco::tokens::Item::OpenQuote(#has_eval));
+            #stream
+            #receiver.item(genco::tokens::Item::CloseQuote);
+        });
+    }
+
     pub(crate) fn encode_quoted(&mut self, s: syn::LitStr) {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);

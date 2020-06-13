@@ -1,6 +1,5 @@
 //! A single element
 
-use crate::fmt;
 use crate::lang::{Lang, LangBox, LangItem as _};
 use crate::tokens;
 use crate::Tokens;
@@ -16,11 +15,6 @@ where
     /// A literal item.
     /// Is added as a raw string to the stream of tokens.
     Literal(tokens::ItemStr),
-    /// A quoted string.
-    ///
-    /// The string content is quoted with the language-specific [quoting method].
-    /// [quoting method]: Lang::quote_string
-    Quoted(tokens::ItemStr),
     /// A language-specific boxed item.
     LangBox(LangBox<L>),
     /// A language-specific boxed item that is not rendered.
@@ -36,47 +30,20 @@ where
     Space,
     /// Manage indentation.
     Indentation(NonZeroI16),
-}
-
-impl<L> Item<L>
-where
-    L: Lang,
-{
-    /// Format the given element.
-    pub fn format(
-        &self,
-        out: &mut fmt::Formatter<'_>,
-        config: &L::Config,
-        format: &L::Format,
-    ) -> fmt::Result {
-        match *self {
-            Self::Registered(_) => {}
-            Self::Literal(ref literal) => {
-                out.write_str(literal.as_ref())?;
-            }
-            Self::Quoted(ref literal) => {
-                L::quote_string(out, literal.as_ref())?;
-            }
-            Self::LangBox(ref lang) => {
-                lang.format(out, config, format)?;
-            }
-            // whitespace below
-            Self::Push => {
-                out.push();
-            }
-            Self::Line => {
-                out.line();
-            }
-            Self::Space => {
-                out.space();
-            }
-            Self::Indentation(n) => {
-                out.indentation(n);
-            }
-        }
-
-        Ok(())
-    }
+    /// Switch to handling input as a quote.
+    ///
+    /// The argument indicates whether the string contains any interpolated
+    /// values.
+    ///
+    /// The string content is quoted with the language-specific [quoting method].
+    /// [quoting method]: Lang::Openquote_string
+    OpenQuote(bool),
+    /// Close the current quote.
+    CloseQuote,
+    /// Switch on evaluation. Only valid during string handling.
+    OpenEval,
+    /// Close evaluation.
+    CloseEval,
 }
 
 impl<L> tokens::FormatInto<L> for Item<L>
@@ -95,13 +62,16 @@ where
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(s) => write!(fmt, "Literal({:?})", s),
-            Self::Quoted(s) => write!(fmt, "Quoted({:?})", s),
             Self::LangBox(item) => write!(fmt, "LangBox({:?})", item),
             Self::Registered(item) => write!(fmt, "Registered({:?})", item),
             Self::Push => write!(fmt, "Push"),
             Self::Line => write!(fmt, "Line"),
             Self::Space => write!(fmt, "Space"),
             Self::Indentation(n) => write!(fmt, "Indentation({:?})", n),
+            Self::OpenQuote(has_eval) => write!(fmt, "OpenQuote({:?})", has_eval),
+            Self::CloseQuote => write!(fmt, "CloseQuote"),
+            Self::OpenEval => write!(fmt, "OpenEval"),
+            Self::CloseEval => write!(fmt, "CloseEval"),
         }
     }
 }
@@ -167,13 +137,16 @@ where
     fn clone(&self) -> Self {
         match self {
             Self::Literal(literal) => Self::Literal(literal.clone()),
-            Self::Quoted(quoted) => Self::Quoted(quoted.clone()),
             Self::LangBox(lang) => Self::LangBox(lang.clone()),
             Self::Registered(lang) => Self::Registered(lang.clone()),
             Self::Push => Self::Push,
             Self::Line => Self::Line,
             Self::Space => Self::Space,
             Self::Indentation(n) => Self::Indentation(*n),
+            Self::OpenQuote(has_eval) => Self::OpenQuote(*has_eval),
+            Self::CloseQuote => Self::CloseQuote,
+            Self::OpenEval => Self::OpenEval,
+            Self::CloseEval => Self::CloseEval,
         }
     }
 }
@@ -185,13 +158,16 @@ where
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Literal(a), Self::Literal(b)) => a == b,
-            (Self::Quoted(a), Self::Quoted(b)) => a == b,
             (Self::LangBox(a), Self::LangBox(b)) => a.eq(b),
             (Self::Registered(a), Self::Registered(b)) => a.eq(b),
             (Self::Push, Self::Push) => true,
             (Self::Line, Self::Line) => true,
             (Self::Space, Self::Space) => true,
             (Self::Indentation(a), Self::Indentation(b)) => *a == *b,
+            (Self::OpenQuote(a), Self::OpenQuote(b)) => *a == *b,
+            (Self::CloseQuote, Self::CloseQuote) => true,
+            (Self::OpenEval, Self::OpenEval) => true,
+            (Self::CloseEval, Self::CloseEval) => true,
             _ => false,
         }
     }

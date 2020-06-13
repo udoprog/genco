@@ -64,6 +64,8 @@ pub use self::vec_writer::VecWriter;
 
 /// Result type for the `fmt` module.
 pub type Result<T = ()> = std::result::Result<T, std::fmt::Error>;
+/// Error for the `fmt` module.
+pub type Error = std::fmt::Error;
 
 /// Buffer used as indentation source.
 static SPACES: &str = "                                                                                                    ";

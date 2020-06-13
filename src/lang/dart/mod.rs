@@ -9,8 +9,26 @@
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: dart::Tokens = quote!("start π 😊 \n \x7f ÿ $ end");
-//! assert_eq!("\"start π 😊 \\n \\x7f ÿ \\$ end\"", toks.to_string()?);
+//! let toks: dart::Tokens = quote!("start π 😊 \n \x7f ÿ $ \\ end");
+//! assert_eq!("\"start π 😊 \\n \\x7f ÿ \\$ \\\\ end\"", toks.to_string()?);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! # String Interpolation in Dart
+//!
+//! Strings can be interpolated in Dart, by using the special `$_(<string>)`
+//! escape sequence.
+//!
+//! ```rust
+//! use genco::prelude::*;
+//!
+//! # fn main() -> genco::fmt::Result {
+//! let toks: dart::Tokens = quote!(#_(  Hello: $var  ));
+//! assert_eq!("\"  Hello: $var  \"", toks.to_string()?);
+//!
+//! let toks: dart::Tokens = quote!(#_(  Hello: $(a + b)  ));
+//! assert_eq!("\"  Hello: ${a + b}  \"", toks.to_string()?);
 //! # Ok(())
 //! # }
 //! ```
@@ -315,10 +333,39 @@ impl Lang for Dart {
     type Format = Format;
     type Import = Type;
 
-    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+    fn string_eval_literal(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+        literal: &str,
+    ) -> fmt::Result {
+        write!(out, "${}", literal)?;
+        Ok(())
+    }
+
+    /// Start a string-interpolated eval.
+    fn start_string_eval(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+    ) -> fmt::Result {
+        out.write_str("${")?;
+        Ok(())
+    }
+
+    /// End a string interpolated eval.
+    fn end_string_eval(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+    ) -> fmt::Result {
+        out.write_char('}')?;
+        Ok(())
+    }
+
+    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // Note: Dart is like C escape, but since it supports string
         // interpolation, `$` also needs to be escaped!
-        out.write_char('"')?;
 
         for c in input.chars() {
             match c {
@@ -350,8 +397,6 @@ impl Lang for Dart {
                 }
             };
         }
-
-        out.write_char('"')?;
 
         Ok(())
     }

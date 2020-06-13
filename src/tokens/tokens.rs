@@ -18,6 +18,9 @@ use std::num::NonZeroI16;
 use std::slice;
 use std::vec;
 
+#[derive(Default, Clone, Copy)]
+struct EndOnEval(bool);
+
 /// A stream of tokens.
 ///
 /// # Structural Guarantees
@@ -221,7 +224,9 @@ where
     where
         S: Into<ItemStr>,
     {
-        self.item(Item::Quoted(s.into()));
+        self.item(Item::OpenQuote(false));
+        self.item(Item::Literal(s.into()));
+        self.item(Item::CloseQuote);
     }
 
     /// Extend with another stream of tokens.
@@ -616,11 +621,90 @@ where
         config: &L::Config,
         format: &L::Format,
     ) -> fmt::Result {
-        for element in &self.items {
-            element.format(out, config, format)?;
+        use crate::tokens::cursor;
+        use std::mem;
+
+        let mut cursor = cursor::Cursor::new(&self.items);
+
+        let mut stack = smallvec::SmallVec::<[Frame; 2]>::new();
+        stack.push(Frame::default());
+
+        while let (Some(item), Some(head)) = (cursor.next(), stack.last_mut()) {
+            let Frame {
+                in_quote,
+                has_eval,
+                end_on_eval,
+            } = head;
+
+            match item {
+                Item::Registered(_) => {}
+                Item::Literal(literal) => {
+                    if *in_quote {
+                        L::write_quoted(out, &literal)?;
+                    } else {
+                        out.write_str(&literal)?;
+                    }
+                }
+                Item::OpenQuote(e) if !*in_quote => {
+                    *has_eval = *e;
+                    *in_quote = true;
+                    L::open_quote(out, config, format, *has_eval)?;
+                }
+                Item::CloseQuote if *in_quote => {
+                    *in_quote = false;
+                    L::close_quote(out, config, format, mem::take(has_eval))?;
+                }
+                Item::LangBox(lang) => {
+                    lang.format(out, config, format)?;
+                }
+                // whitespace below
+                Item::Push => {
+                    out.push();
+                }
+                Item::Line => {
+                    out.line();
+                }
+                Item::Space => {
+                    out.space();
+                }
+                Item::Indentation(n) => {
+                    out.indentation(*n);
+                }
+                Item::OpenEval if *in_quote => {
+                    if cursor.peek::<cursor::Literal>() && cursor.peek1::<cursor::CloseEval>() {
+                        let literal = cursor.parse::<cursor::Literal>()?;
+                        L::string_eval_literal(out, config, format, literal)?;
+                        cursor.parse::<cursor::CloseEval>()?;
+                    } else {
+                        L::start_string_eval(out, config, format)?;
+
+                        stack.push(Frame {
+                            in_quote: false,
+                            has_eval: false,
+                            end_on_eval: true,
+                        });
+                    }
+                }
+                // Eval are only allowed within quotes.
+                Item::CloseEval if *end_on_eval => {
+                    L::end_string_eval(out, config, format)?;
+                    stack.pop();
+                }
+                _ => {
+                    // Anything else is an illegal state for formatting.
+                    return Err(std::fmt::Error);
+                }
+            }
         }
 
-        Ok(())
+        return Ok(());
+
+        #[derive(Default, Clone, Copy)]
+        struct Frame {
+            in_quote: bool,
+            has_eval: bool,
+            end_on_eval: bool,
+        }
     }
 
     /// File formatting function for token streams that gives full control over the

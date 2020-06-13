@@ -1,5 +1,5 @@
 use crate::lang::Lang;
-use crate::tokens::{FormatInto, Item, ItemStr};
+use crate::tokens::{FormatInto, ItemStr};
 use crate::Tokens;
 
 /// Function to provide string quoting.
@@ -59,6 +59,6 @@ where
     T: Into<ItemStr>,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Quoted(self.inner.into()));
+        tokens.quoted(self.inner);
     }
 }

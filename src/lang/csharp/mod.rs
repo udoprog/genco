@@ -590,9 +590,9 @@ impl Lang for Csharp {
     type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://csharpindepth.com/articles/Strings
-        super::c_family_escape(out, input)
+        super::c_family_write_quoted(out, input)
     }
 
     fn format_file(

@@ -5,6 +5,7 @@ use syn::spanned::Spanned;
 use syn::token;
 use syn::{Result, Token};
 
+use crate::string_parser::StringParser;
 use crate::{Control, Cursor, Delimiter, Encoder, MatchArm};
 
 /// Items to process from the queue.
@@ -12,6 +13,10 @@ enum Item {
     /// A raw token tree.
     Tree {
         tt: TokenTree,
+    },
+    String {
+        has_eval: bool,
+        stream: TokenStream,
     },
     /// A quoted string.
     Quoted {
@@ -104,18 +109,25 @@ impl<'a> QuoteParser<'a> {
     }
 
     /// Override the default starting span.
-    pub(crate) fn with_span_start(self, span_start: LineColumn) -> Self {
-        Self {
-            span_start: Some(span_start),
+    pub(crate) fn with_span(self, span: Span) -> Self {
+        return Self {
+            span_start: Some(adjust_start(span.start())),
+            span_end: Some(adjust_end(span.end())),
             ..self
-        }
-    }
+        };
 
-    /// Override the default ending span.
-    pub(crate) fn with_span_end(self, span_end: LineColumn) -> Self {
-        Self {
-            span_end: Some(span_end),
-            ..self
+        fn adjust_start(start: LineColumn) -> LineColumn {
+            LineColumn {
+                line: start.line,
+                column: start.column + 1,
+            }
+        }
+
+        fn adjust_end(end: LineColumn) -> LineColumn {
+            LineColumn {
+                line: end.line,
+                column: end.column.saturating_sub(1),
+            }
         }
     }
 
@@ -195,6 +207,9 @@ impl<'a> QuoteParser<'a> {
                 }
                 Item::Tree { tt, .. } => {
                     encoder.encode_literal(&tt.to_string());
+                }
+                Item::String { has_eval, stream } => {
+                    encoder.encode_string(has_eval, stream);
                 }
                 Item::Quoted { s } => {
                     encoder.encode_quoted(s);
@@ -317,9 +332,7 @@ fn parse_loop(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
         let content;
         let paren = syn::parenthesized!(content in input);
 
-        let parser = QuoteParser::new(receiver)
-            .with_span_start(adjust_start(paren.span.start()))
-            .with_span_end(adjust_end(paren.span.end()));
+        let parser = QuoteParser::new(receiver).with_span(paren.span);
 
         Some(parser.parse(&content)?)
     } else {
@@ -345,20 +358,6 @@ fn parse_loop(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
         expr,
         stream,
     });
-
-    fn adjust_start(start: LineColumn) -> LineColumn {
-        LineColumn {
-            line: start.line,
-            column: start.column + 1,
-        }
-    }
-
-    fn adjust_end(end: LineColumn) -> LineColumn {
-        LineColumn {
-            line: end.line,
-            column: end.column.saturating_sub(1),
-        }
-    }
 }
 
 fn parse_match(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
@@ -492,6 +491,30 @@ fn parse_inner(
                 escape.span(),
                 cursor,
                 Item::Tree { tt: punct.into() },
+            ));
+            continue;
+        }
+
+        if input.peek(syn::Token![#]) && input.peek2(syn::Token![_]) && input.peek3(token::Paren) {
+            let start = input.parse::<syn::Token![#]>()?;
+            input.parse::<syn::Token![_]>()?;
+
+            let content;
+            let paren = syn::parenthesized!(content in input);
+
+            let parser = StringParser::new(receiver, paren.span);
+
+            let (options, stream) = parser.parse(&content)?;
+
+            let cursor = Cursor::join(start.span(), paren.span);
+
+            queue(QueueItem::with_span(
+                content.span(),
+                cursor,
+                Item::String {
+                    has_eval: options.has_eval,
+                    stream,
+                },
             ));
             continue;
         }

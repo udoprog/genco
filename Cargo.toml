@@ -15,6 +15,7 @@ Genco, the even simpler code generator for Rust.
 [dependencies]
 genco-macros = {path = "genco-macros", version = "0.6.0"}
 relative-path = "1.2.0"
+smallvec = "1.4.0"
 
 [dev-dependencies]
 anyhow = "1.0.31"

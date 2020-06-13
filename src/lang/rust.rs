@@ -708,10 +708,8 @@ impl Lang for Rust {
     type Format = Format;
     type Import = Type;
 
-    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://doc.rust-lang.org/reference/tokens.html#literals
-
-        out.write_char('"')?;
 
         for c in input.chars() {
             match c {
@@ -738,7 +736,6 @@ impl Lang for Rust {
             };
         }
 
-        out.write_char('"')?;
         Ok(())
     }
 

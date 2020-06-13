@@ -379,9 +379,61 @@ impl Lang for JavaScript {
     type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        out.write_char('"')?;
+    /// Start a string quote.
+    fn open_quote(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+        has_eval: bool,
+    ) -> fmt::Result {
+        use std::fmt::Write as _;
 
+        if has_eval {
+            out.write_char('`')?;
+        } else {
+            out.write_char('"')?;
+        }
+
+        Ok(())
+    }
+
+    /// End a string quote.
+    fn close_quote(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+        has_eval: bool,
+    ) -> fmt::Result {
+        use std::fmt::Write as _;
+
+        if has_eval {
+            out.write_char('`')?;
+        } else {
+            out.write_char('"')?;
+        }
+
+        Ok(())
+    }
+
+    fn start_string_eval(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+    ) -> fmt::Result {
+        out.write_str("${")?;
+        Ok(())
+    }
+
+    fn end_string_eval(
+        out: &mut fmt::Formatter<'_>,
+        _config: &Self::Config,
+        _format: &Self::Format,
+    ) -> fmt::Result {
+        out.write_char('}')?;
+        Ok(())
+    }
+
+    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         for c in input.chars() {
             match c {
                 '\t' => out.write_str("\\t")?,
@@ -395,8 +447,6 @@ impl Lang for JavaScript {
                 c => out.write_char(c)?,
             };
         }
-
-        out.write_char('"')?;
 
         Ok(())
     }

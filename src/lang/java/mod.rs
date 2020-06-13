@@ -517,11 +517,9 @@ impl Lang for Java {
     type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html
         use std::fmt::Write as _;
-
-        out.write_char('"')?;
 
         for c in input.chars() {
             match c {
@@ -542,8 +540,6 @@ impl Lang for Java {
                 }
             }
         }
-
-        out.write_char('"')?;
 
         Ok(())
     }

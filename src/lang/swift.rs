@@ -166,10 +166,8 @@ impl Lang for Swift {
     type Format = Format;
     type Import = dyn TypeTrait;
 
-    fn quote_string(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
-
-        out.write_char('"')?;
 
         for c in input.chars() {
             match c {
@@ -187,7 +185,6 @@ impl Lang for Swift {
             };
         }
 
-        out.write_char('"')?;
         Ok(())
     }
 

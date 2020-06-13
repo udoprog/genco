@@ -10,6 +10,7 @@ mod encoder;
 mod item_buffer;
 mod quote_in_parser;
 mod quote_parser;
+mod string_parser;
 mod token;
 
 pub(crate) use self::cursor::Cursor;
@@ -49,12 +50,14 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     "hello world"
-///     #("hello world".quoted())
+///     #(quoted("hello world"))
 ///     #("\"hello world\"")
+///     #_(hello world)
 /// };
 ///
 /// assert_eq!(
 ///     vec![
+///         "\"hello world\"",
 ///         "\"hello world\"",
 ///         "\"hello world\"",
 ///         "\"hello world\"",
@@ -76,19 +79,28 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// # fn main() -> genco::fmt::Result {
 /// # let tokens: rust::Tokens = quote! {
 /// #     "hello world"
-/// #     #("hello world".quoted())
+/// #     #(quoted("hello world"))
 /// #     #("\"hello world\"")
+/// #     #_(hello world)
 /// # };
 /// #
 /// use genco::tokens::{Item, ItemStr};
 ///
 /// assert_eq!(
 ///     vec![
-///         Item::Quoted(ItemStr::Static("hello world")),
+///         Item::OpenQuote(false),
+///         Item::Literal(ItemStr::Static("hello world")),
+///         Item::CloseQuote,
 ///         Item::Push,
-///         Item::Quoted(ItemStr::Box("hello world".into())),
+///         Item::OpenQuote(false),
+///         Item::Literal(ItemStr::Box("hello world".into())),
+///         Item::CloseQuote,
 ///         Item::Push,
 ///         Item::Literal(ItemStr::Static("\"hello world\"")),
+///         Item::Push,
+///         Item::OpenQuote(false),
+///         Item::Literal(ItemStr::Static("hello world")),
+///         Item::CloseQuote
 ///     ],
 ///     tokens,
 /// );
@@ -97,6 +109,38 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// ```
 ///
 /// <br>
+///
+/// # Quoted String Interpolation
+///
+/// Some languages support interpolating values into strings.
+///
+/// Some examples of this is:
+///
+/// * JavaScript - `` `Hello ${world}` `` (note the backticks)
+/// * Dart - `"Hello $world"`
+///
+/// The `quote!` macro supports this through a special form of string quoting
+/// known as string interpolation. It has the form: `#_(<string>)`.
+///
+/// Interpolated values are specified with `$(<quoted>)`. And `$` itself is
+/// escaped by repeating it twice `$$`. The `<quoted>` section is whitespace
+/// sensitive.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let t: dart::Tokens = quote!(#_(Hello $(world)));
+/// assert_eq!("\"Hello $world\"", t.to_string()?);
+///
+/// let t: dart::Tokens = quote!(#_(Hello $(a + b)));
+/// assert_eq!("\"Hello ${a + b}\"", t.to_string()?);
+///
+/// let t: js::Tokens = quote!(#_(Hello $(world)));
+/// assert_eq!("`Hello ${world}`", t.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 ///
 /// # Interpolation
 ///
