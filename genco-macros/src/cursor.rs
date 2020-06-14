@@ -15,6 +15,24 @@ impl Cursor {
         }
     }
 
+    /// Check that the cursor is not a mock cursor.
+    ///
+    /// See: https://github.com/alexcrichton/proc-macro2/issues/237
+    pub(crate) fn check_compat(&self) -> syn::Result<()> {
+        if self.start.line == 0
+            && self.start.column == 0
+            && self.end.line == 0
+            && self.end.column == 0
+        {
+            return Err(syn::Error::new(
+                Span::call_site(),
+                "Your compiler does not support spans which is required by genco, see: https://github.com/rust-lang/rust/issues/54725"
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Calculate the start character for the span.
     pub(crate) fn start_character(self) -> Self {
         Cursor {

@@ -160,6 +160,8 @@ impl<'a> QuoteParser<'a> {
         parse_inner(|item| queue.push_back(item), input, receiver, until)?;
 
         while let Some(item) = queue.pop_front() {
+            item.cursor.check_compat()?;
+
             encoder.step(item.cursor, item.span)?;
 
             match item.item {
@@ -552,6 +554,7 @@ fn parse_inner(
         let tt: TokenTree = input.parse()?;
         let cursor = Cursor::from(tt.span());
         let span = tt.span();
+
         queue(QueueItem::with_span(span, cursor, Item::Tree { tt }));
     }
 

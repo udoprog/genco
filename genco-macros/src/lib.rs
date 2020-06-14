@@ -602,7 +602,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// This macro takes a destination stream followed by an `=>` and the tokens to
 /// extend that stream with.
-/// 
+///
 /// Note that the `<target>` arguments must be borrowable. So a mutable
 /// reference like `&mut rust::Tokens` will have to be dereferenced when used
 /// with this macro.
