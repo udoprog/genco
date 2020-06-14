@@ -1,9 +1,9 @@
-use crate::lang::{Lang, LangBox};
+use crate::lang::LangBox;
 use crate::tokens::Item;
 use crate::Tokens;
 
 mod private {
-    pub trait Sealed<L> {}
+    pub trait Sealed {}
 }
 
 /// Helper trait to convert something into a tokens registration.
@@ -37,46 +37,35 @@ mod private {
 /// # Ok(())
 /// # }
 /// ```
-pub trait RegisterTokens<L>: private::Sealed<L>
-where
-    L: Lang,
-{
+pub trait RegisterTokens: private::Sealed {
     /// Convert the type into tokens.
-    fn register_tokens(self, tokens: &mut Tokens<L>);
+    fn register_tokens(self, tokens: &mut Tokens);
 }
 
-impl<T, L> RegisterTokens<L> for T
+impl<T> RegisterTokens for T
 where
-    T: Into<LangBox<L>>,
-    L: Lang,
+    T: Into<LangBox>,
 {
-    fn register_tokens(self, tokens: &mut Tokens<L>) {
+    fn register_tokens(self, tokens: &mut Tokens) {
         tokens.item(Item::Registered(self.into()))
     }
 }
 
-impl<T, L> self::private::Sealed<L> for T
-where
-    T: Into<LangBox<L>>,
-    L: Lang,
-{
-}
+impl<T> self::private::Sealed for T where T: Into<LangBox> {}
 
 macro_rules! impl_register_tokens {
     ($($ty:ident => $var:ident),*) => {
-        impl<L, $($ty,)*> self::private::Sealed<L> for ($($ty,)*)
+        impl<$($ty,)*> self::private::Sealed for ($($ty,)*)
         where
-            $($ty: Into<LangBox<L>>,)*
-            L: Lang,
+            $($ty: Into<LangBox>,)*
         {
         }
 
-        impl<L, $($ty,)*> RegisterTokens<L> for ($($ty,)*)
+        impl<$($ty,)*> RegisterTokens for ($($ty,)*)
         where
-            $($ty: Into<LangBox<L>>,)*
-            L: Lang,
+            $($ty: Into<LangBox>,)*
         {
-            fn register_tokens(self, tokens: &mut Tokens<L>) {
+            fn register_tokens(self, tokens: &mut Tokens) {
                 let ($($var,)*) = self;
                 $(tokens.item(Item::Registered($var.into()));)*
             }

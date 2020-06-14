@@ -46,14 +46,15 @@
 //! ```
 
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use relative_path::RelativePathBuf;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
+use std::any;
 
 /// Tokens container specialization for Rust.
-pub type Tokens = crate::Tokens<JavaScript>;
+pub type Tokens = crate::Tokens;
 /// Format state for JavaScript.
 #[derive(Debug, Default)]
 pub struct Format {}
@@ -128,7 +129,7 @@ impl_dynamic_types! { JavaScript =>
         impl TypeTrait {}
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any) -> fmt::Result {
                 if let Some(alias) = &self.alias {
                     out.write_str(alias)?;
                 } else {
@@ -138,7 +139,7 @@ impl_dynamic_types! { JavaScript =>
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -148,11 +149,11 @@ impl_dynamic_types! { JavaScript =>
         impl TypeTrait {}
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any) -> fmt::Result {
                 out.write_str(&self.name)
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -162,11 +163,11 @@ impl_dynamic_types! { JavaScript =>
         impl TypeTrait {}
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any) -> fmt::Result {
                 out.write_str(&self.name)
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 None
             }
         }
@@ -291,20 +292,22 @@ impl JavaScript {
         let mut modules = BTreeMap::<&Module, ResolvedModule<'_>>::new();
 
         for import in tokens.walk_imports() {
-            match import.as_enum() {
-                AnyRef::Import(this) => {
-                    let module = modules.entry(&this.module).or_default();
+            if let Some(Import(this)) = import.downcast_ref() {
+                let module = modules.entry(&this.module).or_default();
 
-                    module.set.insert(match &this.alias {
-                        None => ImportedElement::Plain(&this.name),
-                        Some(alias) => ImportedElement::Aliased(&this.name, alias),
-                    });
-                }
-                AnyRef::ImportDefault(this) => {
-                    let module = modules.entry(&this.module).or_default();
-                    module.default_import = Some(&this.name);
-                }
-                _ => (),
+                module.set.insert(match &this.alias {
+                    None => ImportedElement::Plain(&this.name),
+                    Some(alias) => ImportedElement::Aliased(&this.name, alias),
+                });
+
+                continue;
+            }
+
+            if let Some(ImportDefault(this)) = import.downcast_ref() {
+                let module = modules.entry(&this.module).or_default();
+                module.default_import = Some(&this.name);
+
+                continue;;
             }
         }
 
@@ -375,7 +378,6 @@ impl JavaScript {
 impl Lang for JavaScript {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
 
     /// Start a string quote.
     fn open_quote(
@@ -452,13 +454,15 @@ impl Lang for JavaScript {
     fn format_file(
         tokens: &Tokens,
         out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
+        config: &dyn any::Any,
     ) -> fmt::Result {
+        let config = config.downcast_ref().ok_or_else(|| fmt::Error)?;
+
         let mut imports = Tokens::new();
         Self::imports(&mut imports, tokens, config);
         let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
+        imports.format::<JavaScript>(out, config, &format)?;
+        tokens.format::<JavaScript>(out, config, &format)?;
         Ok(())
     }
 }

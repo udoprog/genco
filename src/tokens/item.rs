@@ -1,6 +1,6 @@
 //! A single element
 
-use crate::lang::{Lang, LangBox};
+use crate::lang::LangBox;
 use crate::tokens;
 use crate::Tokens;
 use std::cmp;
@@ -8,17 +8,14 @@ use std::num::NonZeroI16;
 use std::rc::Rc;
 
 /// A single element in a set of tokens.
-pub enum Item<L>
-where
-    L: Lang,
-{
+pub enum Item {
     /// A literal item.
     /// Is added as a raw string to the stream of tokens.
     Literal(tokens::ItemStr),
     /// A language-specific boxed item.
-    LangBox(LangBox<L>),
+    LangBox(LangBox),
     /// A language-specific boxed item that is not rendered.
-    Registered(LangBox<L>),
+    Registered(LangBox),
     /// Push a new line unless the current line is empty.
     Push,
     /// Unconditionally push a line.
@@ -46,19 +43,13 @@ where
     CloseEval,
 }
 
-impl<L> tokens::FormatInto<L> for Item<L>
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl tokens::FormatInto for Item {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.item(self);
     }
 }
 
-impl<L> std::fmt::Debug for Item<L>
-where
-    L: Lang,
-{
+impl std::fmt::Debug for Item {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(s) => write!(fmt, "Literal({:?})", s),
@@ -76,64 +67,43 @@ where
     }
 }
 
-impl<L> From<String> for Item<L>
-where
-    L: Lang,
-{
+impl From<String> for Item {
     fn from(value: String) -> Self {
         Item::Literal(value.into())
     }
 }
 
-impl<'a, L> From<&'a str> for Item<L>
-where
-    L: Lang,
-{
+impl<'a> From<&'a str> for Item {
     fn from(value: &'a str) -> Self {
         Item::Literal(value.into())
     }
 }
 
-impl<L> From<Rc<String>> for Item<L>
-where
-    L: Lang,
-{
+impl From<Rc<String>> for Item {
     fn from(value: Rc<String>) -> Self {
         Item::Literal(value.into())
     }
 }
 
-impl<L> From<tokens::ItemStr> for Item<L>
-where
-    L: Lang,
-{
+impl From<tokens::ItemStr> for Item {
     fn from(value: tokens::ItemStr) -> Self {
         Item::Literal(value)
     }
 }
 
-impl<'a, L> From<&'a Item<L>> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: &'a Item<L>) -> Self {
+impl<'a> From<&'a Item> for Item {
+    fn from(value: &'a Item) -> Self {
         value.clone()
     }
 }
 
-impl<L> From<Rc<Item<L>>> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: Rc<Item<L>>) -> Self {
+impl From<Rc<Item>> for Item {
+    fn from(value: Rc<Item>) -> Self {
         (*value).clone()
     }
 }
 
-impl<L> Clone for Item<L>
-where
-    L: Lang,
-{
+impl Clone for Item {
     fn clone(&self) -> Self {
         match self {
             Self::Literal(literal) => Self::Literal(literal.clone()),
@@ -151,10 +121,7 @@ where
     }
 }
 
-impl<L> cmp::PartialEq for Item<L>
-where
-    L: Lang,
-{
+impl cmp::PartialEq for Item {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Literal(a), Self::Literal(b)) => a == b,
@@ -173,7 +140,7 @@ where
     }
 }
 
-impl<L> cmp::Eq for Item<L> where L: Lang {}
+impl cmp::Eq for Item {}
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,3 @@
-use crate::lang::Lang;
 use crate::tokens::{FormatInto, Item};
 use crate::Tokens;
 use std::fmt;
@@ -69,12 +68,11 @@ pub struct Display<T> {
     inner: T,
 }
 
-impl<T, L> FormatInto<L> for Display<T>
+impl<T> FormatInto for Display<T>
 where
-    L: Lang,
     T: fmt::Display,
 {
-    fn format_into(self, tokens: &mut Tokens<L>) {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.item(Item::Literal(
             self.inner.to_string().into_boxed_str().into(),
         ));

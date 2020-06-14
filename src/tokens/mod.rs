@@ -11,7 +11,7 @@
 //! use genco::lang::Lang;
 //!
 //! /// Format a block comment, starting with `/**`, and ending in `*/`.
-//! pub fn block_comment<I, L>(text: I) -> impl FormatInto<L>
+//! pub fn block_comment<I, L>(text: I) -> impl FormatInto
 //! where
 //!     I: IntoIterator,
 //!     I::Item: Into<ItemStr>,

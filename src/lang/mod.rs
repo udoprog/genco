@@ -37,8 +37,8 @@ pub use self::swift::Swift;
 
 use crate::fmt;
 use crate::Tokens;
-use std::any::Any;
 use std::ops;
+use std::any;
 
 /// Trait to implement for language specialization.
 ///
@@ -49,11 +49,9 @@ where
     Self: 'static + Sized,
 {
     /// Configuration associated with building a formatting element.
-    type Config;
+    type Config: any::Any;
     /// State being used during formatting.
-    type Format: Default;
-    /// The type used when resolving imports.
-    type Import: ?Sized;
+    type Format: any::Any + Default;
 
     /// Provide the default indentation.
     fn default_indentation() -> fmt::Indentation {
@@ -122,9 +120,9 @@ where
 
     /// Write a file according to the specified language convention.
     fn format_file(
-        tokens: &Tokens<Self>,
+        tokens: &Tokens,
         out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
+        config: &dyn any::Any,
     ) -> fmt::Result {
         let format = Self::Format::default();
         tokens.format(out, config, &format)
@@ -134,7 +132,6 @@ where
 impl Lang for () {
     type Config = ();
     type Format = ();
-    type Import = ();
 }
 
 /// A type-erased holder for language-specific items.
@@ -142,48 +139,36 @@ impl Lang for () {
 /// Carries formatting and coercion functions like
 /// [as_import][LangItem::as_import] to allow language specific processing to
 /// work.
-pub trait LangItem<L>
+pub trait LangItem
 where
-    Self: Any,
-    L: Lang,
+    Self: any::Any,
 {
     /// Format the language item appropriately.
-    fn format(
-        &self,
-        out: &mut fmt::Formatter<'_>,
-        config: &L::Config,
-        format: &L::Format,
-    ) -> fmt::Result;
+    fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result;
 
     /// LangItem convert to Any. Automatically implemented by macro.
-    fn __lang_item_as_any(&self) -> &dyn Any;
+    fn __lang_item_as_any(&self) -> &dyn any::Any;
 
     /// LangItem clone. Automatically implemented by macro.
-    fn __lang_item_clone(&self) -> Box<dyn LangItem<L>>;
+    fn __lang_item_clone(&self) -> Box<dyn LangItem>;
 
     /// LangItem equality. Automatically implemented by macro.
-    fn __lang_item_eq(&self, other: &dyn LangItem<L>) -> bool;
+    fn __lang_item_eq(&self, other: &dyn LangItem) -> bool;
 
     /// Coerce into an imported type.
     ///
     /// This is used for import resolution for custom language items.
-    fn as_import(&self) -> Option<&L::Import> {
+    fn as_import(&self) -> Option<&dyn any::Any> {
         None
     }
 }
 
 /// A box containing a lang item.
-pub struct LangBox<L>
-where
-    L: Lang,
-{
-    inner: Box<dyn LangItem<L>>,
+pub struct LangBox {
+    inner: Box<dyn LangItem>,
 }
 
-impl<L> Clone for LangBox<L>
-where
-    L: Lang,
-{
+impl Clone for LangBox {
     fn clone(&self) -> Self {
         Self {
             inner: LangItem::__lang_item_clone(&*self.inner),
@@ -191,31 +176,22 @@ where
     }
 }
 
-impl<L> std::fmt::Debug for LangBox<L>
-where
-    L: Lang,
-{
+impl std::fmt::Debug for LangBox {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "LangBox")
     }
 }
 
-impl<L> ops::Deref for LangBox<L>
-where
-    L: Lang,
-{
-    type Target = dyn LangItem<L>;
+impl ops::Deref for LangBox {
+    type Target = dyn LangItem;
 
     fn deref(&self) -> &Self::Target {
         &*self.inner
     }
 }
 
-impl<L> From<Box<dyn LangItem<L>>> for LangBox<L>
-where
-    L: Lang,
-{
-    fn from(value: Box<dyn LangItem<L>>) -> Self {
+impl From<Box<dyn LangItem>> for LangBox {
+    fn from(value: Box<dyn LangItem>) -> Self {
         Self { inner: value }
     }
 }

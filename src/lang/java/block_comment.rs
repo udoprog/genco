@@ -1,4 +1,3 @@
-use crate::lang::Java;
 use crate::tokens;
 use crate::Tokens;
 
@@ -7,12 +6,12 @@ use crate::Tokens;
 /// This struct is created by the [block_comment][super::block_comment()] function.
 pub struct BlockComment<T>(pub(super) T);
 
-impl<T> tokens::FormatInto<Java> for BlockComment<T>
+impl<T> tokens::FormatInto for BlockComment<T>
 where
     T: IntoIterator,
     T::Item: Into<tokens::ItemStr>,
 {
-    fn format_into(self, tokens: &mut Tokens<Java>) {
+    fn format_into(self, tokens: &mut Tokens) {
         let mut it = self.0.into_iter().peekable();
 
         if it.peek().is_none() {

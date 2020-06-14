@@ -2,46 +2,46 @@
 
 macro_rules! impl_lang_item {
     (
-        impl LangItem<$lang:ty> for $ty:ident {
+        impl LangItem for $ty:ident {
             $($item:item)*
         }
     ) => {
-        impl crate::tokens::FormatInto<$lang> for $ty {
-            fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
+        impl crate::tokens::FormatInto for $ty {
+            fn format_into(self, tokens: &mut crate::Tokens) {
                 tokens.item(crate::tokens::Item::LangBox(self.into()));
             }
         }
 
-        impl<'a> crate::tokens::FormatInto<$lang> for &'a $ty {
-            fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
+        impl<'a> crate::tokens::FormatInto for &'a $ty {
+            fn format_into(self, tokens: &mut crate::Tokens) {
                 tokens.item(crate::tokens::Item::LangBox(self.into()));
             }
         }
 
-        impl From<$ty> for crate::lang::LangBox<$lang> {
+        impl From<$ty> for crate::lang::LangBox {
             fn from(value: $ty) -> Self {
-                crate::lang::LangBox::from(Box::new(value) as Box<dyn crate::lang::LangItem<$lang>>)
+                crate::lang::LangBox::from(Box::new(value) as Box<dyn crate::lang::LangItem>)
             }
         }
 
-        impl<'a> From<&'a $ty> for crate::lang::LangBox<$lang> {
+        impl<'a> From<&'a $ty> for crate::lang::LangBox {
             fn from(value: &'a $ty) -> Self {
-                crate::lang::LangBox::from(Box::new(value.clone()) as Box<dyn crate::lang::LangItem<$lang>>)
+                crate::lang::LangBox::from(Box::new(value.clone()) as Box<dyn crate::lang::LangItem>)
             }
         }
 
-        impl crate::lang::LangItem<$lang> for $ty {
+        impl crate::lang::LangItem for $ty {
             $($item)*
 
             fn __lang_item_as_any(&self) -> &dyn std::any::Any {
                 self
             }
 
-            fn __lang_item_clone(&self) -> Box<dyn crate::lang::LangItem<$lang>> {
+            fn __lang_item_clone(&self) -> Box<dyn crate::lang::LangItem> {
                 Box::new(self.clone())
             }
 
-            fn __lang_item_eq(&self, other: &dyn crate::lang::LangItem<$lang>) -> bool {
+            fn __lang_item_eq(&self, other: &dyn crate::lang::LangItem) -> bool {
                 other
                     .__lang_item_as_any()
                     .downcast_ref::<Self>()
@@ -138,7 +138,7 @@ macro_rules! impl_dynamic_types {
         )*
     ) => {
         /// Trait implemented by all types
-        pub trait TypeTrait: 'static + std::fmt::Debug + crate::lang::LangItem<$lang> {
+        pub trait TypeTrait: 'static + std::fmt::Debug + crate::lang::LangItem {
             /// Coerce trait into an enum that can be used for type-specific operations
             fn as_enum(&self) -> AnyRef<'_>;
 
@@ -170,20 +170,20 @@ macro_rules! impl_dynamic_types {
             }
         )*
 
-        impl crate::tokens::FormatInto<$lang> for Any {
-            fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
+        impl crate::tokens::FormatInto for Any {
+            fn format_into(self, tokens: &mut $crate::Tokens) {
                 let value = match self.inner {
-                    $(AnyInner::$ty(value) => value as Box<dyn LangItem<$lang>>,)*
+                    $(AnyInner::$ty(value) => value as Box<dyn crate::lang::LangItem>,)*
                 };
 
                 tokens.item(crate::tokens::Item::LangBox(value.into()));
             }
         }
 
-        impl<'a> crate::tokens::FormatInto<$lang> for &'a Any {
-            fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
+        impl<'a> crate::tokens::FormatInto for &'a Any {
+            fn format_into(self, tokens: &mut $crate::Tokens) {
                 let value = match &self.inner {
-                    $(AnyInner::$ty(value) => Box::new(Clone::clone(&**value)) as Box<dyn LangItem<$lang>>,)*
+                    $(AnyInner::$ty(value) => Box::new(Clone::clone(&**value)) as Box<dyn crate::lang::LangItem>,)*
                 };
 
                 tokens.item(crate::tokens::Item::LangBox(value.into()));
@@ -250,42 +250,42 @@ macro_rules! impl_dynamic_types {
                 $($ty_item)*
             }
 
-            impl crate::tokens::FormatInto<$lang> for $ty {
-                fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
+            impl crate::tokens::FormatInto for $ty {
+                fn format_into(self, tokens: &mut crate::Tokens) {
                     tokens.item(crate::tokens::Item::LangBox(self.into()));
                 }
             }
 
-            impl<'a> crate::tokens::FormatInto<$lang> for &'a $ty {
-                fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
+            impl<'a> crate::tokens::FormatInto for &'a $ty {
+                fn format_into(self, tokens: &mut crate::Tokens) {
                     tokens.item(crate::tokens::Item::LangBox(self.into()));
                 }
             }
 
-            impl From<$ty> for crate::lang::LangBox<$lang> {
+            impl From<$ty> for crate::lang::LangBox {
                 fn from(value: $ty) -> Self {
-                    crate::lang::LangBox::from(Box::new(value) as Box<dyn crate::lang::LangItem<$lang>>)
+                    crate::lang::LangBox::from(Box::new(value) as Box<dyn crate::lang::LangItem>)
                 }
             }
 
-            impl<'a> From<&'a $ty> for crate::lang::LangBox<$lang> {
+            impl<'a> From<&'a $ty> for crate::lang::LangBox {
                 fn from(value: &'a $ty) -> Self {
-                    crate::lang::LangBox::from(Box::new(value.clone()) as Box<dyn crate::lang::LangItem<$lang>>)
+                    crate::lang::LangBox::from(Box::new(value.clone()) as Box<dyn crate::lang::LangItem>)
                 }
             }
 
-            impl LangItem<$lang> for $ty {
+            impl crate::lang::LangItem for $ty {
                 $($ty_lang_item_item)*
 
                 fn __lang_item_as_any(&self) -> &dyn std::any::Any {
                     self
                 }
 
-                fn __lang_item_clone(&self) -> Box<dyn crate::lang::LangItem<$lang>> {
+                fn __lang_item_clone(&self) -> Box<dyn crate::lang::LangItem> {
                     Box::new(self.clone())
                 }
 
-                fn __lang_item_eq(&self, other: &dyn crate::lang::LangItem<$lang>) -> bool {
+                fn __lang_item_eq(&self, other: &dyn crate::lang::LangItem) -> bool {
                     other
                         .__lang_item_as_any()
                         .downcast_ref::<Self>()
@@ -323,14 +323,14 @@ macro_rules! impl_modifier {
             }
         }
 
-        impl crate::tokens::FormatInto<$lang> for $name {
-            fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
+        impl crate::tokens::FormatInto for $name {
+            fn format_into(self, tokens: &mut crate::Tokens) {
                 tokens.append(self.name());
             }
         }
 
-        impl crate::tokens::FormatInto<$lang> for Vec<$name> {
-            fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
+        impl crate::tokens::FormatInto for Vec<$name> {
+            fn format_into(self, tokens: &mut crate::Tokens) {
                 use std::collections::BTreeSet;
 
                 let mut it = self.into_iter().collect::<BTreeSet<_>>().into_iter();

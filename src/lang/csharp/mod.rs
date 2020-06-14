@@ -22,7 +22,7 @@ mod comment;
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::ItemStr;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -31,7 +31,7 @@ pub use self::block_comment::BlockComment;
 pub use self::comment::Comment;
 
 /// Tokens container specialization for C#.
-pub type Tokens = crate::Tokens<Csharp>;
+pub type Tokens = crate::Tokens;
 
 impl_dynamic_types! { Csharp =>
     trait TypeTrait {
@@ -584,7 +584,6 @@ impl Csharp {
 impl Lang for Csharp {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://csharpindepth.com/articles/Strings

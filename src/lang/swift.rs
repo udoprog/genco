@@ -19,9 +19,10 @@ use crate::lang::{Lang, LangItem};
 use crate::tokens::ItemStr;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
+use std::any;
 
 /// Tokens container specialization for Rust.
-pub type Tokens = crate::Tokens<Swift>;
+pub type Tokens = crate::Tokens;
 
 /// Format state for Swift code.
 #[derive(Debug, Default)]
@@ -47,11 +48,11 @@ impl_dynamic_types! { Swift =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any) -> fmt::Result {
                 out.write_str(&self.name)
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -66,7 +67,7 @@ impl_dynamic_types! { Swift =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 out.write_str("[")?;
                 self.key.format(out, config, format)?;
                 out.write_str(": ")?;
@@ -75,7 +76,7 @@ impl_dynamic_types! { Swift =>
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -89,14 +90,14 @@ impl_dynamic_types! { Swift =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 out.write_str("[")?;
                 self.inner.format(out, config, format)?;
                 out.write_str("]")?;
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -136,7 +137,10 @@ impl Swift {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            import.type_imports(&mut modules);
+            if let Some(ty) = import.downcast_ref::<Type>() {
+                ty.type_imports(&mut modules);
+                continue;
+            }
         }
 
         if modules.is_empty() {
@@ -160,7 +164,6 @@ impl Swift {
 impl Lang for Swift {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
@@ -187,13 +190,15 @@ impl Lang for Swift {
     fn format_file(
         tokens: &Tokens,
         out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
+        config: &dyn any::Any,
     ) -> fmt::Result {
+        let config = config.downcast_ref::<Config>().ok_or_else(|| std::fmt::Error)?;
+
         let mut imports = Tokens::new();
         Self::imports(&mut imports, tokens);
         let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
+        imports.format::<Swift>(out, config, &format)?;
+        tokens.format::<Swift>(out, config, &format)?;
         Ok(())
     }
 }

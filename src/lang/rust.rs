@@ -44,11 +44,12 @@ use crate::tokens::ItemStr;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::Write as _;
 use std::rc::Rc;
+use std::any;
 
 /// Tokens container specialization for Rust.
-pub type Tokens = crate::Tokens<Rust>;
+pub type Tokens = crate::Tokens;
 /// Language box specialization for Rust.
-pub type LangBox = crate::lang::LangBox<Rust>;
+pub type LangBox = crate::lang::LangBox;
 
 impl_plain_variadic_args!(Args, Type);
 
@@ -432,8 +433,10 @@ impl Type {
 }
 
 impl_lang_item! {
-    impl LangItem<Rust> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+    impl LangItem for Type {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
+            let config = config.downcast_ref::<Config>().ok_or_else(|| std::fmt::Error)?;
+
             if let Some(reference) = &self.reference {
                 match reference {
                     Reference::StaticRef => {
@@ -510,7 +513,7 @@ impl_lang_item! {
 }
 
 impl Rust {
-    fn imports(out: &mut Tokens, config: &Config, tokens: &Tokens) {
+    fn imports(out: &mut Tokens, config: &Config, tokens: &Tokens) -> fmt::Result<()> {
         use crate as genco;
         use crate::quote_in;
         use std::collections::btree_set;
@@ -520,7 +523,9 @@ impl Rust {
         let mut queue = VecDeque::new();
 
         for import in tokens.walk_imports() {
-            queue.push_back(import);
+            if let Some(import) = import.downcast_ref::<Type>() {
+                queue.push_back(import);
+            }
         }
 
         while let Some(import) = queue.pop_front() {
@@ -612,7 +617,7 @@ impl Rust {
             out.line();
         }
 
-        return;
+        return Ok(());
 
         /// An imported module.
         #[derive(Debug, Default)]
@@ -703,7 +708,6 @@ pub struct Rust(());
 impl Lang for Rust {
     type Config = Config;
     type Format = Format;
-    type Import = Type;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://doc.rust-lang.org/reference/tokens.html#literals
@@ -739,14 +743,16 @@ impl Lang for Rust {
     fn format_file(
         tokens: &Tokens,
         out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
+        config: &dyn any::Any,
     ) -> fmt::Result {
+        let config = config.downcast_ref::<Config>().ok_or_else(|| std::fmt::Error)?;
+
         let mut imports: Tokens = Tokens::new();
-        Self::imports(&mut imports, config, tokens);
+        Self::imports(&mut imports, config, tokens)?;
 
         let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
+        imports.format::<Rust>(out, config, &format)?;
+        tokens.format::<Rust>(out, config, &format)?;
         Ok(())
     }
 }

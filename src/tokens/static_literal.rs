@@ -20,10 +20,7 @@ use crate::tokens;
 /// ```
 ///
 /// [append()]: crate::Tokens::append()
-pub fn static_literal<L>(s: &'static str) -> impl tokens::FormatInto<L>
-where
-    L: lang::Lang,
-{
+pub fn static_literal(s: &'static str) -> impl tokens::FormatInto {
     tokens::from_fn(move |t| {
         t.item(tokens::Item::Literal(tokens::ItemStr::Static(s)));
     })

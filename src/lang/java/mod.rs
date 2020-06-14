@@ -21,13 +21,14 @@ pub use self::block_comment::BlockComment;
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use crate::{quote, quote_in};
 use std::collections::{BTreeSet, HashMap};
+use std::any;
 
 /// Tokens container specialized for Java.
-pub type Tokens = crate::Tokens<Java>;
+pub type Tokens = crate::Tokens;
 
 impl_dynamic_types! { Java =>
     trait TypeTrait {
@@ -48,7 +49,7 @@ impl_dynamic_types! { Java =>
         fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
 
         /// Java-specific interior formatting.
-        fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result;
+        fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any, level: usize) -> fmt::Result;
     }
 
     Primitive {
@@ -61,7 +62,7 @@ impl_dynamic_types! { Java =>
                 Some(JAVA_LANG)
             }
 
-            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any, level: usize) -> fmt::Result {
                 if level > 0 {
                     out.write_str(self.boxed)
                 } else {
@@ -71,7 +72,7 @@ impl_dynamic_types! { Java =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 self.java_format(out, config, format, 0)
             }
         }
@@ -83,7 +84,7 @@ impl_dynamic_types! { Java =>
                 "void"
             }
 
-            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any, level: usize) -> fmt::Result {
                 if level > 0 {
                     out.write_str("Void")
                 } else {
@@ -93,7 +94,7 @@ impl_dynamic_types! { Java =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 self.java_format(out, config, format, 0)
             }
         }
@@ -123,7 +124,10 @@ impl_dynamic_types! { Java =>
                 modules.insert((self.package.clone(), self.name.clone()));
             }
 
-            fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any, level: usize) -> fmt::Result {
+                let config = config.downcast_ref::<Config>().ok_or_else(|| fmt::Error)?;
+                let format = format.downcast_ref::<Format>().ok_or_else(|| fmt::Error)?;
+
                 {
                     let file_package = config.package.as_ref().map(|p| p.as_ref());
                     let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
@@ -167,11 +171,11 @@ impl_dynamic_types! { Java =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 self.java_format(out, config, format, 0)
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -195,17 +199,17 @@ impl_dynamic_types! { Java =>
                 self.value.type_imports(modules);
             }
 
-            fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any, level: usize) -> fmt::Result {
                 self.field.java_format(out, config, format, level)
             }
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 self.java_format(out, config, format, 0)
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -217,17 +221,17 @@ impl_dynamic_types! { Java =>
                 &*self.name
             }
 
-            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, _: usize) -> fmt::Result {
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any, _: usize) -> fmt::Result {
                 out.write_str(&*self.name)
             }
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 self.java_format(out, config, format, 0)
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -477,7 +481,15 @@ impl Java {
         let file_package = config.package.as_ref().map(|p| p.as_ref());
 
         for import in tokens.walk_imports() {
-            import.type_imports(&mut modules);
+            if let Some(import) = import.downcast_ref::<Optional>() {
+                import.type_imports(&mut modules);
+                continue;
+            }
+
+            if let Some(import) = import.downcast_ref::<Type>() {
+                import.type_imports(&mut modules);
+                continue;
+            }
         }
 
         if modules.is_empty() {
@@ -510,7 +522,6 @@ impl Java {
 impl Lang for Java {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html
@@ -542,8 +553,10 @@ impl Lang for Java {
     fn format_file(
         tokens: &Tokens,
         out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
+        config: &dyn any::Any,
     ) -> fmt::Result {
+        let config = config.downcast_ref().ok_or_else(|| fmt::Error)?;
+
         let mut header = Tokens::new();
 
         if let Some(ref package) = config.package {
@@ -553,8 +566,8 @@ impl Lang for Java {
 
         let mut format = Format::default();
         Self::imports(&mut header, tokens, config, &mut format.imported);
-        header.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
+        header.format::<Java>(out, config, &format)?;
+        tokens.format::<Java>(out, config, &format)?;
         Ok(())
     }
 }

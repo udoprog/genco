@@ -44,13 +44,14 @@
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::collections::BTreeSet;
+use std::any;
 
 /// Tokens container specialization for Go.
-pub type Tokens = crate::Tokens<Go>;
+pub type Tokens = crate::Tokens;
 
 impl_dynamic_types! { Go =>
     trait TypeTrait {
@@ -68,7 +69,7 @@ impl_dynamic_types! { Go =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any) -> fmt::Result {
                 if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
                     out.write_str(module)?;
                     out.write_str(SEP)?;
@@ -78,7 +79,7 @@ impl_dynamic_types! { Go =>
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -93,7 +94,7 @@ impl_dynamic_types! { Go =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 out.write_str("map[")?;
                 self.key.format(out, config, format)?;
                 out.write_str("]")?;
@@ -101,7 +102,7 @@ impl_dynamic_types! { Go =>
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -111,11 +112,11 @@ impl_dynamic_types! { Go =>
         impl TypeTrait {}
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any) -> fmt::Result {
                 out.write_str("interface{}")
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -129,14 +130,14 @@ impl_dynamic_types! { Go =>
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &dyn any::Any, format: &dyn any::Any) -> fmt::Result {
                 out.write_str("[")?;
                 out.write_str("]")?;
                 self.inner.format(out, config, format)?;
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn any::Any> {
                 Some(self)
             }
         }
@@ -224,7 +225,6 @@ impl Go {
 impl Lang for Go {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://golang.org/src/strconv/quote.go
@@ -245,8 +245,8 @@ impl Lang for Go {
 
         Self::imports(&mut header, tokens);
         let format = Format::default();
-        header.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
+        header.format::<Go>(out, config, &format)?;
+        tokens.format::<Go>(out, config, &format)?;
         Ok(())
     }
 }

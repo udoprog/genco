@@ -1,4 +1,3 @@
-use crate::lang::Lang;
 use crate::tokens::{FormatInto, ItemStr};
 use crate::Tokens;
 
@@ -53,12 +52,11 @@ pub struct Quoted<T> {
     inner: T,
 }
 
-impl<T, L> FormatInto<L> for Quoted<T>
+impl<T> FormatInto for Quoted<T>
 where
-    L: Lang,
     T: Into<ItemStr>,
 {
-    fn format_into(self, tokens: &mut Tokens<L>) {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.quoted(self.inner);
     }
 }

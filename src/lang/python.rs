@@ -23,9 +23,10 @@ use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::ItemStr;
 use std::collections::BTreeSet;
+use std::any;
 
 /// Tokens container specialization for Python.
-pub type Tokens = crate::Tokens<Python>;
+pub type Tokens = crate::Tokens;
 
 /// Formatting state for python.
 #[derive(Debug, Default)]
@@ -52,8 +53,8 @@ pub struct Type {
 }
 
 impl_lang_item! {
-    impl LangItem<Python> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+    impl LangItem for Type {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &dyn any::Any, _: &dyn any::Any) -> fmt::Result {
             let has_module = match self.module {
                 Some(ref module) => match self.alias {
                     Some(ref alias) => {
@@ -83,7 +84,7 @@ impl_lang_item! {
             Ok(())
         }
 
-        fn as_import(&self) -> Option<&Self> {
+        fn as_import(&self) -> Option<&dyn any::Any> {
             Some(self)
         }
     }
@@ -114,9 +115,11 @@ impl Python {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
         let mut modules = BTreeSet::new();
 
-        for Type { module, alias, .. } in tokens.walk_imports() {
-            if let Some(module) = module {
-                modules.insert((module.clone(), alias.clone()));
+        for import in tokens.walk_imports() {
+            if let Some(Type { module, alias, .. }) = import.downcast_ref() {
+                if let Some(module) = module {
+                    modules.insert((module.clone(), alias.clone()));
+                }
             }
         }
 
@@ -131,7 +134,6 @@ impl Python {
 impl Lang for Python {
     type Config = Config;
     type Format = Format;
-    type Import = Type;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
@@ -141,13 +143,15 @@ impl Lang for Python {
     fn format_file(
         tokens: &Tokens,
         out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
+        config: &dyn any::Any,
     ) -> fmt::Result {
+        let config = config.downcast_ref::<Python>().ok_or_else(|| fmt::Error)?;
+
         let mut imports = Tokens::new();
         Self::imports(&mut imports, tokens);
         let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
+        imports.format::<Python>(out, config, &format)?;
+        tokens.format::<Python>(out, config, &format)?;
         Ok(())
     }
 }

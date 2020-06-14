@@ -1,4 +1,3 @@
-use crate::lang::Lang;
 use crate::tokens::{FormatInto, RegisterTokens};
 use crate::Tokens;
 
@@ -48,10 +47,9 @@ use crate::Tokens;
 /// # Ok(())
 /// # }
 /// ```
-pub fn register<T, L>(inner: T) -> Register<T>
+pub fn register<T>(inner: T) -> Register<T>
 where
-    T: RegisterTokens<L>,
-    L: Lang,
+    T: RegisterTokens,
 {
     Register { inner }
 }
@@ -64,12 +62,11 @@ pub struct Register<T> {
     inner: T,
 }
 
-impl<T, L> FormatInto<L> for Register<T>
+impl<T> FormatInto for Register<T>
 where
-    L: Lang,
-    T: RegisterTokens<L>,
+    T: RegisterTokens,
 {
-    fn format_into(self, tokens: &mut Tokens<L>) {
+    fn format_into(self, tokens: &mut Tokens) {
         self.inner.register_tokens(tokens);
     }
 }

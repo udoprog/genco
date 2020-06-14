@@ -39,13 +39,13 @@ pub use self::doc_comment::DocComment;
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::fmt::Write as _;
 
 /// Tokens container specialization for Dart.
-pub type Tokens = crate::Tokens<Dart>;
+pub type Tokens = crate::Tokens;
 
 impl_dynamic_types! { Dart =>
     trait TypeTrait {}
@@ -333,7 +333,6 @@ impl Dart {
 impl Lang for Dart {
     type Config = Config;
     type Format = Format;
-    type Import = Type;
 
     fn string_eval_literal(
         out: &mut fmt::Formatter<'_>,

@@ -1,4 +1,3 @@
-use crate::lang::Lang;
 use crate::tokens;
 use crate::Tokens;
 
@@ -12,7 +11,7 @@ use crate::Tokens;
 /// use genco::lang::Lang;
 /// use genco::tokens::{ItemStr, FormatInto, from_fn, static_literal};
 ///
-/// fn comment<L>(s: impl Into<ItemStr>) -> impl FormatInto<L>
+/// fn comment<L>(s: impl Into<ItemStr>) -> impl FormatInto
 /// where
 ///     L: Lang
 /// {
@@ -24,10 +23,9 @@ use crate::Tokens;
 /// # Ok(())
 /// # }
 /// ```
-pub fn from_fn<F, L>(f: F) -> FromFn<F>
+pub fn from_fn<F>(f: F) -> FromFn<F>
 where
-    F: FnOnce(&mut Tokens<L>),
-    L: Lang,
+    F: FnOnce(&mut Tokens)
 {
     FromFn { f }
 }
@@ -39,12 +37,11 @@ pub struct FromFn<F> {
     f: F,
 }
 
-impl<L, F> tokens::FormatInto<L> for FromFn<F>
+impl<F> tokens::FormatInto for FromFn<F>
 where
-    L: Lang,
-    F: FnOnce(&mut Tokens<L>),
+    F: FnOnce(&mut Tokens),
 {
-    fn format_into(self, tokens: &mut Tokens<L>) {
+    fn format_into(self, tokens: &mut Tokens) {
         (self.f)(tokens);
     }
 }

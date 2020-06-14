@@ -1,4 +1,3 @@
-use crate::lang::Lang;
 use crate::Tokens;
 use std::rc::Rc;
 
@@ -22,7 +21,7 @@ use std::rc::Rc;
 /// use genco::tokens::{ItemStr, FormatInto, from_fn, static_literal};
 /// use genco::lang::Lang;
 ///
-/// fn comment<L>(s: impl Into<ItemStr>) -> impl FormatInto<L>
+/// fn comment(s: impl Into<ItemStr>) -> impl FormatInto
 /// where
 ///     L: Lang
 /// {
@@ -34,40 +33,28 @@ use std::rc::Rc;
 /// # Ok(())
 /// # }
 /// ```
-pub trait FormatInto<L>
-where
-    L: Lang,
-{
+pub trait FormatInto {
     /// Convert the type into tokens in-place.
     ///
     /// # Examples
-    fn format_into(self, tokens: &mut Tokens<L>);
+    fn format_into(self, tokens: &mut Tokens);
 }
 
-impl<L> FormatInto<L> for Tokens<L>
-where
-    L: Lang,
-{
+impl FormatInto for Tokens {
     fn format_into(self, tokens: &mut Self) {
         tokens.extend(self);
     }
 }
 
-impl<'a, L> FormatInto<L> for &'a Tokens<L>
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl<'a> FormatInto for &'a Tokens {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.extend(self.iter().cloned());
     }
 }
 
 /// Convert collection to tokens.
-impl<L> FormatInto<L> for Vec<Tokens<L>>
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl FormatInto for Vec<Tokens> {
+    fn format_into(self, tokens: &mut Tokens) {
         for t in self {
             tokens.extend(t);
         }
@@ -75,62 +62,46 @@ where
 }
 
 /// Convert borrowed strings.
-impl<'a, L> FormatInto<L> for &'a str
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl<'a> FormatInto for &'a str {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.item(self.to_string().into());
     }
 }
 
 /// Convert borrowed strings.
-impl<'a, L> FormatInto<L> for &'a String
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl<'a> FormatInto for &'a String {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.item(self.clone().into());
     }
 }
 
 /// Convert strings.
-impl<L> FormatInto<L> for String
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl FormatInto for String {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.item(self.into());
     }
 }
 
 /// Convert refcounted strings.
-impl<L> FormatInto<L> for Rc<String>
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl FormatInto for Rc<String> {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.item(self.into());
     }
 }
 
 /// Convert reference to refcounted strings.
-impl<'a, L> FormatInto<L> for &'a Rc<String>
-where
-    L: Lang,
-{
-    fn format_into(self, tokens: &mut Tokens<L>) {
+impl<'a> FormatInto for &'a Rc<String> {
+    fn format_into(self, tokens: &mut Tokens) {
         tokens.item(self.clone().into());
     }
 }
 
 /// Convert stringy things.
-impl<L, T> FormatInto<L> for Option<T>
+impl<T> FormatInto for Option<T>
 where
-    L: Lang,
-    T: FormatInto<L>,
+    T: FormatInto,
 {
-    fn format_into(self, tokens: &mut Tokens<L>) {
+    fn format_into(self, tokens: &mut Tokens) {
         if let Some(inner) = self {
             inner.format_into(tokens);
         }
@@ -138,22 +109,16 @@ where
 }
 
 /// Unit implementation of format tokens. Does nothing.
-impl<L> FormatInto<L> for ()
-where
-    L: Lang,
-{
+impl FormatInto for () {
     #[inline]
-    fn format_into(self, _: &mut Tokens<L>) {}
+    fn format_into(self, _: &mut Tokens) {}
 }
 
 macro_rules! impl_display {
     ($($ty:ty),*) => {
         $(
-            impl<L> FormatInto<L> for $ty
-            where
-                L: Lang,
-            {
-                fn format_into(self, tokens: &mut Tokens<L>) {
+            impl FormatInto for $ty {
+                fn format_into(self, tokens: &mut Tokens) {
                     tokens.append(self.to_string());
                 }
             }

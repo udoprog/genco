@@ -10,13 +10,15 @@
 //! ```
 
 use crate::fmt;
-use crate::lang::Lang;
+use crate::lang::{LangBox, Lang};
 use crate::tokens::{FormatInto, Item, ItemStr, RegisterTokens};
 use std::cmp;
 use std::iter::FromIterator;
+use std::marker;
 use std::num::NonZeroI16;
 use std::slice;
 use std::vec;
+use std::any;
 
 #[derive(Default, Clone, Copy)]
 struct EndOnEval(bool);
@@ -49,17 +51,11 @@ struct EndOnEval(bool);
 /// [push]: Self::push()
 /// [line]: Self::line()
 #[derive(Default)]
-pub struct Tokens<L = ()>
-where
-    L: Lang,
-{
-    items: Vec<Item<L>>,
+pub struct Tokens {
+    items: Vec<Item>,
 }
 
-impl<L> Tokens<L>
-where
-    L: Lang,
-{
+impl Tokens {
     /// Create a new empty stream of tokens.
     ///
     /// # Examples
@@ -93,7 +89,7 @@ where
     /// assert_eq!(Some(&Item::Literal(ItemStr::Static("baz"))), it.next());
     /// assert_eq!(None, it.next());
     /// ```
-    pub fn iter(&self) -> Iter<'_, L> {
+    pub fn iter(&self) -> Iter<'_> {
         Iter {
             iter: self.items.iter(),
         }
@@ -117,7 +113,7 @@ where
     /// assert_eq!(Some(Item::Literal(ItemStr::Static("baz"))), it.next());
     /// assert_eq!(None, it.next());
     /// ```
-    pub fn into_iter(self) -> IntoIter<L> {
+    pub fn into_iter(self) -> IntoIter {
         IntoIter {
             iter: self.items.into_iter(),
         }
@@ -147,7 +143,7 @@ where
     /// ```
     pub fn append<T>(&mut self, tokens: T)
     where
-        T: FormatInto<L>,
+        T: FormatInto,
     {
         tokens.format_into(self)
     }
@@ -170,7 +166,7 @@ where
     ///
     /// assert_eq!(tokens, quote!(foo bar));
     /// ```
-    pub fn item(&mut self, item: Item<L>) {
+    pub fn item(&mut self, item: Item) {
         match item {
             Item::Push => self.push(),
             Item::Line => self.line(),
@@ -251,7 +247,7 @@ where
     /// ```
     pub fn extend<I>(&mut self, it: I)
     where
-        I: IntoIterator<Item = Item<L>>,
+        I: IntoIterator<Item = Item>,
     {
         for item in it {
             self.item(item);
@@ -276,7 +272,7 @@ where
     ///     println!("{:?}", import);
     /// }
     /// ```
-    pub fn walk_imports(&self) -> WalkImports<'_, L> {
+    pub fn walk_imports(&self) -> WalkImports<'_> {
         WalkImports {
             queue: self.items.iter(),
         }
@@ -307,7 +303,7 @@ where
     /// [quote!]: macro.quote.html
     pub fn register<T>(&mut self, tokens: T)
     where
-        T: RegisterTokens<L>,
+        T: RegisterTokens,
     {
         tokens.register_tokens(self);
     }
@@ -615,12 +611,12 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn format(
+    pub fn format<L>(
         &self,
         out: &mut fmt::Formatter<'_>,
         config: &L::Config,
         format: &L::Format,
-    ) -> fmt::Result {
+    ) -> fmt::Result where L: Lang {
         use crate::tokens::cursor;
         use std::mem;
 
@@ -747,13 +743,13 @@ where
     /// # Ok(())
     /// # }
     /// ```
-    pub fn format_file(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result {
-        L::format_file(self, out, &config)?;
+    pub fn format_file<L>(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result where L: Lang {
+        L::format_file(self, out, config)?;
         Ok(())
     }
 }
 
-impl<C: Default, L: Lang<Config = C>> Tokens<L> {
+impl Tokens {
     /// Format the token stream as a file for the given target language to a
     /// string using the default configuration.
     ///
@@ -783,11 +779,11 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn to_file_string(&self) -> fmt::Result<String> {
+    pub fn to_file_string<L>(&self) -> fmt::Result<String> where L: Lang, L::Config: Default {
         let mut w = fmt::FmtWriter::new(String::new());
         let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
         let config = L::Config::default();
-        self.format_file(&mut formatter, &config)?;
+        self.format_file::<L>(&mut formatter, &config)?;
         Ok(w.into_inner())
     }
 
@@ -819,12 +815,12 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn to_string(self) -> fmt::Result<String> {
+    pub fn to_string<L>(self) -> fmt::Result<String> where L: Lang, L::Config: Default {
         let mut w = fmt::FmtWriter::new(String::new());
         let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
         let config = L::Config::default();
         let format = L::Format::default();
-        self.format(&mut formatter, &config, &format)?;
+        self.format::<L>(&mut formatter, &config, &format)?;
         Ok(w.into_inner())
     }
 
@@ -861,11 +857,11 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn to_file_vec(&self) -> fmt::Result<Vec<String>> {
+    pub fn to_file_vec<L>(&self) -> fmt::Result<Vec<String>> where L: Lang, L::Config: Default {
         let mut w = fmt::VecWriter::new();
         let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
         let config = L::Config::default();
-        self.format_file(&mut formatter, &config)?;
+        self.format_file::<L>(&mut formatter, &config)?;
         Ok(w.into_vec())
     }
 
@@ -900,29 +896,23 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn to_vec(self) -> fmt::Result<Vec<String>> {
+    pub fn to_vec<L>(self) -> fmt::Result<Vec<String>> where L: Lang, L::Config: Default {
         let mut w = fmt::VecWriter::new();
         let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
         let config = L::Config::default();
         let format = L::Format::default();
-        self.format(&mut formatter, &config, &format)?;
+        self.format::<L>(&mut formatter, &config, &format)?;
         Ok(w.into_vec())
     }
 }
 
-impl<L> std::fmt::Debug for Tokens<L>
-where
-    L: Lang,
-{
+impl std::fmt::Debug for Tokens {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_list().entries(self.items.iter()).finish()
     }
 }
 
-impl<L> Clone for Tokens<L>
-where
-    L: Lang,
-{
+impl Clone for Tokens {
     fn clone(&self) -> Self {
         Self {
             items: self.items.clone(),
@@ -930,80 +920,56 @@ where
     }
 }
 
-impl<L> cmp::PartialEq for Tokens<L>
-where
-    L: Lang,
-{
+impl cmp::PartialEq for Tokens {
     fn eq(&self, other: &Self) -> bool {
         self.items == other.items
     }
 }
 
-impl<'a, L> cmp::PartialEq<Vec<Item<L>>> for Tokens<L>
-where
-    L: Lang,
-{
-    fn eq(&self, other: &Vec<Item<L>>) -> bool {
+impl cmp::PartialEq<Vec<Item>> for Tokens {
+    fn eq(&self, other: &Vec<Item>) -> bool {
         self.items == *other
     }
 }
 
-impl<'a, L> cmp::PartialEq<Tokens<L>> for Vec<Item<L>>
-where
-    L: Lang,
-{
-    fn eq(&self, other: &Tokens<L>) -> bool {
+impl<'a> cmp::PartialEq<Tokens> for Vec<Item> {
+    fn eq(&self, other: &Tokens) -> bool {
         *self == other.items
     }
 }
 
-impl<'a, L> cmp::PartialEq<[Item<L>]> for Tokens<L>
-where
-    L: Lang,
-{
-    fn eq(&self, other: &[Item<L>]) -> bool {
+impl<'a> cmp::PartialEq<[Item]> for Tokens {
+    fn eq(&self, other: &[Item]) -> bool {
         &*self.items == other
     }
 }
 
-impl<'a, L> cmp::PartialEq<Tokens<L>> for [Item<L>]
-where
-    L: Lang,
-{
-    fn eq(&self, other: &Tokens<L>) -> bool {
+impl<'a> cmp::PartialEq<Tokens> for [Item] {
+    fn eq(&self, other: &Tokens) -> bool {
         self == &*other.items
     }
 }
 
-impl<L> cmp::Eq for Tokens<L> where L: Lang {}
+impl cmp::Eq for Tokens {}
 
 /// Iterator over [Tokens].
 ///
 /// This is created using [Tokens::into_iter()].
-pub struct IntoIter<L>
-where
-    L: Lang,
-{
-    iter: vec::IntoIter<Item<L>>,
+pub struct IntoIter {
+    iter: vec::IntoIter<Item>,
 }
 
-impl<L> Iterator for IntoIter<L>
-where
-    L: Lang,
-{
-    type Item = Item<L>;
+impl Iterator for IntoIter {
+    type Item = Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
 }
 
-impl<L> IntoIterator for Tokens<L>
-where
-    L: Lang,
-{
-    type Item = Item<L>;
-    type IntoIter = IntoIter<L>;
+impl IntoIterator for Tokens {
+    type Item = Item;
+    type IntoIter = IntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
         self.into_iter()
@@ -1013,52 +979,37 @@ where
 /// Iterator over [Tokens].
 ///
 /// This is created using [Tokens::iter()].
-pub struct Iter<'a, L>
-where
-    L: Lang,
-{
-    iter: slice::Iter<'a, Item<L>>,
+pub struct Iter<'a> {
+    iter: slice::Iter<'a, Item>,
 }
 
-impl<'a, L: 'a> Iterator for Iter<'a, L>
-where
-    L: Lang,
-{
-    type Item = &'a Item<L>;
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
 }
 
-impl<'a, L> IntoIterator for &'a Tokens<L>
-where
-    L: Lang,
-{
-    type Item = &'a Item<L>;
-    type IntoIter = Iter<'a, L>;
+impl<'a> IntoIterator for &'a Tokens {
+    type Item = &'a Item;
+    type IntoIter = Iter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
 
-impl<'a, L: 'a> FromIterator<&'a Item<L>> for Tokens<L>
-where
-    L: Lang,
-{
-    fn from_iter<I: IntoIterator<Item = &'a Item<L>>>(iter: I) -> Tokens<L> {
+impl<'a> FromIterator<&'a Item> for Tokens {
+    fn from_iter<I: IntoIterator<Item = &'a Item>>(iter: I) -> Tokens {
         let mut tokens = Tokens::new();
         tokens.extend(iter.into_iter().cloned());
         tokens
     }
 }
 
-impl<L> FromIterator<Item<L>> for Tokens<L>
-where
-    L: Lang,
-{
-    fn from_iter<I: IntoIterator<Item = Item<L>>>(iter: I) -> Tokens<L> {
+impl FromIterator<Item> for Tokens {
+    fn from_iter<I: IntoIterator<Item = Item>>(iter: I) -> Tokens {
         let mut tokens = Tokens::new();
         tokens.extend(iter.into_iter());
         tokens
@@ -1068,18 +1019,12 @@ where
 /// An iterator over language-specific imported items.
 ///
 /// Constructed using the [Tokens::walk_imports] method.
-pub struct WalkImports<'a, L>
-where
-    L: Lang,
-{
-    queue: std::slice::Iter<'a, Item<L>>,
+pub struct WalkImports<'a> {
+    queue: std::slice::Iter<'a, Item>,
 }
 
-impl<'a, L> Iterator for WalkImports<'a, L>
-where
-    L: Lang,
-{
-    type Item = &'a L::Import;
+impl<'a> Iterator for WalkImports<'a> {
+    type Item = &'a dyn any::Any;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.queue.next() {
@@ -1130,7 +1075,6 @@ mod tests {
     impl crate::lang::Lang for Lang {
         type Config = ();
         type Format = ();
-        type Import = Import;
     }
 
     #[test]

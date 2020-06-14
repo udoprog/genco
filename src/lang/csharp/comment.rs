@@ -1,4 +1,3 @@
-use crate::lang::Csharp;
 use crate::tokens;
 use crate::Tokens;
 
@@ -7,12 +6,12 @@ use crate::Tokens;
 /// This struct is created by the [comment][super::comment()] function.
 pub struct Comment<T>(pub(super) T);
 
-impl<T> tokens::FormatInto<Csharp> for Comment<T>
+impl<T> tokens::FormatInto for Comment<T>
 where
     T: IntoIterator,
     T::Item: Into<tokens::ItemStr>,
 {
-    fn format_into(self, tokens: &mut Tokens<Csharp>) {
+    fn format_into(self, tokens: &mut Tokens) {
         for line in self.0 {
             tokens.push();
             tokens.append(tokens::static_literal("//"));
