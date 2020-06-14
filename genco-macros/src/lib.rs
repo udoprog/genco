@@ -114,17 +114,19 @@ pub(crate) use self::item_buffer::ItemBuffer;
 ///
 /// Some languages support interpolating values into strings.
 ///
-/// Some examples of this is:
+/// Examples of this is:
 ///
-/// * JavaScript - `` `Hello ${world}` `` (note the backticks)
-/// * Dart - `"Hello $world"`
+/// * JavaScript - `` `Hello ${a}` `` (note the backticks).
+/// * Dart - `"Hello $a"` or `"Hello ${a + b}"`.
 ///
 /// The `quote!` macro supports this through a special form of string quoting
-/// known as string interpolation. It has the form: `#_(<string>)`.
+/// through the form: `#_(<string>)`. This will produce literal strings but
+/// with the appropriate language-specific string interpolation method used.
 ///
 /// Interpolated values are specified with `$(<quoted>)`. And `$` itself is
-/// escaped by repeating it twice `$$`. The `<quoted>` section is whitespace
-/// sensitive.
+/// escaped by repeating it twice with `$$`. The `<quoted>` section is
+/// interpreted the same as in the [quote!] macro, but is whitespace sensitive.
+/// So `$(foo)` is not the same as `$(foo )` (note the space at the end).
 ///
 /// ```rust
 /// use genco::prelude::*;
