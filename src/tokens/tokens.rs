@@ -75,6 +75,23 @@ where
         Tokens { items: Vec::new() }
     }
 
+    /// Create a new empty stream of tokens with the specified capacity.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// let tokens = Tokens::<()>::with_capacity(10);
+    ///
+    /// assert!(tokens.is_empty());
+    /// ```
+    pub fn with_capacity(cap: usize) -> Self {
+        Tokens {
+            items: Vec::with_capacity(cap),
+        }
+    }
+
     /// Construct an iterator over the token stream.
     ///
     /// # Examples
@@ -253,6 +270,10 @@ where
     where
         I: IntoIterator<Item = Item<L>>,
     {
+        let it = it.into_iter();
+        let (low, high) = it.size_hint();
+        self.items.reserve(high.unwrap_or(low));
+
         for item in it {
             self.item(item);
         }
@@ -996,6 +1017,10 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
 }
 
 impl<L> IntoIterator for Tokens<L>
@@ -1029,6 +1054,10 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
 }
 
 impl<'a, L> IntoIterator for &'a Tokens<L>
@@ -1047,9 +1076,11 @@ impl<'a, L: 'a> FromIterator<&'a Item<L>> for Tokens<L>
 where
     L: Lang,
 {
-    fn from_iter<I: IntoIterator<Item = &'a Item<L>>>(iter: I) -> Tokens<L> {
-        let mut tokens = Tokens::new();
-        tokens.extend(iter.into_iter().cloned());
+    fn from_iter<I: IntoIterator<Item = &'a Item<L>>>(iter: I) -> Self {
+        let it = iter.into_iter();
+        let (low, high) = it.size_hint();
+        let mut tokens = Self::with_capacity(high.unwrap_or(low));
+        tokens.extend(it.cloned());
         tokens
     }
 }
@@ -1058,9 +1089,11 @@ impl<L> FromIterator<Item<L>> for Tokens<L>
 where
     L: Lang,
 {
-    fn from_iter<I: IntoIterator<Item = Item<L>>>(iter: I) -> Tokens<L> {
-        let mut tokens = Tokens::new();
-        tokens.extend(iter.into_iter());
+    fn from_iter<I: IntoIterator<Item = Item<L>>>(iter: I) -> Self {
+        let it = iter.into_iter();
+        let (low, high) = it.size_hint();
+        let mut tokens = Self::with_capacity(high.unwrap_or(low));
+        tokens.extend(it);
         tokens
     }
 }
@@ -1109,9 +1142,6 @@ mod tests {
     struct Import(u32);
 
     impl_lang_item! {
-        impl FormatInto<Lang> for Import;
-        impl From<Import> for LangBox<Lang>;
-
         impl LangItem<Lang> for Import {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
                 use std::fmt::Write as _;
