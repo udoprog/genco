@@ -38,7 +38,7 @@ pub use self::swift::Swift;
 use crate::fmt;
 use crate::Tokens;
 use std::any::Any;
-use std::rc::Rc;
+use std::ops;
 
 /// Trait to implement for language specialization.
 ///
@@ -155,11 +155,14 @@ where
         format: &L::Format,
     ) -> fmt::Result;
 
-    /// Check equality.
-    fn eq(&self, other: &dyn LangItem<L>) -> bool;
+    /// LangItem convert to Any. Automatically implemented by macro.
+    fn __lang_item_as_any(&self) -> &dyn Any;
 
-    /// Convert into any type.
-    fn as_any(&self) -> &dyn Any;
+    /// LangItem clone. Automatically implemented by macro.
+    fn __lang_item_clone(&self) -> Box<dyn LangItem<L>>;
+
+    /// LangItem equality. Automatically implemented by macro.
+    fn __lang_item_eq(&self, other: &dyn LangItem<L>) -> bool;
 
     /// Coerce into an imported type.
     ///
@@ -174,7 +177,7 @@ pub struct LangBox<L>
 where
     L: Lang,
 {
-    inner: Rc<dyn LangItem<L>>,
+    inner: Box<dyn LangItem<L>>,
 }
 
 impl<L> Clone for LangBox<L>
@@ -183,7 +186,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            inner: self.inner.clone(),
+            inner: LangItem::__lang_item_clone(&*self.inner),
         }
     }
 }
@@ -197,37 +200,22 @@ where
     }
 }
 
-impl<L> LangItem<L> for LangBox<L>
+impl<L> ops::Deref for LangBox<L>
 where
     L: Lang,
 {
-    fn format(
-        &self,
-        out: &mut fmt::Formatter<'_>,
-        config: &L::Config,
-        format: &L::Format,
-    ) -> fmt::Result {
-        self.inner.format(out, config, format)
-    }
+    type Target = dyn LangItem<L>;
 
-    fn eq(&self, other: &dyn LangItem<L>) -> bool {
-        self.inner.eq(other)
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self.inner.as_any()
-    }
-
-    fn as_import(&self) -> Option<&L::Import> {
-        self.inner.as_import()
+    fn deref(&self) -> &Self::Target {
+        &*self.inner
     }
 }
 
-impl<L> From<Rc<dyn LangItem<L>>> for LangBox<L>
+impl<L> From<Box<dyn LangItem<L>>> for LangBox<L>
 where
     L: Lang,
 {
-    fn from(value: Rc<dyn LangItem<L>>) -> Self {
+    fn from(value: Box<dyn LangItem<L>>) -> Self {
         Self { inner: value }
     }
 }

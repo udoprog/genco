@@ -34,7 +34,7 @@ pub use self::comment::Comment;
 pub type Tokens = crate::Tokens<Csharp>;
 
 impl_dynamic_types! { Csharp =>
-    pub trait TypeTrait {
+    trait TypeTrait {
         /// Get the name of the type.
         fn name(&self) -> &str;
 
@@ -50,98 +50,213 @@ impl_dynamic_types! { Csharp =>
         fn type_imports(&self, _: &mut BTreeSet<(ItemStr, ItemStr)>) {}
     }
 
-    pub trait Args;
-    pub struct Any;
-    pub enum AnyRef;
+    Simple {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                self.name
+            }
 
-    impl TypeTrait for Simple {
-        fn name(&self) -> &str {
-            self.name
-        }
+            fn namespace(&self) -> Option<&str> {
+                Some(SYSTEM)
+            }
 
-        fn namespace(&self) -> Option<&str> {
-            Some(SYSTEM)
-        }
+            fn is_nullable(&self) -> bool {
+                false
+            }
 
-        fn is_nullable(&self) -> bool {
-            false
-        }
-
-        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-            modules.insert((SYSTEM.into(), self.alias.into()));
-        }
-    }
-
-    impl TypeTrait for Optional {
-        fn name(&self) -> &str {
-            self.inner.name()
-        }
-
-        fn namespace(&self) -> Option<&str> {
-            self.inner.namespace()
-        }
-
-        fn is_nullable(&self) -> bool {
-            false
-        }
-
-        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-            self.inner.type_imports(modules)
-        }
-    }
-
-    impl TypeTrait for Type {
-        fn name(&self) -> &str {
-            &*self.name
-        }
-
-        fn namespace(&self) -> Option<&str> {
-            self.namespace.as_deref()
-        }
-
-        fn is_nullable(&self) -> bool {
-            match self.kind {
-                Kind::Enum | Kind::Struct => false,
-                _ => true,
+            fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+                modules.insert((SYSTEM.into(), self.alias.into()));
             }
         }
 
-        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-            for argument in &self.arguments {
-                argument.type_imports(modules);
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(self.alias)?;
+                Ok(())
             }
 
-            if let Some(namespace) = &self.namespace {
-                modules.insert((namespace.clone(), self.name.clone()));
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
             }
         }
     }
 
-    impl TypeTrait for Array {
-        fn name(&self) -> &str {
-            self.inner.name()
+    Optional {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                self.inner.name()
+            }
+
+            fn namespace(&self) -> Option<&str> {
+                self.inner.namespace()
+            }
+
+            fn is_nullable(&self) -> bool {
+                false
+            }
+
+            fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+                self.inner.type_imports(modules)
+            }
         }
 
-        fn namespace(&self) -> Option<&str> {
-            self.inner.namespace()
-        }
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                self.inner.format(out, config, format)?;
 
-        fn is_nullable(&self) -> bool {
-            true
-        }
+                if !self.inner.is_nullable() {
+                    out.write_str("?")?;
+                }
 
-        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-            self.inner.type_imports(modules);
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 
-    impl TypeTrait for Void {
-        fn name(&self) -> &str {
-            "void"
+    Type {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                &*self.name
+            }
+
+            fn namespace(&self) -> Option<&str> {
+                self.namespace.as_deref()
+            }
+
+            fn is_nullable(&self) -> bool {
+                match self.kind {
+                    Kind::Enum | Kind::Struct => false,
+                    _ => true,
+                }
+            }
+
+            fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+                for argument in &self.arguments {
+                    argument.type_imports(modules);
+                }
+
+                if let Some(namespace) = &self.namespace {
+                    modules.insert((namespace.clone(), self.name.clone()));
+                }
+            }
         }
 
-        fn is_nullable(&self) -> bool {
-            false
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                {
+                    let qualified = match self.qualified {
+                        true => true,
+                        false => {
+                            let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
+                            let imported = format
+                                .imported_names
+                                .get(self.name.as_ref())
+                                .map(String::as_str);
+                            let pkg = self.namespace.as_deref();
+                            imported != pkg && file_namespace != pkg
+                        }
+                    };
+
+                    if let Some(namespace) = &self.namespace {
+                        if qualified {
+                            out.write_str(namespace)?;
+                            out.write_str(SEP)?;
+                        }
+                    }
+                }
+
+                {
+                    out.write_str(self.name.as_ref())?;
+
+                    let mut it = self.path.iter();
+
+                    while let Some(n) = it.next() {
+                        out.write_str(".")?;
+                        out.write_str(n.as_ref())?;
+                    }
+                }
+
+                if !self.arguments.is_empty() {
+                    out.write_str("<")?;
+
+                    let mut it = self.arguments.iter().peekable();
+
+                    while let Some(argument) = it.next() {
+                        argument.format(out, config, format)?;
+
+                        if it.peek().is_some() {
+                            out.write_str(", ")?;
+                        }
+                    }
+
+                    out.write_str(">")?;
+                }
+
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+
+    Array {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                self.inner.name()
+            }
+
+            fn namespace(&self) -> Option<&str> {
+                self.inner.namespace()
+            }
+
+            fn is_nullable(&self) -> bool {
+                true
+            }
+
+            fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+                self.inner.type_imports(modules);
+            }
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                self.inner.format(out, config, format)?;
+                out.write_str("[]")?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+
+    Void {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                "void"
+            }
+
+            fn is_nullable(&self) -> bool {
+                false
+            }
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str("void")?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 }
@@ -319,24 +434,6 @@ pub struct Optional {
     inner: Any,
 }
 
-impl_lang_item! {
-    impl LangItem<Csharp> for Optional {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            self.inner.format(out, config, format)?;
-
-            if !self.inner.is_nullable() {
-                out.write_str("?")?;
-            }
-
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// The kind of the pointed to type.
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Kind {
@@ -417,67 +514,6 @@ impl Type {
     }
 }
 
-impl_lang_item! {
-    impl LangItem<Csharp> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            {
-                let qualified = match self.qualified {
-                    true => true,
-                    false => {
-                        let file_namespace = config.namespace.as_ref().map(|p| p.as_ref());
-                        let imported = format
-                            .imported_names
-                            .get(self.name.as_ref())
-                            .map(String::as_str);
-                        let pkg = self.namespace.as_deref();
-                        imported != pkg && file_namespace != pkg
-                    }
-                };
-
-                if let Some(namespace) = &self.namespace {
-                    if qualified {
-                        out.write_str(namespace)?;
-                        out.write_str(SEP)?;
-                    }
-                }
-            }
-
-            {
-                out.write_str(self.name.as_ref())?;
-
-                let mut it = self.path.iter();
-
-                while let Some(n) = it.next() {
-                    out.write_str(".")?;
-                    out.write_str(n.as_ref())?;
-                }
-            }
-
-            if !self.arguments.is_empty() {
-                out.write_str("<")?;
-
-                let mut it = self.arguments.iter().peekable();
-
-                while let Some(argument) = it.next() {
-                    argument.format(out, config, format)?;
-
-                    if it.peek().is_some() {
-                        out.write_str(", ")?;
-                    }
-                }
-
-                out.write_str(">")?;
-            }
-
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// Simple type.
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Simple {
@@ -487,55 +523,15 @@ pub struct Simple {
     alias: &'static str,
 }
 
-impl_lang_item! {
-    impl LangItem<Csharp> for Simple {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str(self.alias)?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// An array type in C#.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Array {
     inner: Any,
 }
 
-impl_lang_item! {
-    impl LangItem<Csharp> for Array {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            self.inner.format(out, config, format)?;
-            out.write_str("[]")?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// The special `void` type.
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Void(());
-
-impl_lang_item! {
-    impl LangItem<Csharp> for Void {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str("void")?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
 
 /// Language specialization for C#.
 pub struct Csharp(());

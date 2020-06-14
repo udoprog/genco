@@ -32,33 +32,73 @@ pub struct Format {}
 pub struct Config {}
 
 impl_dynamic_types! { Swift =>
-    pub trait TypeTrait {
+    trait TypeTrait {
         /// Handle imports for the given type.
         fn type_imports(&self, modules: &mut BTreeSet<ItemStr>);
     }
 
-    pub trait Args;
-    pub struct Any;
-    pub enum AnyRef;
+    Type {
+        impl TypeTrait {
+            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+                if let Some(module) = &self.module {
+                    modules.insert(module.clone());
+                }
+            }
+        }
 
-    impl TypeTrait for Type {
-        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-            if let Some(module) = &self.module {
-                modules.insert(module.clone());
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(&self.name)
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
             }
         }
     }
 
-    impl TypeTrait for Map {
-        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-            self.key.type_imports(modules);
-            self.value.type_imports(modules);
+    Map {
+        impl TypeTrait {
+            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+                self.key.type_imports(modules);
+                self.value.type_imports(modules);
+            }
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                out.write_str("[")?;
+                self.key.format(out, config, format)?;
+                out.write_str(": ")?;
+                self.value.format(out, config, format)?;
+                out.write_str("]")?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 
-    impl TypeTrait for Array {
-        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-            self.inner.type_imports(modules);
+    Array {
+        impl TypeTrait {
+            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+                self.inner.type_imports(modules);
+            }
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                out.write_str("[")?;
+                self.inner.format(out, config, format)?;
+                out.write_str("]")?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 }
@@ -75,18 +115,6 @@ pub struct Type {
     name: ItemStr,
 }
 
-impl_lang_item! {
-    impl LangItem<Swift> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str(&self.name)
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// A map `[<key>: <value>]`.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Map {
@@ -96,43 +124,11 @@ pub struct Map {
     value: Any,
 }
 
-impl_lang_item! {
-    impl LangItem<Swift> for Map {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            out.write_str("[")?;
-            self.key.format(out, config, format)?;
-            out.write_str(": ")?;
-            self.value.format(out, config, format)?;
-            out.write_str("]")?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// An array, `[<inner>]`.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Array {
     /// Inner value of the array.
     inner: Any,
-}
-
-impl_lang_item! {
-    impl LangItem<Swift> for Array {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            out.write_str("[")?;
-            self.inner.format(out, config, format)?;
-            out.write_str("]")?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
 }
 
 impl Swift {

@@ -10,7 +10,7 @@
 //! ```
 
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::tokens::{FormatInto, Item, ItemStr, RegisterTokens};
 use std::cmp;
 use std::iter::FromIterator;

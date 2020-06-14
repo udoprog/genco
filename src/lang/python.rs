@@ -23,7 +23,6 @@ use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::ItemStr;
 use std::collections::BTreeSet;
-use std::fmt::Write as _;
 
 /// Tokens container specialization for Python.
 pub type Tokens = crate::Tokens<Python>;
@@ -53,49 +52,40 @@ pub struct Type {
 }
 
 impl_lang_item! {
-    impl FormatInto<Python> for Type;
-    impl From<Type> for LangBox<Python>;
-
     impl LangItem<Python> for Type {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            write!(out, "{}", self)
+            let has_module = match self.module {
+                Some(ref module) => match self.alias {
+                    Some(ref alias) => {
+                        out.write_str(alias)?;
+                        true
+                    }
+                    None => {
+                        if let Some(part) = module.split(SEP).last() {
+                            out.write_str(part)?;
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                },
+                None => false,
+            };
+
+            if let Some(ref name) = self.name {
+                if has_module {
+                    out.write_str(SEP)?;
+                }
+
+                out.write_str(name.as_ref())?;
+            }
+
+            Ok(())
         }
 
         fn as_import(&self) -> Option<&Self> {
             Some(self)
         }
-    }
-}
-
-impl std::fmt::Display for Type {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let has_module = match self.module {
-            Some(ref module) => match self.alias {
-                Some(ref alias) => {
-                    fmt.write_str(alias)?;
-                    true
-                }
-                None => {
-                    if let Some(part) = module.split(SEP).last() {
-                        fmt.write_str(part)?;
-                        true
-                    } else {
-                        false
-                    }
-                }
-            },
-            None => false,
-        };
-
-        if let Some(ref name) = self.name {
-            if has_module {
-                fmt.write_str(SEP)?;
-            }
-
-            fmt.write_str(name.as_ref())?;
-        }
-
-        Ok(())
     }
 }
 

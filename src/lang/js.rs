@@ -122,15 +122,55 @@ impl Config {
 }
 
 impl_dynamic_types! { JavaScript =>
-    pub trait TypeTrait {}
+    trait TypeTrait {}
 
-    pub trait Args;
-    pub struct Any;
-    pub enum AnyRef;
+    Import {
+        impl TypeTrait {}
 
-    impl TypeTrait for Import {}
-    impl TypeTrait for ImportDefault {}
-    impl TypeTrait for Local {}
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                if let Some(alias) = &self.alias {
+                    out.write_str(alias)?;
+                } else {
+                    out.write_str(&self.name)?;
+                }
+
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+
+    ImportDefault {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(&self.name)
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+
+    Local {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(&self.name)
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                None
+            }
+        }
+    }
 }
 
 /// An imported item in JavaScript.
@@ -195,24 +235,6 @@ impl Import {
     }
 }
 
-impl_lang_item! {
-    impl LangItem<JavaScript> for Import {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            if let Some(alias) = &self.alias {
-                out.write_str(alias)?;
-            } else {
-                out.write_str(&self.name)?;
-            }
-
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// A module being imported.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Module {
@@ -248,18 +270,6 @@ pub struct ImportDefault {
     name: ItemStr,
 }
 
-impl_lang_item! {
-    impl LangItem<JavaScript> for ImportDefault {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str(&self.name)
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// A local name.
 ///
 /// Created using the [local()] function.
@@ -267,18 +277,6 @@ impl_lang_item! {
 pub struct Local {
     /// The local name.
     name: ItemStr,
-}
-
-impl_lang_item! {
-    impl LangItem<JavaScript> for Local {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str(&self.name)
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            None
-        }
-    }
 }
 
 /// JavaScript language specialization.

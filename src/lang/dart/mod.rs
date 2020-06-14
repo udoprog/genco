@@ -48,16 +48,85 @@ use std::fmt::Write as _;
 pub type Tokens = crate::Tokens<Dart>;
 
 impl_dynamic_types! { Dart =>
-    pub trait TypeTrait {}
-    pub trait Args;
-    pub struct Any;
-    pub enum AnyRef;
+    trait TypeTrait {}
 
-    impl TypeTrait for Type {}
-    impl TypeTrait for BuiltIn {}
-    impl TypeTrait for Local {}
-    impl TypeTrait for Void {}
-    impl TypeTrait for Dynamic {}
+    Type {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                if let Some(alias) = &self.alias {
+                    out.write_str(alias.as_ref())?;
+                    out.write_str(SEP)?;
+                }
+
+                out.write_str(&*self.name)?;
+
+                if !self.arguments.is_empty() {
+                    out.write_str("<")?;
+
+                    let mut it = self.arguments.iter().peekable();
+
+                    while let Some(argument) = it.next() {
+                        argument.format(out, config, format)?;
+
+                        if it.peek().is_some() {
+                            out.write_str(", ")?;
+                        }
+                    }
+
+                    out.write_str(">")?;
+                }
+
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&Self> {
+                Some(self)
+            }
+        }
+    }
+
+    BuiltIn {
+        impl TypeTrait {
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(self.name)
+            }
+        }
+    }
+
+    Local {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(&*self.name)
+            }
+        }
+    }
+
+    Void {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str("void")
+            }
+        }
+    }
+
+    Dynamic {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str("dynamic")
+            }
+        }
+    }
 }
 
 static SEP: &'static str = ".";
@@ -135,51 +204,19 @@ pub struct BuiltIn {
     name: &'static str,
 }
 
-impl_lang_item! {
-    impl LangItem<Dart> for BuiltIn {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str(self.name)
-        }
-    }
-}
-
 /// a locally defined type.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Local {
     name: ItemStr,
 }
 
-impl_lang_item! {
-    impl LangItem<Dart> for Local {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str(&*self.name)
-        }
-    }
-}
-
 /// the void type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Void(());
 
-impl_lang_item! {
-    impl LangItem<Dart> for Void {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str("void")
-        }
-    }
-}
-
 /// The dynamic type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Dynamic(());
-
-impl_lang_item! {
-    impl LangItem<Dart> for Dynamic {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str("dynamic")
-        }
-    }
-}
 
 /// A custom dart type.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -254,41 +291,6 @@ impl Type {
     /// Check if type is generic.
     pub fn is_generic(&self) -> bool {
         !self.arguments.is_empty()
-    }
-}
-
-impl_lang_item! {
-    impl LangItem<Dart> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            if let Some(alias) = &self.alias {
-                out.write_str(alias.as_ref())?;
-                out.write_str(SEP)?;
-            }
-
-            out.write_str(&*self.name)?;
-
-            if !self.arguments.is_empty() {
-                out.write_str("<")?;
-
-                let mut it = self.arguments.iter().peekable();
-
-                while let Some(argument) = it.next() {
-                    argument.format(out, config, format)?;
-
-                    if it.peek().is_some() {
-                        out.write_str(", ")?;
-                    }
-                }
-
-                out.write_str(">")?;
-            }
-
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
-        }
     }
 }
 

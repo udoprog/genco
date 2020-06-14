@@ -53,35 +53,92 @@ use std::collections::BTreeSet;
 pub type Tokens = crate::Tokens<Go>;
 
 impl_dynamic_types! { Go =>
-    pub trait TypeTrait {
+    trait TypeTrait {
         /// Handle imports for the given type.
         fn type_imports(&self, _: &mut BTreeSet<ItemStr>) {}
     }
 
-    pub trait Args;
-    pub struct Any;
-    pub enum AnyRef;
+    Type {
+        impl TypeTrait {
+            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+                if let Some(module) = &self.module {
+                    modules.insert(module.clone());
+                }
+            }
+        }
 
-    impl TypeTrait for Type {
-        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-            if let Some(module) = &self.module {
-                modules.insert(module.clone());
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
+                    out.write_str(module)?;
+                    out.write_str(SEP)?;
+                }
+
+                out.write_str(&self.name)?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
             }
         }
     }
 
-    impl TypeTrait for Map {
-        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-            self.key.type_imports(modules);
-            self.value.type_imports(modules);
+    Map {
+        impl TypeTrait {
+            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+                self.key.type_imports(modules);
+                self.value.type_imports(modules);
+            }
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                out.write_str("map[")?;
+                self.key.format(out, config, format)?;
+                out.write_str("]")?;
+                self.value.format(out, config, format)?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 
-    impl TypeTrait for Interface {}
+    Interface {
+        impl TypeTrait {}
 
-    impl TypeTrait for Array {
-        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-            self.inner.type_imports(modules);
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str("interface{}")
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+
+    Array {
+        impl TypeTrait {
+            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
+                self.inner.type_imports(modules);
+            }
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                out.write_str("[")?;
+                out.write_str("]")?;
+                self.inner.format(out, config, format)?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 }
@@ -100,24 +157,6 @@ pub struct Type {
     name: ItemStr,
 }
 
-impl_lang_item! {
-    impl LangItem<Go> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
-                out.write_str(module)?;
-                out.write_str(SEP)?;
-            }
-
-            out.write_str(&self.name)?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// A map `map[<key>]<value>`.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Map {
@@ -127,22 +166,6 @@ pub struct Map {
     value: Any,
 }
 
-impl_lang_item! {
-    impl LangItem<Go> for Map {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            out.write_str("map[")?;
-            self.key.format(out, config, format)?;
-            out.write_str("]")?;
-            self.value.format(out, config, format)?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// An array `[]<inner>`.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Array {
@@ -150,36 +173,9 @@ pub struct Array {
     inner: Any,
 }
 
-impl_lang_item! {
-    impl LangItem<Go> for Array {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            out.write_str("[")?;
-            out.write_str("]")?;
-            self.inner.format(out, config, format)?;
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// The interface type `interface{}`.
 #[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Interface(());
-
-impl_lang_item! {
-    impl LangItem<Go> for Interface {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            out.write_str("interface{}")
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
 
 /// Format for Go.
 #[derive(Debug, Default)]

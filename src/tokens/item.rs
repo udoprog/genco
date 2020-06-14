@@ -1,6 +1,6 @@
 //! A single element
 
-use crate::lang::{Lang, LangBox, LangItem as _};
+use crate::lang::{Lang, LangBox};
 use crate::tokens;
 use crate::Tokens;
 use std::cmp;
@@ -158,8 +158,8 @@ where
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Literal(a), Self::Literal(b)) => a == b,
-            (Self::LangBox(a), Self::LangBox(b)) => a.eq(b),
-            (Self::Registered(a), Self::Registered(b)) => a.eq(b),
+            (Self::LangBox(a), Self::LangBox(b)) => a.__lang_item_eq(&**b),
+            (Self::Registered(a), Self::Registered(b)) => a.__lang_item_eq(&**b),
             (Self::Push, Self::Push) => true,
             (Self::Line, Self::Line) => true,
             (Self::Space, Self::Space) => true,

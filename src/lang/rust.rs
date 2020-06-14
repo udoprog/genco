@@ -432,9 +432,6 @@ impl Type {
 }
 
 impl_lang_item! {
-    impl FormatInto<Rust> for Type;
-    impl From<Type> for LangBox<Rust>;
-
     impl LangItem<Rust> for Type {
         fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             if let Some(reference) = &self.reference {

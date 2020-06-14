@@ -30,7 +30,7 @@ use std::collections::{BTreeSet, HashMap};
 pub type Tokens = crate::Tokens<Java>;
 
 impl_dynamic_types! { Java =>
-    pub trait TypeTrait {
+    trait TypeTrait {
         /// Get package type belongs to.
         fn name(&self) -> &str;
 
@@ -51,137 +51,185 @@ impl_dynamic_types! { Java =>
         fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result;
     }
 
-    pub trait Args;
-    pub struct Any;
-    pub enum AnyRef;
+    Primitive {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                self.primitive
+            }
 
-    impl TypeTrait for Primitive {
-        fn name(&self) -> &str {
-            self.primitive
+            fn package(&self) -> Option<&str> {
+                Some(JAVA_LANG)
+            }
+
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
+                if level > 0 {
+                    out.write_str(self.boxed)
+                } else {
+                    out.write_str(self.primitive)
+                }
+            }
         }
 
-        fn package(&self) -> Option<&str> {
-            Some(JAVA_LANG)
-        }
-
-        fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
-            if level > 0 {
-                out.write_str(self.boxed)
-            } else {
-                out.write_str(self.primitive)
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                self.java_format(out, config, format, 0)
             }
         }
     }
 
-    impl TypeTrait for Void {
-        fn name(&self) -> &str {
-            "void"
+    Void {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                "void"
+            }
+
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
+                if level > 0 {
+                    out.write_str("Void")
+                } else {
+                    out.write_str("void")
+                }
+            }
         }
 
-        fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, level: usize) -> fmt::Result {
-            if level > 0 {
-                out.write_str("Void")
-            } else {
-                out.write_str("void")
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                self.java_format(out, config, format, 0)
             }
         }
     }
 
-    impl TypeTrait for Type {
-        fn name(&self) -> &str {
-            &*self.name
-        }
-
-        fn package(&self) -> Option<&str> {
-            Some(&*self.package)
-        }
-
-        fn arguments(&self) -> Option<&[Any]> {
-            Some(&self.arguments)
-        }
-
-        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-            for argument in &self.arguments {
-                if let AnyRef::Type(ty) = argument.as_enum() {
-                    ty.type_imports(modules);
-                }
+    Type {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                &*self.name
             }
 
-            modules.insert((self.package.clone(), self.name.clone()));
-        }
-
-        fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
-            {
-                let file_package = config.package.as_ref().map(|p| p.as_ref());
-                let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
-                let pkg = Some(self.package.as_ref());
-
-                if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
-                    out.write_str(self.package.as_ref())?;
-                    out.write_str(SEP)?;
-                }
+            fn package(&self) -> Option<&str> {
+                Some(&*self.package)
             }
 
-            {
-                out.write_str(self.name.as_ref())?;
-
-                let mut it = self.path.iter();
-
-                while let Some(n) = it.next() {
-                    out.write_str(".")?;
-                    out.write_str(n.as_ref())?;
-                }
+            fn arguments(&self) -> Option<&[Any]> {
+                Some(&self.arguments)
             }
 
-            if !self.arguments.is_empty() {
-                out.write_str("<")?;
-
-                let mut it = self.arguments.iter().peekable();
-
-                while let Some(argument) = it.next() {
-                    argument.java_format(out, config, format, level + 1)?;
-
-                    if it.peek().is_some() {
-                        out.write_str(", ")?;
+            fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+                for argument in &self.arguments {
+                    if let AnyRef::Type(ty) = argument.as_enum() {
+                        ty.type_imports(modules);
                     }
                 }
 
-                out.write_str(">")?;
+                modules.insert((self.package.clone(), self.name.clone()));
             }
 
-            Ok(())
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
+                {
+                    let file_package = config.package.as_ref().map(|p| p.as_ref());
+                    let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
+                    let pkg = Some(self.package.as_ref());
+
+                    if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
+                        out.write_str(self.package.as_ref())?;
+                        out.write_str(SEP)?;
+                    }
+                }
+
+                {
+                    out.write_str(self.name.as_ref())?;
+
+                    let mut it = self.path.iter();
+
+                    while let Some(n) = it.next() {
+                        out.write_str(".")?;
+                        out.write_str(n.as_ref())?;
+                    }
+                }
+
+                if !self.arguments.is_empty() {
+                    out.write_str("<")?;
+
+                    let mut it = self.arguments.iter().peekable();
+
+                    while let Some(argument) = it.next() {
+                        argument.java_format(out, config, format, level + 1)?;
+
+                        if it.peek().is_some() {
+                            out.write_str(", ")?;
+                        }
+                    }
+
+                    out.write_str(">")?;
+                }
+
+                Ok(())
+            }
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                self.java_format(out, config, format, 0)
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 
-    impl TypeTrait for Optional {
-        fn name(&self) -> &str {
-            self.value.name()
+    Optional {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                self.value.name()
+            }
+
+            fn package(&self) -> Option<&str> {
+                self.value.package()
+            }
+
+            fn arguments(&self) -> Option<&[Any]> {
+                self.value.arguments()
+            }
+
+            fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
+                self.value.type_imports(modules);
+            }
+
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
+                self.field.java_format(out, config, format, level)
+            }
         }
 
-        fn package(&self) -> Option<&str> {
-            self.value.package()
-        }
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                self.java_format(out, config, format, 0)
+            }
 
-        fn arguments(&self) -> Option<&[Any]> {
-            self.value.arguments()
-        }
-
-        fn type_imports(&self, modules: &mut BTreeSet<(ItemStr, ItemStr)>) {
-            self.value.type_imports(modules);
-        }
-
-        fn java_format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format, level: usize) -> fmt::Result {
-            self.field.java_format(out, config, format, level)
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 
-    impl TypeTrait for Local {
-        fn name(&self) -> &str {
-            &*self.name
+    Local {
+        impl TypeTrait {
+            fn name(&self) -> &str {
+                &*self.name
+            }
+
+            fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, _: usize) -> fmt::Result {
+                out.write_str(&*self.name)
+            }
         }
 
-        fn java_format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format, _: usize) -> fmt::Result {
-            out.write_str(&*self.name)
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+                self.java_format(out, config, format, 0)
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
         }
     }
 }
@@ -362,30 +410,9 @@ impl Type {
     }
 }
 
-impl_lang_item! {
-    impl LangItem<Java> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            self.java_format(out, config, format, 0)
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
-}
-
 /// The void type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Void(());
-
-impl_lang_item! {
-    impl LangItem<Java> for Void {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            self.java_format(out, config, format, 0)
-        }
-    }
-}
-
 /// A primitive type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Primitive {
@@ -407,31 +434,11 @@ impl Primitive {
     }
 }
 
-impl_lang_item! {
-    impl LangItem<Java> for Primitive {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            self.java_format(out, config, format, 0)
-        }
-    }
-}
-
 /// A local name with no specific qualification.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Local {
     /// Name of class.
     name: ItemStr,
-}
-
-impl_lang_item! {
-    impl LangItem<Java> for Local {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            self.java_format(out, config, format, 0)
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
-    }
 }
 
 /// An optional type.
@@ -452,18 +459,6 @@ impl Optional {
     /// Get the value type (strips optionality).
     pub fn as_value(self) -> Any {
         self.value.clone()
-    }
-}
-
-impl_lang_item! {
-    impl LangItem<Java> for Optional {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            self.java_format(out, config, format, 0)
-        }
-
-        fn as_import(&self) -> Option<&dyn TypeTrait> {
-            Some(self)
-        }
     }
 }
 
