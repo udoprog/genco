@@ -415,12 +415,6 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// For a more compact version, you can also omit the braces by doing
 /// `#(ref <binding> => <quoted>)`.
 ///
-/// Note that this can cause borrowing issues if the underlying stream is
-/// already a mutable reference. To work around this you can specify
-/// `*<binding>` to cause it to reborrow.
-///
-/// For more information, see [quote_in!].
-///
 /// ```rust
 /// use genco::prelude::*;
 ///
@@ -608,22 +602,26 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// This macro takes a destination stream followed by an `=>` and the tokens to
 /// extend that stream with.
+/// 
+/// Note that the `<target>` arguments must be borrowable. So a mutable
+/// reference like `&mut rust::Tokens` will have to be dereferenced when used
+/// with this macro.
 ///
 /// ```rust
 /// # use genco::prelude::*;
 ///
-/// # fn generate() -> Tokens<()> {
-/// let mut tokens = Tokens::new();
+/// # fn generate() -> rust::Tokens {
+/// let mut tokens = rust::Tokens::new();
 /// quote_in!(tokens => hello world);
 /// # tokens
 /// # }
 ///
-/// # fn generate_into(tokens: &mut Tokens<()>) {
-/// quote_in! { *tokens =>
-///     hello...
-///     world!
+/// fn generate_into(tokens: &mut rust::Tokens) {
+///     quote_in! { *tokens =>
+///         hello...
+///         world!
+///     };
 /// }
-/// # }
 /// ```
 ///
 /// [quote!]: macro.quote.html
