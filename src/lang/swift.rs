@@ -27,13 +27,7 @@ impl_dynamic_types! {
     /// Swift token specialization.
     pub Swift
     =>
-    trait TypeTrait {
-    }
-
     Import {
-        impl TypeTrait {
-        }
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
                 out.write_str(&self.name)

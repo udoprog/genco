@@ -53,13 +53,7 @@ impl_dynamic_types! {
     /// Language specialization for Rust.
     pub Rust
     =>
-    trait TypeTrait {
-    }
-
     Import {
-        impl TypeTrait {
-        }
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
                 match &self.module {

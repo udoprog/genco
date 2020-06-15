@@ -33,11 +33,7 @@ impl_dynamic_types! {
     /// Language specialization for Java.
     pub Java
     =>
-    trait TypeTrait {}
-
     Import {
-        impl TypeTrait {}
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
                 let file_package = config.package.as_ref().map(|p| p.as_ref());

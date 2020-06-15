@@ -1142,13 +1142,7 @@ mod tests {
     impl_dynamic_types! {
         Lang
         =>
-        trait TypeTrait {
-        }
-
         Import {
-            impl TypeTrait {
-            }
-
             impl LangItem {
                 fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
                     use std::fmt::Write as _;

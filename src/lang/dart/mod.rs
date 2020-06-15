@@ -55,11 +55,7 @@ impl_dynamic_types! {
     /// Language specialization for Dart.
     pub Dart
     =>
-    trait TypeTrait {}
-
     Import {
-        impl TypeTrait {}
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
                 if let Some(alias) = &self.alias {

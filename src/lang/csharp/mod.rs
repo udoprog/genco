@@ -37,13 +37,7 @@ impl_dynamic_types! {
     /// Language specialization for C#.
     pub Csharp
     =>
-    trait TypeTrait {
-    }
-
     Import {
-        impl TypeTrait {
-        }
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
                 {

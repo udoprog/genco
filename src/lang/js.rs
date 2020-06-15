@@ -59,11 +59,7 @@ impl_dynamic_types! {
     /// JavaScript language specialization.
     pub JavaScript
     =>
-    trait TypeTrait {}
-
     Import {
-        impl TypeTrait {}
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
                 let name = match self.kind {

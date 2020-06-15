@@ -31,13 +31,7 @@ impl_dynamic_types! {
     /// Language specialization for Python.
     pub Python
     =>
-    trait TypeTrait {
-    }
-
     Import {
-        impl TypeTrait {
-        }
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
                 if let TypeModule::Qualified { module, alias }  = &self.module {
@@ -54,16 +48,13 @@ impl_dynamic_types! {
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn AsAny> {
                 Some(self)
             }
         }
     }
 
     ImportModule {
-        impl TypeTrait {
-        }
-
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
                 let module = match &self.alias {
@@ -75,7 +66,7 @@ impl_dynamic_types! {
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&dyn AsAny> {
                 Some(self)
             }
         }
@@ -297,8 +288,8 @@ impl Python {
         let mut imports = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            match import.as_enum() {
-                AnyRef::Import(Import {
+            match import.as_any() {
+                Any::Import(Import {
                     module,
                     alias,
                     name,
@@ -313,7 +304,7 @@ impl Python {
                             .insert((name, alias));
                     }
                 },
-                AnyRef::ImportModule(ImportModule { module, alias }) => {
+                Any::ImportModule(ImportModule { module, alias }) => {
                     imports.insert((module, alias));
                 }
             }
@@ -357,7 +348,7 @@ impl Python {
 impl Lang for Python {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
+    type Import = dyn AsAny;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
