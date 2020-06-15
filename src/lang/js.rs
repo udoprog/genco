@@ -48,7 +48,7 @@
 use crate::fmt;
 use crate::lang::Lang;
 use crate::tokens::ItemStr;
-use relative_path::RelativePathBuf;
+use relative_path::{RelativePath, RelativePathBuf};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
@@ -66,30 +66,15 @@ impl_dynamic_types! {
 
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                if let Some(alias) = &self.alias {
-                    out.write_str(alias)?;
-                } else {
-                    out.write_str(&self.name)?;
-                }
+                let name = match self.kind {
+                    ImportKind::Named => self.alias.as_ref().unwrap_or(&self.name),
+                    _ => &self.name,
+                };
 
-                Ok(())
+                out.write_str(name)
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
-            }
-        }
-    }
-
-    ImportDefault {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(&self.name)
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&Self> {
                 Some(self)
             }
         }
@@ -123,7 +108,7 @@ impl Config {
     /// # fn main() -> genco::fmt::Result {
     /// let foo1 = js::import(js::Module::Path("foo/bar.js".into()), "Foo1");
     /// let foo2 = js::import(js::Module::Path("foo/bar.js".into()), "Foo2");
-    /// let react = js::import_default("react", "React");
+    /// let react = js::import("react", "React").into_default();
     ///
     /// let toks: js::Tokens = quote! {
     ///     #foo1
@@ -163,11 +148,21 @@ impl Config {
     }
 }
 
+/// Internal type to determine the kind of import used.
+#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
+enum ImportKind {
+    Named,
+    Default,
+    Wildcard,
+}
+
 /// An imported JavaScript item `import {foo} from "module.js"`.
 ///
 /// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
+    /// The kind of the import.
+    kind: ImportKind,
     /// Module of the imported name.
     module: Module,
     /// Name imported.
@@ -183,7 +178,9 @@ pub struct Import {
 }
 
 impl Import {
-    /// Alias of an imported item.
+    /// Change alias of imported item.
+    ///
+    /// This implies that the import is a named import.
     ///
     /// If this is set, you'll get an import like:
     ///
@@ -222,7 +219,70 @@ impl Import {
         N: Into<ItemStr>,
     {
         Self {
+            kind: ImportKind::Named,
             alias: Some(alias.into()),
+            ..self
+        }
+    }
+
+    /// Convert into a default import.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let default_vec = js::import("collections", "defaultVec").into_default();
+    ///
+    /// let toks = quote!(#default_vec);
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import defaultVec from \"collections\";",
+    ///         "",
+    ///         "defaultVec",
+    ///     ],
+    ///     toks.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn into_default(self) -> Self {
+        Self {
+            kind: ImportKind::Default,
+            alias: None,
+            ..self
+        }
+    }
+
+    /// Convert into a wildcard import.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let all = js::import("collections", "all").into_wildcard();
+    ///
+    /// let toks = quote!(#all);
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import * as all from \"collections\";",
+    ///         "",
+    ///         "all",
+    ///     ],
+    ///     toks.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn into_wildcard(self) -> Self {
+        Self {
+            kind: ImportKind::Wildcard,
+            alias: None,
             ..self
         }
     }
@@ -252,18 +312,6 @@ impl From<String> for Module {
     }
 }
 
-/// The import of a default JavaScript item from a module
-/// `import foo from "module.js"`.
-///
-/// Created through the [import_default()] function.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct ImportDefault {
-    /// Module of the imported name.
-    module: Module,
-    /// Name imported.
-    name: ItemStr,
-}
-
 impl JavaScript {
     /// Translate imports into the necessary tokens.
     fn imports(out: &mut Tokens, tokens: &Tokens, config: &Config) {
@@ -271,26 +319,37 @@ impl JavaScript {
         use crate::prelude::*;
 
         let mut modules = BTreeMap::<&Module, ResolvedModule<'_>>::new();
+        let mut wildcards = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            match import.as_enum() {
-                AnyRef::Import(this) => {
-                    let module = modules.entry(&this.module).or_default();
+            match import.kind {
+                ImportKind::Named => {
+                    let module = modules.entry(&import.module).or_default();
 
-                    module.set.insert(match &this.alias {
-                        None => ImportedElement::Plain(&this.name),
-                        Some(alias) => ImportedElement::Aliased(&this.name, alias),
+                    module.set.insert(match &import.alias {
+                        None => ImportedElement::Plain(&import.name),
+                        Some(alias) => ImportedElement::Aliased(&import.name, alias),
                     });
                 }
-                AnyRef::ImportDefault(this) => {
-                    let module = modules.entry(&this.module).or_default();
-                    module.default_import = Some(&this.name);
+                ImportKind::Default => {
+                    let module = modules.entry(&import.module).or_default();
+                    module.default_import = Some(&import.name);
+                }
+                ImportKind::Wildcard => {
+                    wildcards.insert((&import.module, &import.name));
                 }
             }
         }
 
-        if modules.is_empty() {
+        if modules.is_empty() && wildcards.is_empty() {
             return;
+        }
+
+        for (module, name) in wildcards {
+            out.push();
+            quote_in! { *out =>
+                import * as #name from #(ref t => render_from(t, config.module_path.as_deref(), module));
+            }
         }
 
         for (name, module) in modules {
@@ -329,11 +388,7 @@ impl JavaScript {
 
                         tokens.append("}");
                     }
-                }) from #(match (&config.module_path, name) {
-                    (_, Module::Global(from)) => #(quoted(from)),
-                    (None, Module::Path(path)) => #(quoted(path.as_str())),
-                    (Some(module_path), Module::Path(path)) => #(quoted(module_path.relative(path).as_str())),
-                });
+                }) from #(ref t => render_from(t, config.module_path.as_deref(), name));
             };
         }
 
@@ -350,13 +405,23 @@ impl JavaScript {
             Plain(&'a ItemStr),
             Aliased(&'a ItemStr, &'a ItemStr),
         }
+
+        fn render_from(t: &mut js::Tokens, module_path: Option<&RelativePath>, module: &Module) {
+            quote_in! { *t =>
+                #(match (module_path, module) {
+                    (_, Module::Global(from)) => #(quoted(from)),
+                    (None, Module::Path(path)) => #(quoted(path.as_str())),
+                    (Some(module_path), Module::Path(path)) => #(quoted(module_path.relative(path).as_str())),
+                })
+            }
+        }
     }
 }
 
 impl Lang for JavaScript {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
+    type Import = Import;
 
     /// Start a string quote.
     fn open_quote(
@@ -452,18 +517,25 @@ impl Lang for JavaScript {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let a = js::import("collections", "vec");
-/// let b = js::import("collections", "vec").with_alias("list");
+/// let default_vec = js::import("collections", "defaultVec").into_default();
+/// let all = js::import("collections", "all").into_wildcard();
+/// let vec = js::import("collections", "vec");
+/// let vec_as_list = js::import("collections", "vec").with_alias("list");
 ///
 /// let toks = quote! {
-///     #a
-///     #b
+///     #default_vec
+///     #all
+///     #vec
+///     #vec_as_list
 /// };
 ///
 /// assert_eq!(
 ///     vec![
-///         "import {vec, vec as list} from \"collections\";",
+///         "import * as all from \"collections\";",
+///         "import defaultVec, {vec, vec as list} from \"collections\";",
 ///         "",
+///         "defaultVec",
+///         "all",
 ///         "vec",
 ///         "list",
 ///     ],
@@ -478,53 +550,9 @@ where
     N: Into<ItemStr>,
 {
     Import {
+        kind: ImportKind::Named,
         module: module.into(),
         name: name.into(),
         alias: None,
-    }
-}
-
-/// Import the default element from the specified module.
-///
-/// Note that the default element may only be aliased once, so multiple aliases
-/// will cause an error.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let a = js::import_default("collections", "defaultVec");
-/// let b = js::import("collections", "vec");
-/// let c = js::import("collections", "vec").with_alias("list");
-///
-/// let toks = quote! {
-///     #a
-///     #b
-///     #c
-/// };
-///
-/// assert_eq!(
-///     vec![
-///         "import defaultVec, {vec, vec as list} from \"collections\";",
-///         "",
-///         "defaultVec",
-///         "vec",
-///         "list",
-///     ],
-///     toks.to_file_vec()?
-/// );
-/// # Ok(())
-/// # }
-/// ```
-pub fn import_default<M, N>(module: M, name: N) -> ImportDefault
-where
-    M: Into<Module>,
-    N: Into<ItemStr>,
-{
-    ImportDefault {
-        module: module.into(),
-        name: name.into(),
     }
 }

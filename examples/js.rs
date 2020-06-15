@@ -2,10 +2,10 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let react = &js::import_default("react", "React");
-    let display = &js::import_default("./Display", "Display");
-    let button_panel = &js::import_default("./ButtonPanel", "ButtonPanel");
-    let calculate = &js::import_default("../logic/calculate", "calculate");
+    let react = &js::import("react", "React").into_default();
+    let display = &js::import("./Display", "Display").into_default();
+    let button_panel = &js::import("./ButtonPanel", "ButtonPanel").into_default();
+    let calculate = &js::import("../logic/calculate", "calculate").into_default();
 
     let tokens = quote! {
         export default class App extends #react.Component {
