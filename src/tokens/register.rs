@@ -1,5 +1,5 @@
 use crate::lang::Lang;
-use crate::tokens::{from_fn, FormatInto};
+use crate::tokens::FormatInto;
 use crate::Tokens;
 
 /// Function to provide item registration.
@@ -47,14 +47,30 @@ use crate::Tokens;
 /// # Ok(())
 /// # }
 /// ```
-pub fn register<T, L>(inner: T) -> impl FormatInto<L>
+pub fn register<T, L>(inner: T) -> RegisterFn<T>
 where
     T: Register<L>,
     L: Lang,
 {
-    from_fn(move |t| {
-        inner.register(t);
-    })
+    RegisterFn { inner }
+}
+
+/// Struct containing a type only intended to be registered.
+///
+/// This is constructed with the [register()] function.
+#[derive(Debug, Clone, Copy)]
+pub struct RegisterFn<T> {
+    inner: T,
+}
+
+impl<T, L> FormatInto<L> for RegisterFn<T>
+where
+    T: Register<L>,
+    L: Lang,
+{
+    fn format_into(self, t: &mut Tokens<L>) {
+        t.register(self.inner);
+    }
 }
 
 /// Helper trait to convert something into a stream of registrations.

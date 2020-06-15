@@ -180,8 +180,12 @@ impl<'a> Encoder<'a> {
     pub(crate) fn encode_quoted(&mut self, s: syn::LitStr) {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);
-        self.output
-            .extend(quote::quote!(#receiver.quoted(genco::tokens::ItemStr::Static(#s));));
+
+        self.output.extend(quote::quote! {
+            #receiver.item(genco::tokens::Item::OpenQuote(false));
+            #receiver.append(genco::tokens::ItemStr::Static(#s));
+            #receiver.item(genco::tokens::Item::CloseQuote);
+        });
     }
 
     pub(crate) fn encode_control(&mut self, control: Control) {

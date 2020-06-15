@@ -11,7 +11,7 @@
 
 use crate::fmt;
 use crate::lang::Lang;
-use crate::tokens::{FormatInto, Item, ItemStr, Register};
+use crate::tokens::{FormatInto, Item, Register};
 use std::cmp;
 use std::iter::FromIterator;
 use std::num::NonZeroI16;
@@ -180,10 +180,10 @@ where
     ///
     /// let mut tokens = Tokens::<()>::new();
     ///
-    /// tokens.literal(ItemStr::Static("foo"));
+    /// tokens.append(ItemStr::Static("foo"));
     /// tokens.item(Item::Space);
     /// tokens.item(Item::Space); // Note: second space ignored
-    /// tokens.literal(ItemStr::Static("bar"));
+    /// tokens.append(ItemStr::Static("bar"));
     ///
     /// assert_eq!(tokens, quote!(foo bar));
     /// ```
@@ -194,56 +194,6 @@ where
             Item::Space => self.space(),
             other => self.items.push(other),
         }
-    }
-
-    /// Push the given string as a literal.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    /// use genco::tokens::{Item, ItemStr};
-    ///
-    /// let mut tokens = Tokens::<()>::new();
-    ///
-    /// tokens.literal(ItemStr::Static("foo"));
-    /// tokens.item(Item::Space);
-    /// tokens.item(Item::Space); // Note: second space ignored
-    /// tokens.literal(ItemStr::Static("bar"));
-    ///
-    /// assert_eq!(tokens, quote!(foo bar));
-    /// ```
-    pub fn literal<S>(&mut self, s: S)
-    where
-        S: Into<ItemStr>,
-    {
-        self.item(Item::Literal(s.into()));
-    }
-
-    /// Push the given string as a quoted.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    /// use genco::tokens::{Item, ItemStr};
-    ///
-    /// let mut tokens = Tokens::<()>::new();
-    ///
-    /// tokens.quoted(ItemStr::Static("foo"));
-    /// tokens.item(Item::Space);
-    /// tokens.item(Item::Space); // Note: second space ignored
-    /// tokens.quoted(ItemStr::Static("bar"));
-    ///
-    /// assert_eq!(tokens, quote!("foo" "bar"));
-    /// ```
-    pub fn quoted<S>(&mut self, s: S)
-    where
-        S: Into<ItemStr>,
-    {
-        self.item(Item::OpenQuote(false));
-        self.item(Item::Literal(s.into()));
-        self.item(Item::CloseQuote);
     }
 
     /// Extend with another stream of tokens.

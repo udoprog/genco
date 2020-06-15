@@ -132,7 +132,7 @@ impl<'a> Encoder<'a> {
         self.count += 1;
 
         self.stream.extend(quote::quote! {
-            #receiver.literal(genco::tokens::ItemStr::Static(#lit));
+            #receiver.append(genco::tokens::ItemStr::Static(#lit));
         });
 
         self.buffer.clear();
