@@ -19,7 +19,6 @@
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use crate::{quote, quote_in};
 use std::collections::{BTreeMap, BTreeSet};
@@ -27,48 +26,66 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Tokens container specialization for Python.
 pub type Tokens = crate::Tokens<Python>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// Language specialization for Python.
-    pub Python
-    =>
+    pub Python {
+        type Config = Config;
+        type Format = Format;
+        type Import = dyn AsAny;
+
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
+            super::c_family_write_quoted(out, input)
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut imports = Tokens::new();
+            Self::imports(&mut imports, tokens);
+            let format = Format::default();
+            imports.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
+            Ok(())
+        }
+    }
+
     Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                if let TypeModule::Qualified { module, alias }  = &self.module {
-                    out.write_str(alias.as_ref().unwrap_or(module))?;
-                    out.write_str(SEP)?;
-                }
-
-                let name = match &self.alias {
-                    Some(alias) => alias,
-                    None => &self.name,
-                };
-
-                out.write_str(name)?;
-                Ok(())
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            if let TypeModule::Qualified { module, alias }  = &self.module {
+                out.write_str(alias.as_ref().unwrap_or(module))?;
+                out.write_str(SEP)?;
             }
 
-            fn as_import(&self) -> Option<&dyn AsAny> {
-                Some(self)
-            }
+            let name = match &self.alias {
+                Some(alias) => alias,
+                None => &self.name,
+            };
+
+            out.write_str(name)?;
+            Ok(())
+        }
+
+        fn as_import(&self) -> Option<&dyn AsAny> {
+            Some(self)
         }
     }
 
     ImportModule {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                let module = match &self.alias {
-                    Some(alias) => alias,
-                    None => &self.module,
-                };
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            let module = match &self.alias {
+                Some(alias) => alias,
+                None => &self.module,
+            };
 
-                out.write_str(module)?;
-                Ok(())
-            }
+            out.write_str(module)?;
+            Ok(())
+        }
 
-            fn as_import(&self) -> Option<&dyn AsAny> {
-                Some(self)
-            }
+        fn as_import(&self) -> Option<&dyn AsAny> {
+            Some(self)
         }
     }
 }
@@ -342,30 +359,6 @@ impl Python {
         }
 
         out.line();
-    }
-}
-
-impl Lang for Python {
-    type Config = Config;
-    type Format = Format;
-    type Import = dyn AsAny;
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
-        super::c_family_write_quoted(out, input)
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut imports = Tokens::new();
-        Self::imports(&mut imports, tokens);
-        let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
-        Ok(())
     }
 }
 

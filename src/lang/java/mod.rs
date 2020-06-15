@@ -21,7 +21,6 @@ pub use self::block_comment::BlockComment;
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use crate::{quote, quote_in};
 use std::collections::{BTreeSet, HashMap};
@@ -29,29 +28,77 @@ use std::collections::{BTreeSet, HashMap};
 /// Tokens container specialized for Java.
 pub type Tokens = crate::Tokens<Java>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// Language specialization for Java.
-    pub Java
-    =>
-    Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-                let file_package = config.package.as_ref().map(|p| p.as_ref());
-                let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
-                let pkg = Some(self.package.as_ref());
+    pub Java {
+        type Config = Config;
+        type Format = Format;
+        type Import = Import;
 
-                if &*self.package != JAVA_LANG && imported != pkg && file_package != pkg {
-                    out.write_str(self.package.as_ref())?;
-                    out.write_str(SEP)?;
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html
+            use std::fmt::Write as _;
+
+            for c in input.chars() {
+                match c {
+                    '\t' => out.write_str("\\t")?,
+                    '\u{0007}' => out.write_str("\\b")?,
+                    '\n' => out.write_str("\\n")?,
+                    '\r' => out.write_str("\\r")?,
+                    '\u{0014}' => out.write_str("\\f")?,
+                    '\'' => out.write_str("\\'")?,
+                    '"' => out.write_str("\\\"")?,
+                    '\\' => out.write_str("\\\\")?,
+                    ' ' => out.write_char(' ')?,
+                    c if c.is_ascii() && !c.is_control() => out.write_char(c)?,
+                    c => {
+                        for c in c.encode_utf16(&mut [0u16; 2]) {
+                            write!(out, "\\u{:04x}", c)?;
+                        }
+                    }
                 }
-
-                out.write_str(&self.name)?;
-                Ok(())
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
+            Ok(())
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut header = Tokens::new();
+
+            if let Some(ref package) = config.package {
+                quote_in!(header => package #package;);
+                header.line();
             }
+
+            let mut format = Format::default();
+            Self::imports(&mut header, tokens, config, &mut format.imported);
+            header.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
+            Ok(())
+        }
+    }
+
+    Import {
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            let file_package = config.package.as_ref().map(|p| p.as_ref());
+            let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
+            let pkg = Some(self.package.as_ref());
+
+            if &*self.package != JAVA_LANG && imported != pkg && file_package != pkg {
+                out.write_str(self.package.as_ref())?;
+                out.write_str(SEP)?;
+            }
+
+            out.write_str(&self.name)?;
+            Ok(())
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
         }
     }
 }
@@ -173,58 +220,6 @@ impl Java {
         }
 
         out.line();
-    }
-}
-
-impl Lang for Java {
-    type Config = Config;
-    type Format = Format;
-    type Import = Import;
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html
-        use std::fmt::Write as _;
-
-        for c in input.chars() {
-            match c {
-                '\t' => out.write_str("\\t")?,
-                '\u{0007}' => out.write_str("\\b")?,
-                '\n' => out.write_str("\\n")?,
-                '\r' => out.write_str("\\r")?,
-                '\u{0014}' => out.write_str("\\f")?,
-                '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                '\\' => out.write_str("\\\\")?,
-                ' ' => out.write_char(' ')?,
-                c if c.is_ascii() && !c.is_control() => out.write_char(c)?,
-                c => {
-                    for c in c.encode_utf16(&mut [0u16; 2]) {
-                        write!(out, "\\u{:04x}", c)?;
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut header = Tokens::new();
-
-        if let Some(ref package) = config.package {
-            quote_in!(header => package #package;);
-            header.line();
-        }
-
-        let mut format = Format::default();
-        Self::imports(&mut header, tokens, config, &mut format.imported);
-        header.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
-        Ok(())
     }
 }
 

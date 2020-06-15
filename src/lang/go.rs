@@ -44,38 +44,64 @@
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::collections::BTreeSet;
 
+const MODULE_SEP: &str = "/";
+const SEP: &str = ".";
+
 /// Tokens container specialization for Go.
 pub type Tokens = crate::Tokens<Go>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// Language specialization for Go.
-    pub Go
-    =>
+    pub Go {
+        type Config = Config;
+        type Format = Format;
+        type Import = Import;
+
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // From: https://golang.org/src/strconv/quote.go
+            super::c_family_write_quoted(out, input)
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut header = Tokens::new();
+
+            if let Some(package) = &config.package {
+                quote_in!(header => package #package);
+                header.line();
+            }
+
+            Self::imports(&mut header, tokens);
+            let format = Format::default();
+            header.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
+            Ok(())
+        }
+    }
+
     Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                if let Some(module) = self.module.split("/").last() {
-                    out.write_str(module)?;
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(&self.name)?;
-                Ok(())
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            if let Some(module) = self.module.rsplit(MODULE_SEP).next() {
+                out.write_str(module)?;
+                out.write_str(SEP)?;
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
-            }
+            out.write_str(&self.name)?;
+            Ok(())
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
         }
     }
 }
-
-const SEP: &str = ".";
 
 /// A Go type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -127,36 +153,6 @@ impl Go {
     }
 }
 
-impl Lang for Go {
-    type Config = Config;
-    type Format = Format;
-    type Import = Import;
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        // From: https://golang.org/src/strconv/quote.go
-        super::c_family_write_quoted(out, input)
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut header = Tokens::new();
-
-        if let Some(package) = &config.package {
-            quote_in!(header => package #package);
-            header.line();
-        }
-
-        Self::imports(&mut header, tokens);
-        let format = Format::default();
-        header.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
-        Ok(())
-    }
-}
-
 /// Setup an imported element.
 ///
 /// # Examples
@@ -165,7 +161,7 @@ impl Lang for Go {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let ty = go::import("foo", "Debug");
+/// let ty = go::import("foo/bar", "Debug");
 ///
 /// let toks = quote! {
 ///     #ty
@@ -173,9 +169,9 @@ impl Lang for Go {
 ///
 /// assert_eq!(
 ///     vec![
-///        "import \"foo\"",
+///        "import \"foo/bar\"",
 ///        "",
-///        "foo.Debug",
+///        "bar.Debug",
 ///     ],
 ///     toks.to_file_vec()?
 /// );

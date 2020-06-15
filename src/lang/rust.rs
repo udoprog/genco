@@ -39,7 +39,6 @@
 //! # }
 
 use crate::fmt;
-use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::Write as _;
@@ -49,48 +48,95 @@ const SEP: &'static str = "::";
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Rust>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// Language specialization for Rust.
-    pub Rust
-    =>
+    pub Rust {
+        type Config = Config;
+        type Format = Format;
+        type Import = Import;
+
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // From: https://doc.rust-lang.org/reference/tokens.html#literals
+
+            for c in input.chars() {
+                match c {
+                    // new line
+                    '\n' => out.write_str("\\n")?,
+                    // carriage return
+                    '\r' => out.write_str("\\r")?,
+                    // horizontal tab
+                    '\t' => out.write_str("\\t")?,
+                    // backslash
+                    '\\' => out.write_str("\\\\")?,
+                    // null
+                    '\0' => out.write_str("\\0")?,
+                    // Note: only relevant if we were to use single-quoted strings.
+                    // '\'' => out.write_str("\\'")?,
+                    '"' => out.write_str("\\\"")?,
+                    c if !c.is_control() => out.write_char(c)?,
+                    c if (c as u32) < 0x80 => {
+                        write!(out, "\\x{:02x}", c as u32)?;
+                    }
+                    c => {
+                        write!(out, "\\u{{{:04x}}}", c as u32)?;
+                    }
+                };
+            }
+
+            Ok(())
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut imports: Tokens = Tokens::new();
+            Self::imports(&mut imports, config, tokens);
+
+            let format = Format::default();
+            imports.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
+            Ok(())
+        }
+    }
+
     Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
-                match &self.module {
-                    Module::Module {
-                        import: Some(ImportMode::Direct),
-                        ..
-                    } => {
-                        self.write_direct(out)?;
-                    }
-                    Module::Module {
-                        import: Some(ImportMode::Qualified),
-                        module,
-                    } => {
-                        self.write_prefixed(out, module)?;
-                    }
-                    Module::Module {
-                        import: None,
-                        module,
-                    } => match &config.default_import {
-                        ImportMode::Direct => self.write_direct(out)?,
-                        ImportMode::Qualified => self.write_prefixed(out, module)?,
-                    },
-                    Module::Aliased {
-                        alias: ref module, ..
-                    } => {
-                        out.write_str(module)?;
-                        out.write_str(SEP)?;
-                        out.write_str(&self.name)?;
-                    }
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
+            match &self.module {
+                Module::Module {
+                    import: Some(ImportMode::Direct),
+                    ..
+                } => {
+                    self.write_direct(out)?;
                 }
-
-                Ok(())
+                Module::Module {
+                    import: Some(ImportMode::Qualified),
+                    module,
+                } => {
+                    self.write_prefixed(out, module)?;
+                }
+                Module::Module {
+                    import: None,
+                    module,
+                } => match &config.default_import {
+                    ImportMode::Direct => self.write_direct(out)?,
+                    ImportMode::Qualified => self.write_prefixed(out, module)?,
+                },
+                Module::Aliased {
+                    alias: ref module, ..
+                } => {
+                    out.write_str(module)?;
+                    out.write_str(SEP)?;
+                    out.write_str(&self.name)?;
+                }
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
-            }
+            Ok(())
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
         }
     }
 }
@@ -506,57 +552,6 @@ impl Rust {
                 }
             }
         }
-    }
-}
-
-impl Lang for Rust {
-    type Config = Config;
-    type Format = Format;
-    type Import = Import;
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        // From: https://doc.rust-lang.org/reference/tokens.html#literals
-
-        for c in input.chars() {
-            match c {
-                // new line
-                '\n' => out.write_str("\\n")?,
-                // carriage return
-                '\r' => out.write_str("\\r")?,
-                // horizontal tab
-                '\t' => out.write_str("\\t")?,
-                // backslash
-                '\\' => out.write_str("\\\\")?,
-                // null
-                '\0' => out.write_str("\\0")?,
-                // Note: only relevant if we were to use single-quoted strings.
-                // '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                c if !c.is_control() => out.write_char(c)?,
-                c if (c as u32) < 0x80 => {
-                    write!(out, "\\x{:02x}", c as u32)?;
-                }
-                c => {
-                    write!(out, "\\u{{{:04x}}}", c as u32)?;
-                }
-            };
-        }
-
-        Ok(())
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut imports: Tokens = Tokens::new();
-        Self::imports(&mut imports, config, tokens);
-
-        let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
-        Ok(())
     }
 }
 

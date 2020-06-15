@@ -39,7 +39,6 @@ pub use self::doc_comment::DocComment;
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::fmt::Write as _;
@@ -51,25 +50,108 @@ const DART_CORE: &'static str = "dart:core";
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// Language specialization for Dart.
-    pub Dart
-    =>
+    pub Dart {
+        type Config = Config;
+        type Format = Format;
+        type Import = Import;
+
+        fn string_eval_literal(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+            literal: &str,
+        ) -> fmt::Result {
+            write!(out, "${}", literal)?;
+            Ok(())
+        }
+
+        /// Start a string-interpolated eval.
+        fn start_string_eval(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+        ) -> fmt::Result {
+            out.write_str("${")?;
+            Ok(())
+        }
+
+        /// End a string interpolated eval.
+        fn end_string_eval(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+        ) -> fmt::Result {
+            out.write_char('}')?;
+            Ok(())
+        }
+
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // Note: Dart is like C escape, but since it supports string
+            // interpolation, `$` also needs to be escaped!
+
+            for c in input.chars() {
+                match c {
+                    // backspace
+                    '\u{0008}' => out.write_str("\\b")?,
+                    // form feed
+                    '\u{0012}' => out.write_str("\\f")?,
+                    // new line
+                    '\n' => out.write_str("\\n")?,
+                    // carriage return
+                    '\r' => out.write_str("\\r")?,
+                    // horizontal tab
+                    '\t' => out.write_str("\\t")?,
+                    // vertical tab
+                    '\u{0011}' => out.write_str("\\v")?,
+                    // Note: only relevant if we were to use single-quoted strings.
+                    // '\'' => out.write_str("\\'")?,
+                    '"' => out.write_str("\\\"")?,
+                    '\\' => out.write_str("\\\\")?,
+                    '$' => out.write_str("\\$")?,
+                    c if !c.is_control() => out.write_char(c)?,
+                    c if (c as u32) < 0x100 => {
+                        write!(out, "\\x{:02x}", c as u32)?;
+                    }
+                    c => {
+                        for c in c.encode_utf16(&mut [0u16; 2]) {
+                            write!(out, "\\u{:04x}", c)?;
+                        }
+                    }
+                };
+            }
+
+            Ok(())
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut imports: Tokens = Tokens::new();
+            Self::imports(&mut imports, tokens, config);
+            let format = Format::default();
+            imports.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
+            Ok(())
+        }
+    }
+
     Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                if let Some(alias) = &self.alias {
-                    out.write_str(alias.as_ref())?;
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(&*self.name)?;
-                Ok(())
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            if let Some(alias) = &self.alias {
+                out.write_str(alias.as_ref())?;
+                out.write_str(SEP)?;
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
-            }
+            out.write_str(&*self.name)?;
+            Ok(())
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
         }
     }
 }
@@ -135,93 +217,6 @@ impl Dart {
         }
 
         out.line();
-    }
-}
-
-impl Lang for Dart {
-    type Config = Config;
-    type Format = Format;
-    type Import = Import;
-
-    fn string_eval_literal(
-        out: &mut fmt::Formatter<'_>,
-        _config: &Self::Config,
-        _format: &Self::Format,
-        literal: &str,
-    ) -> fmt::Result {
-        write!(out, "${}", literal)?;
-        Ok(())
-    }
-
-    /// Start a string-interpolated eval.
-    fn start_string_eval(
-        out: &mut fmt::Formatter<'_>,
-        _config: &Self::Config,
-        _format: &Self::Format,
-    ) -> fmt::Result {
-        out.write_str("${")?;
-        Ok(())
-    }
-
-    /// End a string interpolated eval.
-    fn end_string_eval(
-        out: &mut fmt::Formatter<'_>,
-        _config: &Self::Config,
-        _format: &Self::Format,
-    ) -> fmt::Result {
-        out.write_char('}')?;
-        Ok(())
-    }
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        // Note: Dart is like C escape, but since it supports string
-        // interpolation, `$` also needs to be escaped!
-
-        for c in input.chars() {
-            match c {
-                // backspace
-                '\u{0008}' => out.write_str("\\b")?,
-                // form feed
-                '\u{0012}' => out.write_str("\\f")?,
-                // new line
-                '\n' => out.write_str("\\n")?,
-                // carriage return
-                '\r' => out.write_str("\\r")?,
-                // horizontal tab
-                '\t' => out.write_str("\\t")?,
-                // vertical tab
-                '\u{0011}' => out.write_str("\\v")?,
-                // Note: only relevant if we were to use single-quoted strings.
-                // '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                '\\' => out.write_str("\\\\")?,
-                '$' => out.write_str("\\$")?,
-                c if !c.is_control() => out.write_char(c)?,
-                c if (c as u32) < 0x100 => {
-                    write!(out, "\\x{:02x}", c as u32)?;
-                }
-                c => {
-                    for c in c.encode_utf16(&mut [0u16; 2]) {
-                        write!(out, "\\u{:04x}", c)?;
-                    }
-                }
-            };
-        }
-
-        Ok(())
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut imports: Tokens = Tokens::new();
-        Self::imports(&mut imports, tokens, config);
-        let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
-        Ok(())
     }
 }
 

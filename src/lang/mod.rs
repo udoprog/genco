@@ -148,12 +148,9 @@ where
     L: Lang,
 {
     /// Format the language item appropriately.
-    fn format(
-        &self,
-        out: &mut fmt::Formatter<'_>,
-        config: &L::Config,
-        format: &L::Format,
-    ) -> fmt::Result;
+    fn format(&self, _: &mut fmt::Formatter<'_>, _: &L::Config, _: &L::Format) -> fmt::Result {
+        Ok(())
+    }
 
     /// LangItem convert to Any. Automatically implemented by macro.
     fn __lang_item_as_any(&self) -> &dyn Any;

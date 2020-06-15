@@ -15,7 +15,6 @@
 //! # }
 
 use crate::fmt;
-use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
@@ -23,19 +22,56 @@ use std::fmt::Write as _;
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Swift>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// Swift token specialization.
-    pub Swift
-    =>
-    Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(&self.name)
+    pub Swift {
+        type Config = Config;
+        type Format = Format;
+        type Import = Import;
+
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
+
+            for c in input.chars() {
+                match c {
+                    '\0' => out.write_str("\\0")?,
+                    '\\' => out.write_str("\\\\")?,
+                    '\t' => out.write_str("\\t")?,
+                    '\n' => out.write_str("\\n")?,
+                    '\r' => out.write_str("\\r")?,
+                    '\'' => out.write_str("\\'")?,
+                    '"' => out.write_str("\\\"")?,
+                    c if !c.is_control() => out.write_char(c)?,
+                    c => {
+                        write!(out, "\\u{{{:x}}}", c as u32)?;
+                    }
+                };
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
-            }
+            Ok(())
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut imports = Tokens::new();
+            Self::imports(&mut imports, tokens);
+            let format = Format::default();
+            imports.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
+            Ok(())
+        }
+    }
+
+    Import {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            out.write_str(&self.name)
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
         }
     }
 }
@@ -77,47 +113,6 @@ impl Swift {
         }
 
         out.line();
-    }
-}
-
-impl Lang for Swift {
-    type Config = Config;
-    type Format = Format;
-    type Import = Import;
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
-
-        for c in input.chars() {
-            match c {
-                '\0' => out.write_str("\\0")?,
-                '\\' => out.write_str("\\\\")?,
-                '\t' => out.write_str("\\t")?,
-                '\n' => out.write_str("\\n")?,
-                '\r' => out.write_str("\\r")?,
-                '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                c if !c.is_control() => out.write_char(c)?,
-                c => {
-                    write!(out, "\\u{{{:x}}}", c as u32)?;
-                }
-            };
-        }
-
-        Ok(())
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut imports = Tokens::new();
-        Self::imports(&mut imports, tokens);
-        let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
-        Ok(())
     }
 }
 

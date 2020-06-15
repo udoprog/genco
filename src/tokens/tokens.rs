@@ -1139,27 +1139,23 @@ mod tests {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     struct Import(u32);
 
-    impl_dynamic_types! {
-        Lang
-        =>
-        Import {
-            impl LangItem {
-                fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
-                    use std::fmt::Write as _;
-                    write!(out, "{}", self.0)
-                }
+    impl_lang! {
+        Lang {
+            type Config = ();
+            type Format = ();
+            type Import = Import;
+        }
 
-                fn as_import(&self) -> Option<&Self> {
-                    Some(self)
-                }
+        Import {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
+                use std::fmt::Write as _;
+                write!(out, "{}", self.0)
+            }
+
+            fn as_import(&self) -> Option<&Self> {
+                Some(self)
             }
         }
-    }
-
-    impl crate::lang::Lang for Lang {
-        type Config = ();
-        type Format = ();
-        type Import = Import;
     }
 
     #[test]

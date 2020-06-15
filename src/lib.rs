@@ -17,6 +17,9 @@
 //! * **Structural Indentation** — genco's quasi quoting utilizes
 //!   [whitespace detection] to structurally sort out spaces and indentation.
 //!
+//! * **Language Customization** — Building support for a custom language is
+//!   straight forward with the [impl_lang!] macro.
+//!
 //! <br>
 //!
 //! We depend on `proc_macro_hygiene` stabilizations. Until then, you must build
@@ -104,6 +107,7 @@
 //! [Python Example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 //! [quote!]: https://docs.rs/genco/0/genco/macro.quote.html
 //! [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
+//! [impl_lang!]: https://docs.rs/genco/0/genco/fn.impl_lang.html
 //! [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html
 
 #![doc(html_root_url = "https://docs.rs/genco/0.8.1")]

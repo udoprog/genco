@@ -22,7 +22,6 @@ mod comment;
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::ItemStr;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -33,48 +32,82 @@ pub use self::comment::Comment;
 /// Tokens container specialization for C#.
 pub type Tokens = crate::Tokens<Csharp>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// Language specialization for C#.
-    pub Csharp
-    =>
+    pub Csharp {
+        type Config = Config;
+        type Format = Format;
+        type Import = Import;
+
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // From: https://csharpindepth.com/articles/Strings
+            super::c_family_write_quoted(out, input)
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut file: Tokens = Tokens::new();
+
+            let mut format = Format::default();
+
+            Self::imports(&mut file, tokens, config, &mut format.imported_names);
+
+            if let Some(namespace) = &config.namespace {
+                quote_in! { file =>
+                    namespace #namespace {
+                        #tokens
+                    }
+                }
+
+                file.format(out, config, &format)?;
+            } else {
+                file.format(out, config, &format)?;
+                tokens.format(out, config, &format)?;
+            }
+
+            Ok(())
+        }
+    }
+
     Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-                {
-                    let qualified = self.qualified || is_qualified(config, format, &*self.namespace, &*self.name);
+        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            {
+                let qualified = self.qualified || is_qualified(config, format, &*self.namespace, &*self.name);
 
-                    if qualified {
-                        out.write_str(&self.namespace)?;
-                        out.write_str(SEP)?;
-                    }
-                }
-
-                out.write_str(&self.name)?;
-
-                return Ok(());
-
-                fn is_qualified(config: &Config, format: &Format, namespace: &str, name: &str) -> bool {
-                    // Name is in current namespace. No need to qualify.
-                    if let Some(config) = &config.namespace {
-                        if &**config == namespace {
-                            return false;
-                        }
-                    }
-
-                    if let Some(imported) = format.imported_names.get(name) {
-                        // a conflicting name is in the namespace.
-                        if imported != namespace {
-                            return true;
-                        }
-                    }
-
-                    false
+                if qualified {
+                    out.write_str(&self.namespace)?;
+                    out.write_str(SEP)?;
                 }
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
+            out.write_str(&self.name)?;
+
+            return Ok(());
+
+            fn is_qualified(config: &Config, format: &Format, namespace: &str, name: &str) -> bool {
+                // Name is in current namespace. No need to qualify.
+                if let Some(config) = &config.namespace {
+                    if &**config == namespace {
+                        return false;
+                    }
+                }
+
+                if let Some(imported) = format.imported_names.get(name) {
+                    // a conflicting name is in the namespace.
+                    if imported != namespace {
+                        return true;
+                    }
+                }
+
+                false
             }
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
         }
     }
 }
@@ -180,44 +213,6 @@ impl Csharp {
         }
 
         out.line();
-    }
-}
-
-impl Lang for Csharp {
-    type Config = Config;
-    type Format = Format;
-    type Import = Import;
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        // From: https://csharpindepth.com/articles/Strings
-        super::c_family_write_quoted(out, input)
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut file: Tokens = Tokens::new();
-
-        let mut format = Format::default();
-
-        Self::imports(&mut file, tokens, config, &mut format.imported_names);
-
-        if let Some(namespace) = &config.namespace {
-            quote_in! { file =>
-                namespace #namespace {
-                    #tokens
-                }
-            }
-
-            file.format(out, config, &format)?;
-        } else {
-            file.format(out, config, &format)?;
-            tokens.format(out, config, &format)?;
-        }
-
-        Ok(())
     }
 }
 

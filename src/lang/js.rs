@@ -46,7 +46,6 @@
 //! ```
 
 use crate::fmt;
-use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use relative_path::{RelativePath, RelativePathBuf};
 use std::collections::{BTreeMap, BTreeSet};
@@ -55,24 +54,111 @@ use std::fmt::Write as _;
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
 
-impl_dynamic_types! {
+impl_lang! {
     /// JavaScript language specialization.
-    pub JavaScript
-    =>
-    Import {
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                let name = match self.kind {
-                    ImportKind::Named => self.alias.as_ref().unwrap_or(&self.name),
-                    _ => &self.name,
+    pub JavaScript {
+        type Config = Config;
+        type Format = Format;
+        type Import = Import;
+
+        /// Start a string quote.
+        fn open_quote(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+            has_eval: bool,
+        ) -> fmt::Result {
+            use std::fmt::Write as _;
+
+            if has_eval {
+                out.write_char('`')?;
+            } else {
+                out.write_char('"')?;
+            }
+
+            Ok(())
+        }
+
+        /// End a string quote.
+        fn close_quote(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+            has_eval: bool,
+        ) -> fmt::Result {
+            use std::fmt::Write as _;
+
+            if has_eval {
+                out.write_char('`')?;
+            } else {
+                out.write_char('"')?;
+            }
+
+            Ok(())
+        }
+
+        fn start_string_eval(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+        ) -> fmt::Result {
+            out.write_str("${")?;
+            Ok(())
+        }
+
+        fn end_string_eval(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+        ) -> fmt::Result {
+            out.write_char('}')?;
+            Ok(())
+        }
+
+        fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            for c in input.chars() {
+                match c {
+                    '\t' => out.write_str("\\t")?,
+                    '\u{0007}' => out.write_str("\\b")?,
+                    '\n' => out.write_str("\\n")?,
+                    '\r' => out.write_str("\\r")?,
+                    '\u{0014}' => out.write_str("\\f")?,
+                    '\'' => out.write_str("\\'")?,
+                    '"' => out.write_str("\\\"")?,
+                    '\\' => out.write_str("\\\\")?,
+                    c => out.write_char(c)?,
                 };
-
-                out.write_str(name)
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
-            }
+            Ok(())
+        }
+
+        fn format_file(
+            tokens: &Tokens,
+            out: &mut fmt::Formatter<'_>,
+            config: &Self::Config,
+        ) -> fmt::Result {
+            let mut imports = Tokens::new();
+            Self::imports(&mut imports, tokens, config);
+            let format = Format::default();
+            imports.format(out, config, &format)?;
+            tokens.format(out, config, &format)?;
+            Ok(())
+        }
+    }
+
+    Import {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            let name = match self.kind {
+                ImportKind::Named => self.alias.as_ref().unwrap_or(&self.name),
+                _ => &self.name,
+            };
+
+            out.write_str(name)
+        }
+
+        fn as_import(&self) -> Option<&Self> {
+            Some(self)
         }
     }
 }
@@ -411,97 +497,6 @@ impl JavaScript {
                 })
             }
         }
-    }
-}
-
-impl Lang for JavaScript {
-    type Config = Config;
-    type Format = Format;
-    type Import = Import;
-
-    /// Start a string quote.
-    fn open_quote(
-        out: &mut fmt::Formatter<'_>,
-        _config: &Self::Config,
-        _format: &Self::Format,
-        has_eval: bool,
-    ) -> fmt::Result {
-        use std::fmt::Write as _;
-
-        if has_eval {
-            out.write_char('`')?;
-        } else {
-            out.write_char('"')?;
-        }
-
-        Ok(())
-    }
-
-    /// End a string quote.
-    fn close_quote(
-        out: &mut fmt::Formatter<'_>,
-        _config: &Self::Config,
-        _format: &Self::Format,
-        has_eval: bool,
-    ) -> fmt::Result {
-        use std::fmt::Write as _;
-
-        if has_eval {
-            out.write_char('`')?;
-        } else {
-            out.write_char('"')?;
-        }
-
-        Ok(())
-    }
-
-    fn start_string_eval(
-        out: &mut fmt::Formatter<'_>,
-        _config: &Self::Config,
-        _format: &Self::Format,
-    ) -> fmt::Result {
-        out.write_str("${")?;
-        Ok(())
-    }
-
-    fn end_string_eval(
-        out: &mut fmt::Formatter<'_>,
-        _config: &Self::Config,
-        _format: &Self::Format,
-    ) -> fmt::Result {
-        out.write_char('}')?;
-        Ok(())
-    }
-
-    fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        for c in input.chars() {
-            match c {
-                '\t' => out.write_str("\\t")?,
-                '\u{0007}' => out.write_str("\\b")?,
-                '\n' => out.write_str("\\n")?,
-                '\r' => out.write_str("\\r")?,
-                '\u{0014}' => out.write_str("\\f")?,
-                '\'' => out.write_str("\\'")?,
-                '"' => out.write_str("\\\"")?,
-                '\\' => out.write_str("\\\\")?,
-                c => out.write_char(c)?,
-            };
-        }
-
-        Ok(())
-    }
-
-    fn format_file(
-        tokens: &Tokens,
-        out: &mut fmt::Formatter<'_>,
-        config: &Self::Config,
-    ) -> fmt::Result {
-        let mut imports = Tokens::new();
-        Self::imports(&mut imports, tokens, config);
-        let format = Format::default();
-        imports.format(out, config, &format)?;
-        tokens.format(out, config, &format)?;
-        Ok(())
     }
 }
 
