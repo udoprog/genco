@@ -49,13 +49,13 @@ macro_rules! impl_dynamic_types {
 
             impl From<$ty> for crate::lang::LangBox<$lang> {
                 fn from(value: $ty) -> Self {
-                    crate::lang::LangBox::from(Box::new(value) as Box<dyn crate::lang::LangItem<$lang>>)
+                    crate::lang::LangBox::new(value)
                 }
             }
 
             impl<'a> From<&'a $ty> for crate::lang::LangBox<$lang> {
                 fn from(value: &'a $ty) -> Self {
-                    crate::lang::LangBox::from(Box::new(value.clone()) as Box<dyn crate::lang::LangItem<$lang>>)
+                    crate::lang::LangBox::new(value.clone())
                 }
             }
 

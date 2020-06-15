@@ -144,7 +144,7 @@ impl Lang for () {
 /// work.
 pub trait LangItem<L>
 where
-    Self: Any,
+    Self: Any + std::fmt::Debug,
     L: Lang,
 {
     /// Format the language item appropriately.
@@ -180,6 +180,21 @@ where
     inner: Box<dyn LangItem<L>>,
 }
 
+impl<L> LangBox<L>
+where
+    L: Lang,
+{
+    /// Construct a new LangBox containing the given value.
+    pub fn new<T>(value: T) -> Self
+    where
+        T: LangItem<L>,
+    {
+        Self {
+            inner: Box::new(value),
+        }
+    }
+}
+
 impl<L> Clone for LangBox<L>
 where
     L: Lang,
@@ -196,7 +211,7 @@ where
     L: Lang,
 {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "LangBox")
+        write!(fmt, "{:?}", self.inner)
     }
 }
 
@@ -208,15 +223,6 @@ where
 
     fn deref(&self) -> &Self::Target {
         &*self.inner
-    }
-}
-
-impl<L> From<Box<dyn LangItem<L>>> for LangBox<L>
-where
-    L: Lang,
-{
-    fn from(value: Box<dyn LangItem<L>>) -> Self {
-        Self { inner: value }
     }
 }
 
