@@ -14,17 +14,18 @@ genco only minimally deals with language-specific syntax, but primarily deals
 with solving the following:
 
 * **Imports** — genco generates and groups import statements according to
-  conventions for the language being generated for.
+  language convention.
 
-* **String Quoting** — Strings can be quoted in a language specific way
-  either by including them literally in the token stream using
-  `quote!("hello")`, or by through the [quoted()] function.
+* **String Quoting** — strings can be quoted in a language specific way
+  either by including them literally in the token stream by using
+  `quote!("hello")` or `quote!(#_(hello))`. Or explicitly with the
+  [quoted()] function.
 
 * **Structural Indentation** — genco's quasi quoting utilizes
   [whitespace detection] to structurally sort out spaces and indentation.
 
-* **Language Customization** — Building support for a custom language is
-  straight forward with the [impl_lang!] macro.
+* **Language Customization** — building support for an unsupported language
+  is easy with the [impl_lang!] macro.
 
 <br>
 
