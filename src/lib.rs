@@ -106,7 +106,7 @@
 //! [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
 //! [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html
 
-#![doc(html_root_url = "https://docs.rs/genco/0.8.0")]
+#![doc(html_root_url = "https://docs.rs/genco/0.8.1")]
 #![deny(missing_docs)]
 #![deny(intra_doc_link_resolution_failure)]
 
