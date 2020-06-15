@@ -1,6 +1,5 @@
 use crate::lang::Lang;
-use crate::tokens::{FormatInto, ItemStr};
-use crate::Tokens;
+use crate::tokens::{from_fn, FormatInto, Item};
 
 /// Function to provide string quoting.
 ///
@@ -38,27 +37,14 @@ use crate::Tokens;
 /// ```
 ///
 /// [quote!]: macro.quote.html
-pub fn quoted<T>(inner: T) -> Quoted<T>
+pub fn quoted<T, L>(inner: T) -> impl FormatInto<L>
 where
-    T: Into<ItemStr>,
-{
-    Quoted { inner }
-}
-
-/// Struct containing a type that is quoted.
-///
-/// This is constructed with the [quoted()] function.
-#[derive(Clone, Copy)]
-pub struct Quoted<T> {
-    inner: T,
-}
-
-impl<T, L> FormatInto<L> for Quoted<T>
-where
+    T: FormatInto<L>,
     L: Lang,
-    T: Into<ItemStr>,
 {
-    fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.quoted(self.inner);
-    }
+    from_fn(move |t| {
+        t.item(Item::OpenQuote(false));
+        inner.format_into(t);
+        t.item(Item::CloseQuote);
+    })
 }

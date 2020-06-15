@@ -1,5 +1,5 @@
 use crate::lang::Lang;
-use crate::tokens::{FormatInto, RegisterTokens};
+use crate::tokens::{from_fn, FormatInto};
 use crate::Tokens;
 
 /// Function to provide item registration.
@@ -47,28 +47,79 @@ use crate::Tokens;
 /// # Ok(())
 /// # }
 /// ```
-pub fn register<T, L>(inner: T) -> Register<T>
+pub fn register<T, L>(inner: T) -> impl FormatInto<L>
 where
-    T: RegisterTokens<L>,
+    T: Register<L>,
     L: Lang,
 {
-    Register { inner }
+    from_fn(move |t| {
+        inner.register(t);
+    })
 }
 
-/// Struct containing a type only intended to be registered.
+/// Helper trait to convert something into a stream of registrations.
 ///
-/// This is constructed with the [register()] function.
-#[derive(Clone, Copy)]
-pub struct Register<T> {
-    inner: T,
-}
-
-impl<T, L> FormatInto<L> for Register<T>
+/// Thanks to this, we can provide a flexible number of arguments to
+/// [register()], like a tuple.
+///
+/// This is trait is very similar to [FormatInto], except that it constrains
+/// the types that can be "registered" to only language items. An implementation
+/// of register must not be used as a substitute for [FormatInto].
+///
+/// [register()]: crate::Tokens::register()
+/// [FormatInto]: crate::tokens::FormatInto
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let mut tokens = rust::Tokens::new();
+///
+/// let hash_map = rust::import("std::collections", "HashMap");
+/// let btree_map = rust::import("std::collections", "BTreeMap");
+///
+/// tokens.register((hash_map, btree_map));
+///
+/// assert_eq!(
+///     vec![
+///         "use std::collections::{BTreeMap, HashMap};",
+///     ],
+///     tokens.to_file_vec()?,
+/// );
+/// # Ok(())
+/// # }
+/// ```
+pub trait Register<L>
 where
     L: Lang,
-    T: RegisterTokens<L>,
 {
-    fn format_into(self, tokens: &mut Tokens<L>) {
-        self.inner.register_tokens(tokens);
+    /// Convert the type into tokens.
+    fn register(self, tokens: &mut Tokens<L>);
+}
+
+/// Macro to build implementations of `Register<T>` for a tuple.
+macro_rules! impl_register_tuple {
+    ($($ty:ident, $var:ident),*) => {
+        impl<L, $($ty,)*> Register<L> for ($($ty,)*)
+        where
+            $($ty: Register<L>,)*
+            L: Lang,
+        {
+            fn register(self, tokens: &mut Tokens<L>) {
+                let ($($var,)*) = self;
+                $(tokens.register($var);)*
+            }
+        }
     }
 }
+
+impl_register_tuple!(T1, t1);
+impl_register_tuple!(T1, t1, T2, t2);
+impl_register_tuple!(T1, t1, T2, t2, T3, t3);
+impl_register_tuple!(T1, t1, T2, t2, T3, t3, T4, t4);
+impl_register_tuple!(T1, t1, T2, t2, T3, t3, T4, t4, T5, t5);
+impl_register_tuple!(T1, t1, T2, t2, T3, t3, T4, t4, T5, t5, T6, t6);
+impl_register_tuple!(T1, t1, T2, t2, T3, t3, T4, t4, T5, t5, T6, t6, T7, t7);
+impl_register_tuple!(T1, t1, T2, t2, T3, t3, T4, t4, T5, t5, T6, t6, T7, t7, T8, t8);

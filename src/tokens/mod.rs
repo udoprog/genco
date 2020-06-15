@@ -64,7 +64,6 @@ mod item;
 mod item_str;
 mod quoted;
 mod register;
-mod register_tokens;
 mod static_literal;
 mod tokens;
 
@@ -73,8 +72,7 @@ pub use self::format_into::FormatInto;
 pub use self::from_fn::{from_fn, FromFn};
 pub use self::item::Item;
 pub use self::item_str::ItemStr;
-pub use self::quoted::{quoted, Quoted};
+pub use self::quoted::quoted;
 pub use self::register::{register, Register};
-pub use self::register_tokens::RegisterTokens;
 pub use self::static_literal::static_literal;
 pub use self::tokens::Tokens;

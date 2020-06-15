@@ -37,25 +37,29 @@ macro_rules! impl_dynamic_types {
 
             impl crate::tokens::FormatInto<$lang> for $ty {
                 fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
-                    tokens.item(crate::tokens::Item::LangBox(self.into()));
+                    let b = crate::lang::LangBox::new(self);
+                    tokens.item(crate::tokens::Item::LangBox(b));
                 }
             }
 
             impl<'a> crate::tokens::FormatInto<$lang> for &'a $ty {
                 fn format_into(self, tokens: &mut crate::Tokens<$lang>) {
-                    tokens.item(crate::tokens::Item::LangBox(self.into()));
+                    let b = crate::lang::LangBox::new(self.clone());
+                    tokens.item(crate::tokens::Item::LangBox(b));
                 }
             }
 
-            impl From<$ty> for crate::lang::LangBox<$lang> {
-                fn from(value: $ty) -> Self {
-                    crate::lang::LangBox::new(value)
+            impl crate::tokens::Register<$lang> for $ty {
+                fn register(self, tokens: &mut crate::Tokens<$lang>) {
+                    let b = crate::lang::LangBox::new(self);
+                    tokens.item(crate::tokens::Item::Registered(b));
                 }
             }
 
-            impl<'a> From<&'a $ty> for crate::lang::LangBox<$lang> {
-                fn from(value: &'a $ty) -> Self {
-                    crate::lang::LangBox::new(value.clone())
+            impl<'a> crate::tokens::Register<$lang> for &'a $ty {
+                fn register(self, tokens: &mut crate::Tokens<$lang>) {
+                    let b = crate::lang::LangBox::new(self.clone());
+                    tokens.item(crate::tokens::Item::Registered(b));
                 }
             }
 

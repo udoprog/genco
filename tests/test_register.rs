@@ -13,6 +13,8 @@ fn test_register() -> genco::fmt::Result {
         }
     };
 
+    println!("{:?}", tokens);
+
     assert_eq!(
         vec![
             "use std::iter::FromIterator as _;",

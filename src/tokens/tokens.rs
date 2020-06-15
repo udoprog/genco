@@ -11,7 +11,7 @@
 
 use crate::fmt;
 use crate::lang::Lang;
-use crate::tokens::{FormatInto, Item, ItemStr, RegisterTokens};
+use crate::tokens::{FormatInto, Item, ItemStr, Register};
 use std::cmp;
 use std::iter::FromIterator;
 use std::num::NonZeroI16;
@@ -324,9 +324,9 @@ where
     /// [quote!]: macro.quote.html
     pub fn register<T>(&mut self, tokens: T)
     where
-        T: RegisterTokens<L>,
+        T: Register<L>,
     {
-        tokens.register_tokens(self);
+        tokens.register(self);
     }
 
     /// Check if tokens contain no items.

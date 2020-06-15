@@ -137,15 +137,6 @@ where
     }
 }
 
-/// Unit implementation of format tokens. Does nothing.
-impl<L> FormatInto<L> for ()
-where
-    L: Lang,
-{
-    #[inline]
-    fn format_into(self, _: &mut Tokens<L>) {}
-}
-
 macro_rules! impl_display {
     ($($ty:ty),*) => {
         $(
