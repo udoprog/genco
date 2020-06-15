@@ -2,7 +2,7 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let sqrt = dart::imported("dart:math", "sqrt");
+    let sqrt = dart::import("dart:math", "sqrt");
 
     let tokens = quote! {
         class Position {

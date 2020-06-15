@@ -32,7 +32,7 @@ use std::fmt;
 ///     }
 /// }
 ///
-/// let map = rust::imported("std::collections", "HashMap");
+/// let map = rust::import("std::collections", "HashMap");
 ///
 /// let foo = Foo(());
 ///

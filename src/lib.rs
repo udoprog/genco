@@ -59,7 +59,7 @@
 //! use genco::fmt;
 //!
 //! # fn main() -> fmt::Result {
-//! let map = rust::imported("std::collections", "HashMap");
+//! let map = rust::import("std::collections", "HashMap");
 //!
 //! let tokens: rust::Tokens = quote! {
 //!     fn main() {
@@ -104,7 +104,7 @@
 //! [Python Example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 //! [quote!]: https://docs.rs/genco/0/genco/macro.quote.html
 //! [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
-//! [quoted()]: https://docs.rs/genco/0/genco/method.quoted.html
+//! [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html
 
 #![doc(html_root_url = "https://docs.rs/genco/0.7.2")]
 #![deny(missing_docs)]

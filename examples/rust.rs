@@ -4,14 +4,14 @@ use genco::prelude::*;
 fn main() -> anyhow::Result<()> {
     // Import the LittleEndian item, without referencing it through the last
     // module component it is part of.
-    let little_endian = rust::imported("byteorder", "LittleEndian");
-    let big_endian = rust::imported("byteorder", "BigEndian").prefixed();
+    let little_endian = rust::import("byteorder", "LittleEndian");
+    let big_endian = rust::import("byteorder", "BigEndian").qualified();
 
     // This is a trait, so only import it into the scope (unless we intent to
     // implement it).
-    let write_bytes_ext = rust::imported("byteorder", "WriteBytesExt").alias("_");
-    let read_bytes_ext = rust::imported("byteorder", "ReadBytesExt").alias("_");
-    let error = rust::imported("std::error", "Error");
+    let write_bytes_ext = rust::import("byteorder", "WriteBytesExt").with_alias("_");
+    let read_bytes_ext = rust::import("byteorder", "ReadBytesExt").with_alias("_");
+    let error = rust::import("std::error", "Error");
 
     let tokens = quote! {
         #(register((write_bytes_ext, read_bytes_ext)))

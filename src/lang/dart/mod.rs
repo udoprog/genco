@@ -39,7 +39,7 @@ pub use self::doc_comment::DocComment;
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::fmt::Write as _;
@@ -47,83 +47,28 @@ use std::fmt::Write as _;
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;
 
-impl_dynamic_types! { Dart =>
+impl_dynamic_types! {
+    /// Language specialization for Dart.
+    pub Dart
+    =>
     trait TypeTrait {}
 
-    Type {
+    Import {
         impl TypeTrait {}
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
                 if let Some(alias) = &self.alias {
                     out.write_str(alias.as_ref())?;
                     out.write_str(SEP)?;
                 }
 
                 out.write_str(&*self.name)?;
-
-                if !self.arguments.is_empty() {
-                    out.write_str("<")?;
-
-                    let mut it = self.arguments.iter().peekable();
-
-                    while let Some(argument) = it.next() {
-                        argument.format(out, config, format)?;
-
-                        if it.peek().is_some() {
-                            out.write_str(", ")?;
-                        }
-                    }
-
-                    out.write_str(">")?;
-                }
-
                 Ok(())
             }
 
             fn as_import(&self) -> Option<&Self> {
                 Some(self)
-            }
-        }
-    }
-
-    BuiltIn {
-        impl TypeTrait {
-        }
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(self.name)
-            }
-        }
-    }
-
-    Local {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(&*self.name)
-            }
-        }
-    }
-
-    Void {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str("void")
-            }
-        }
-    }
-
-    Dynamic {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str("dynamic")
             }
         }
     }
@@ -134,48 +79,6 @@ static SEP: &'static str = ".";
 /// dart:core package.
 pub static DART_CORE: &'static str = "dart:core";
 
-/// The type corresponding to `void`.
-pub const VOID: Void = Void(());
-
-/// The type corresponding to `dynamic`.
-pub const DYNAMIC: Dynamic = Dynamic(());
-
-/// Integer built-in type.
-pub const INT: BuiltIn = BuiltIn { name: "int" };
-
-/// Double built-in type.
-pub const DOUBLE: BuiltIn = BuiltIn { name: "double" };
-
-/// Boolean built-in type.
-pub const BOOL: BuiltIn = BuiltIn { name: "bool" };
-
-impl_modifier! {
-    /// A Dart modifier.
-    ///
-    /// A vector of modifiers have a custom implementation, allowing them to be
-    /// formatted with a spacing between them in the language-recommended order.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    /// use dart::Modifier::*;
-    ///
-    /// # fn main() -> genco::fmt::Result {
-    /// let toks: dart::Tokens = quote!(#(vec![Final, Async]));
-    ///
-    /// assert_eq!("async final", toks.to_string()?);
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub enum Modifier<Dart> {
-        /// The `async` modifier.
-        Async => "async",
-        /// The `final` modifier.
-        Final => "final",
-    }
-}
-
 /// Format state for Dart.
 #[derive(Debug, Default)]
 pub struct Format {}
@@ -184,118 +87,26 @@ pub struct Format {}
 #[derive(Debug, Default)]
 pub struct Config {}
 
-/// built-in types.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// assert_eq!("int", quote!(#(dart::INT)).to_string()?);
-/// assert_eq!("double", quote!(#(dart::DOUBLE)).to_string()?);
-/// assert_eq!("bool", quote!(#(dart::BOOL)).to_string()?);
-/// # Ok(())
-/// # }
-/// ```
-#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct BuiltIn {
-    /// The built-in type.
-    name: &'static str,
-}
-
-/// a locally defined type.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Local {
-    name: ItemStr,
-}
-
-/// the void type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Void(());
-
-/// The dynamic type.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Dynamic(());
-
 /// A custom dart type.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Type {
+pub struct Import {
     /// Path to import.
     path: ItemStr,
     /// Name imported.
     name: ItemStr,
     /// Alias of module.
     alias: Option<ItemStr>,
-    /// Generic arguments.
-    arguments: Vec<Any>,
 }
 
-impl Type {
+impl Import {
     /// Add an `as` keyword to the import.
-    pub fn alias(self, alias: impl Into<ItemStr>) -> Type {
+    pub fn with_alias(self, alias: impl Into<ItemStr>) -> Import {
         Self {
             alias: Some(alias.into()),
             ..self
         }
     }
-
-    /// Add arguments to the given variable.
-    ///
-    /// Only applies to classes, any other will return the same value.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    ///
-    /// # fn main() -> genco::fmt::Result {
-    /// let import = dart::imported("dart:collection", "Map")
-    ///     .with_arguments((dart::INT, dart::VOID));
-    ///
-    /// let toks = quote! {
-    ///     #import
-    /// };
-    ///
-    /// assert_eq!(
-    ///     vec![
-    ///         "import \"dart:collection\";",
-    ///         "",
-    ///         "Map<int, void>",
-    ///     ],
-    ///     toks.to_file_vec()?
-    /// );
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn with_arguments(self, args: impl Args) -> Type {
-        Self {
-            arguments: args.into_args(),
-            ..self
-        }
-    }
-
-    /// Convert into raw type.
-    pub fn raw(self) -> Type {
-        Self {
-            arguments: vec![],
-            ..self
-        }
-    }
-
-    /// Check if this type belongs to a core package.
-    pub fn is_core(&self) -> bool {
-        &*self.path != DART_CORE
-    }
-
-    /// Check if type is generic.
-    pub fn is_generic(&self) -> bool {
-        !self.arguments.is_empty()
-    }
 }
-
-/// Language specialization for Dart.
-pub struct Dart(());
 
 impl Dart {
     /// Resolve all imports.
@@ -333,7 +144,7 @@ impl Dart {
 impl Lang for Dart {
     type Config = Config;
     type Format = Format;
-    type Import = Type;
+    type Import = Import;
 
     fn string_eval_literal(
         out: &mut fmt::Formatter<'_>,
@@ -425,10 +236,10 @@ impl Lang for Dart {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let a = dart::imported("package:http/http.dart", "A");
-/// let b = dart::imported("package:http/http.dart", "B");
-/// let c = dart::imported("package:http/http.dart", "C").alias("h2");
-/// let d = dart::imported("../http.dart", "D");
+/// let a = dart::import("package:http/http.dart", "A");
+/// let b = dart::import("package:http/http.dart", "B");
+/// let c = dart::import("package:http/http.dart", "C").with_alias("h2");
+/// let d = dart::import("../http.dart", "D");
 ///
 /// let toks = quote! {
 ///     #a
@@ -452,18 +263,16 @@ impl Lang for Dart {
 /// # Ok(())
 /// # }
 /// ```
-pub fn imported<P: Into<ItemStr>, N: Into<ItemStr>>(path: P, name: N) -> Type {
-    Type {
+pub fn import<P, N>(path: P, name: N) -> Import
+where
+    P: Into<ItemStr>,
+    N: Into<ItemStr>,
+{
+    Import {
         path: path.into(),
         alias: None,
         name: name.into(),
-        arguments: Vec::new(),
     }
-}
-
-/// Setup a local element.
-pub fn local<N: Into<ItemStr>>(name: N) -> Local {
-    Local { name: name.into() }
 }
 
 /// Format a doc comment where each line is preceeded by `///`.

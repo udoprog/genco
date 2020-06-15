@@ -2,7 +2,7 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let flask = &python::imported("flask").name("Flask");
+    let flask = &python::import("flask", "Flask");
 
     let tokens = quote! {
         app = #flask(__name__)

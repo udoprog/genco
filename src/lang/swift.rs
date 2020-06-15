@@ -15,13 +15,36 @@
 //! # }
 
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Swift>;
+
+impl_dynamic_types! {
+    /// Swift token specialization.
+    pub Swift
+    =>
+    trait TypeTrait {
+    }
+
+    Import {
+        impl TypeTrait {
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(&self.name)
+            }
+
+            fn as_import(&self) -> Option<&Self> {
+                Some(self)
+            }
+        }
+    }
+}
 
 /// Format state for Swift code.
 #[derive(Debug, Default)]
@@ -31,126 +54,30 @@ pub struct Format {}
 #[derive(Debug, Default)]
 pub struct Config {}
 
-impl_dynamic_types! { Swift =>
-    trait TypeTrait {
-        /// Handle imports for the given type.
-        fn type_imports(&self, modules: &mut BTreeSet<ItemStr>);
-    }
-
-    Type {
-        impl TypeTrait {
-            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-                if let Some(module) = &self.module {
-                    modules.insert(module.clone());
-                }
-            }
-        }
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(&self.name)
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
-            }
-        }
-    }
-
-    Map {
-        impl TypeTrait {
-            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-                self.key.type_imports(modules);
-                self.value.type_imports(modules);
-            }
-        }
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-                out.write_str("[")?;
-                self.key.format(out, config, format)?;
-                out.write_str(": ")?;
-                self.value.format(out, config, format)?;
-                out.write_str("]")?;
-                Ok(())
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
-            }
-        }
-    }
-
-    Array {
-        impl TypeTrait {
-            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-                self.inner.type_imports(modules);
-            }
-        }
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-                out.write_str("[")?;
-                self.inner.format(out, config, format)?;
-                out.write_str("]")?;
-                Ok(())
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
-            }
-        }
-    }
-}
-
-/// Swift token specialization.
-pub struct Swift(());
-
 /// A regular type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type {
+pub struct Import {
     /// Module of the imported name.
-    module: Option<ItemStr>,
+    module: ItemStr,
     /// Name imported.
     name: ItemStr,
 }
 
-/// A map `[<key>: <value>]`.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Map {
-    /// Key of the map.
-    key: Any,
-    /// Value of the map.
-    value: Any,
-}
-
-/// An array, `[<inner>]`.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Array {
-    /// Inner value of the array.
-    inner: Any,
-}
-
 impl Swift {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
+        use crate as genco;
+        use crate::quote_in;
+
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            import.type_imports(&mut modules);
+            modules.insert(&import.module);
         }
 
-        if modules.is_empty() {
-            return;
-        }
-
-        for module in modules {
-            let mut s = Tokens::new();
-
-            s.append("import ");
-            s.append(module);
-
-            out.append(s);
-            out.push();
+        if !modules.is_empty() {
+            for module in modules {
+                quote_in! { *out => #<push>import #module}
+            }
         }
 
         out.line();
@@ -160,7 +87,7 @@ impl Swift {
 impl Lang for Swift {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
+    type Import = Import;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
@@ -206,7 +133,7 @@ impl Lang for Swift {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(swift::imported("Foo", "Debug")));
+/// let toks = quote!(#(swift::import("Foo", "Debug")));
 ///
 /// assert_eq!(
 ///     vec![
@@ -219,86 +146,13 @@ impl Lang for Swift {
 /// # Ok(())
 /// # }
 /// ```
-pub fn imported<M, N>(module: M, name: N) -> Type
+pub fn import<M, N>(module: M, name: N) -> Import
 where
     M: Into<ItemStr>,
     N: Into<ItemStr>,
 {
-    Type {
-        module: Some(module.into()),
+    Import {
+        module: module.into(),
         name: name.into(),
-    }
-}
-
-/// Setup a local element.
-pub fn local<N>(name: N) -> Type
-where
-    N: Into<ItemStr>,
-{
-    Type {
-        module: None,
-        name: name.into(),
-    }
-}
-
-/// Setup a map.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(swift::map(swift::local("String"), swift::imported("Foo", "Debug"))));
-///
-/// assert_eq!(
-///     vec![
-///         "import Foo",
-///         "",
-///         "[String: Debug]",
-///     ],
-///     toks.to_file_vec()?
-/// );
-/// # Ok(())
-/// # }
-/// ```
-pub fn map<K, V>(key: K, value: V) -> Map
-where
-    K: Into<Any>,
-    V: Into<Any>,
-{
-    Map {
-        key: key.into(),
-        value: value.into(),
-    }
-}
-
-/// Setup an array.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(swift::array(swift::imported("Foo", "Debug"))));
-///
-/// assert_eq!(
-///     vec![
-///         "import Foo",
-///         "",
-///         "[Debug]"
-///     ],
-///     toks.to_file_vec()?
-/// );
-/// # Ok(())
-/// # }
-/// ```
-pub fn array<'a, I>(inner: I) -> Array
-where
-    I: Into<Any>,
-{
-    Array {
-        inner: inner.into(),
     }
 }

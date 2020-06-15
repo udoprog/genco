@@ -43,86 +43,61 @@ use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::Write as _;
-use std::rc::Rc;
+
+const SEP: &'static str = "::";
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Rust>;
-/// Language box specialization for Rust.
-pub type LangBox = crate::lang::LangBox<Rust>;
 
-impl_plain_variadic_args!(Args, Type);
-
-/// The `()` (unit) type.
-pub const UNIT: Type = const_local("()");
-/// The `!` (never) type.
-pub const NEVER: Type = const_local("!");
-/// The `u8` type.
-pub const U8: Type = const_local("u8");
-/// The `u16` type.
-pub const U16: Type = const_local("u16");
-/// The `u32` type.
-pub const U32: Type = const_local("u32");
-/// The `u64` type.
-pub const U64: Type = const_local("u64");
-/// The `u128` type.
-pub const U128: Type = const_local("u128");
-/// The `i8` type.
-pub const I8: Type = const_local("i8");
-/// The `i16` type.
-pub const I16: Type = const_local("i16");
-/// The `i32` type.
-pub const I32: Type = const_local("i32");
-/// The `i64` type.
-pub const I64: Type = const_local("i64");
-/// The `i128` type.
-pub const I128: Type = const_local("i128");
-/// The `usize` type.
-pub const USIZE: Type = const_local("usize");
-/// The `isize` type.
-pub const ISIZE: Type = const_local("isize");
-
-static SEP: &'static str = "::";
-
-/// The inferred reference.
-#[derive(Debug, Clone, Copy)]
-pub struct Ref;
-
-/// The static reference.
-#[derive(Debug, Clone, Copy)]
-pub struct StaticRef;
-
-/// Reference information about a name.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum Reference {
-    /// An anonymous reference.
-    Ref,
-    /// A static reference.
-    StaticRef,
-    /// A named reference.
-    Named(ItemStr),
-}
-
-impl From<Ref> for Reference {
-    fn from(_: Ref) -> Self {
-        Reference::Ref
+impl_dynamic_types! {
+    /// Language specialization for Rust.
+    pub Rust
+    =>
+    trait TypeTrait {
     }
-}
 
-impl From<StaticRef> for Reference {
-    fn from(_: StaticRef) -> Self {
-        Reference::StaticRef
-    }
-}
+    Import {
+        impl TypeTrait {
+        }
 
-impl From<Rc<String>> for Reference {
-    fn from(value: Rc<String>) -> Self {
-        Reference::Named(ItemStr::from(value))
-    }
-}
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
+                match &self.module {
+                    Module::Module {
+                        import: Some(ImportMode::Direct),
+                        ..
+                    } => {
+                        self.write_direct(out)?;
+                    }
+                    Module::Module {
+                        import: Some(ImportMode::Qualified),
+                        module,
+                    } => {
+                        self.write_prefixed(out, module)?;
+                    }
+                    Module::Module {
+                        import: None,
+                        module,
+                    } => match &config.default_import {
+                        ImportMode::Direct => self.write_direct(out)?,
+                        ImportMode::Qualified => self.write_prefixed(out, module)?,
+                    },
+                    Module::Aliased {
+                        alias: ref module, ..
+                    } => {
+                        out.write_str(module)?;
+                        out.write_str(SEP)?;
+                        out.write_str(&self.name)?;
+                    }
+                }
 
-impl From<&'static str> for Reference {
-    fn from(value: &'static str) -> Self {
-        Reference::Named(ItemStr::Static(value))
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&Self> {
+                Some(self)
+            }
+        }
     }
 }
 
@@ -132,14 +107,14 @@ pub struct Format {}
 /// Language configuration for Rust.
 #[derive(Debug)]
 pub struct Config {
-    default_import: Import,
+    default_import: ImportMode,
 }
 
 impl Config {
     /// Configure the default import policy to use.
     ///
     /// See [Import] for more details.
-    pub fn with_default_import(self, default_import: Import) -> Self {
+    pub fn with_default_import(self, default_import: ImportMode) -> Self {
         Self {
             default_import,
             ..self
@@ -150,33 +125,31 @@ impl Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            default_import: Import::Direct,
+            default_import: ImportMode::Direct,
         }
     }
 }
 
 /// The import policy to use when generating import statements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Import {
+pub enum ImportMode {
     /// Import names without a module prefix.
     ///
     /// so for `std::fmt::Debug` it would import `std::fmt::Debug`, and use
     /// `Debug`.
     Direct,
-    /// Import names with a module prefix.
+    /// Import qualified names with a module prefix.
     ///
     /// so for `std::fmt::Debug` it would import `std::fmt`, and use
     /// `fmt::Debug`.
-    Prefixed,
+    Qualified,
 }
 
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 enum Module {
-    /// Local type.
-    Local,
     /// Type imported directly from module with the specified policy.
     Module {
-        import: Option<Import>,
+        import: Option<ImportMode>,
         module: ItemStr,
     },
     /// Prefixed with an alias.
@@ -204,7 +177,7 @@ impl Module {
     fn into_aliased(self) -> Self {
         match self {
             Self::Module { module, .. } => Self::Module {
-                import: Some(Import::Direct),
+                import: Some(ImportMode::Direct),
                 module,
             },
             other => other,
@@ -212,11 +185,11 @@ impl Module {
     }
 
     /// Convert into a prefixed, or keep as same in case that's not feasible.
-    fn into_prefixed(self) -> Self {
+    fn qualified(self) -> Self {
         match self {
             Self::Module { module, .. } => Self::Module {
                 module,
-                import: Some(Import::Prefixed),
+                import: Some(ImportMode::Qualified),
             },
             other => other,
         }
@@ -225,22 +198,16 @@ impl Module {
 
 /// An imported name in Rust.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type {
-    /// Reference information on the type.
-    reference: Option<Reference>,
-    /// If the type is dynamic.
-    dyn_type: bool,
+pub struct Import {
     /// How the type is imported.
     module: Module,
     /// Name of type.
     name: ItemStr,
-    /// Arguments of the class.
-    arguments: Vec<Type>,
     /// Alias to use for the type.
     alias: Option<ItemStr>,
 }
 
-impl Type {
+impl Import {
     /// Alias the given type as it's imported.
     ///
     /// # Examples
@@ -249,7 +216,7 @@ impl Type {
     /// use genco::prelude::*;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let ty = rust::imported("std::fmt", "Debug").alias("FmtDebug");
+    /// let ty = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
     ///
     /// let toks = quote!(#ty);
     ///
@@ -264,7 +231,7 @@ impl Type {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn alias<A: Into<ItemStr>>(self, alias: A) -> Self {
+    pub fn with_alias<A: Into<ItemStr>>(self, alias: A) -> Self {
         Self {
             module: self.module.into_aliased(),
             alias: Some(alias.into()),
@@ -282,7 +249,7 @@ impl Type {
     /// use genco::prelude::*;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let ty = rust::imported("std::fmt", "Debug").module_alias("other");
+    /// let ty = rust::import("std::fmt", "Debug").with_module_alias("other");
     ///
     /// let toks = quote!(#ty);
     ///
@@ -299,19 +266,20 @@ impl Type {
     /// ```
     ///
     /// [prefixed]: Self::prefixed()
-    pub fn module_alias<A: Into<ItemStr>>(self, alias: A) -> Type {
-        Type {
+    pub fn with_module_alias<A: Into<ItemStr>>(self, alias: A) -> Self {
+        Self {
             module: self.module.into_module_aliased(alias),
             ..self
         }
     }
 
-    /// Prefix any use of this type with the corresponding module.
+    /// Perform a qualified import by prefixing the module the type is being
+    /// imported from.
     ///
     /// So importing `std::fmt::Debug` will cause the module to be referenced as
     /// `fmt::Debug` instead of `Debug`.
     ///
-    /// This is implied if [module_alias()][Self::module_alias()] is used.
+    /// This is implied if [with_module_alias()][Self::with_module_alias()] is used.
     ///
     /// # Examples
     ///
@@ -319,7 +287,7 @@ impl Type {
     /// use genco::prelude::*;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let ty = rust::imported("std::fmt", "Debug").prefixed();
+    /// let ty = rust::import("std::fmt", "Debug").qualified();
     ///
     /// let toks = quote!(#ty);
     ///
@@ -334,78 +302,9 @@ impl Type {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn prefixed(self) -> Type {
-        Type {
-            module: self.module.into_prefixed(),
-            ..self
-        }
-    }
-
-    /// Add generic arguments to the type.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    ///
-    /// # fn main() -> genco::fmt::Result {
-    /// let ty = rust::imported("std::collections", "HashMap")
-    ///     .with_arguments((rust::local("u32"), rust::local("u32")));
-    ///
-    /// let toks = quote!(#ty);
-    ///
-    /// assert_eq!(
-    ///     vec![
-    ///         "use std::collections::HashMap;",
-    ///         "",
-    ///         "HashMap<u32, u32>",
-    ///     ],
-    ///     toks.to_file_vec()?
-    /// );
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    ///
-    /// # fn main() -> genco::fmt::Result {
-    /// let dbg = rust::imported("std::collections", "HashMap")
-    ///     .prefixed()
-    ///     .with_arguments((rust::local("T"), rust::local("U")));
-    ///
-    /// let toks = quote!(#dbg);
-    ///
-    /// assert_eq!(
-    ///     vec![
-    ///        "use std::collections;",
-    ///        "",
-    ///        "collections::HashMap<T, U>",
-    ///     ],
-    ///     toks.to_file_vec()?
-    /// );
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn with_arguments(self, args: impl Args) -> Type {
-        Type {
-            arguments: args.into_args(),
-            ..self
-        }
-    }
-
-    /// Convert into a reference `&<type>` type.
-    pub fn reference<R: Into<Reference>>(self, reference: R) -> Self {
+    pub fn qualified(self) -> Self {
         Self {
-            reference: Some(reference.into()),
-            ..self
-        }
-    }
-
-    /// Convert into a dynamic `dyn <type>` type.
-    pub fn into_dyn(self) -> Self {
-        Self {
-            dyn_type: true,
+            module: self.module.qualified(),
             ..self
         }
     }
@@ -421,7 +320,7 @@ impl Type {
 
     /// Write the prefixed name of the type.
     fn write_prefixed(&self, out: &mut fmt::Formatter<'_>, module: &ItemStr) -> fmt::Result {
-        if let Some(module) = module.rsplit("::").next() {
+        if let Some(module) = module.rsplit(SEP).next() {
             out.write_str(module)?;
             out.write_str(SEP)?;
         }
@@ -431,91 +330,13 @@ impl Type {
     }
 }
 
-impl_lang_item! {
-    impl LangItem<Rust> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-            if let Some(reference) = &self.reference {
-                match reference {
-                    Reference::StaticRef => {
-                        out.write_str("&'static ")?;
-                    }
-                    Reference::Named(name) => {
-                        out.write_str("&'")?;
-                        out.write_str(name.as_ref())?;
-                        out.write_str(" ")?;
-                    }
-                    Reference::Ref => {
-                        out.write_str("&")?;
-                    }
-                }
-            }
-
-            if self.dyn_type {
-                out.write_str("dyn ")?;
-            }
-
-            match &self.module {
-                Module::Local
-                | Module::Module {
-                    import: Some(Import::Direct),
-                    ..
-                } => {
-                    self.write_direct(out)?;
-                }
-                Module::Module {
-                    import: Some(Import::Prefixed),
-                    module,
-                } => {
-                    self.write_prefixed(out, module)?;
-                }
-                Module::Module {
-                    import: None,
-                    module,
-                } => match &config.default_import {
-                    Import::Direct => self.write_direct(out)?,
-                    Import::Prefixed => self.write_prefixed(out, module)?,
-                },
-                Module::Aliased {
-                    alias: ref module, ..
-                } => {
-                    out.write_str(module)?;
-                    out.write_str(SEP)?;
-                    out.write_str(&self.name)?;
-                }
-            }
-
-            if !self.arguments.is_empty() {
-                let mut it = self.arguments.iter().peekable();
-
-                out.write_str("<")?;
-
-                while let Some(n) = it.next() {
-                    n.format(out, config, format)?;
-
-                    if it.peek().is_some() {
-                        out.write_str(", ")?;
-                    }
-                }
-
-                out.write_str(">")?;
-            }
-
-            Ok(())
-        }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
-        }
-    }
-}
-
 impl Rust {
     fn imports(out: &mut Tokens, config: &Config, tokens: &Tokens) {
         use crate as genco;
         use crate::quote_in;
         use std::collections::btree_set;
 
-        let mut modules = BTreeMap::<&ItemStr, Imported>::new();
+        let mut modules = BTreeMap::<&ItemStr, Import>::new();
 
         let mut queue = VecDeque::new();
 
@@ -525,17 +346,16 @@ impl Rust {
 
         while let Some(import) = queue.pop_front() {
             match &import.module {
-                Module::Local => continue,
                 Module::Module {
                     module,
-                    import: Some(Import::Direct),
+                    import: Some(ImportMode::Direct),
                 } => {
                     let module = modules.entry(module).or_default();
                     module.names.insert((&import.name, import.alias.as_ref()));
                 }
                 Module::Module {
                     module,
-                    import: Some(Import::Prefixed),
+                    import: Some(ImportMode::Qualified),
                 } => {
                     let module = modules.entry(module).or_default();
                     module.self_import = true;
@@ -544,11 +364,11 @@ impl Rust {
                     module,
                     import: None,
                 } => match config.default_import {
-                    Import::Direct => {
+                    ImportMode::Direct => {
                         let module = modules.entry(module).or_default();
                         module.names.insert((&import.name, import.alias.as_ref()));
                     }
-                    Import::Prefixed => {
+                    ImportMode::Qualified => {
                         let module = modules.entry(module).or_default();
                         module.self_import = true;
                     }
@@ -557,10 +377,6 @@ impl Rust {
                     let module = modules.entry(module).or_default();
                     module.self_aliases.insert(alias);
                 }
-            }
-
-            for arg in &import.arguments {
-                queue.push_back(arg);
             }
         }
 
@@ -616,7 +432,7 @@ impl Rust {
 
         /// An imported module.
         #[derive(Debug, Default)]
-        struct Imported<'a> {
+        struct Import<'a> {
             /// If we need the module (e.g. through an alias).
             self_import: bool,
             /// Aliases for the own module.
@@ -625,7 +441,7 @@ impl Rust {
             names: BTreeSet<(&'a ItemStr, Option<&'a ItemStr>)>,
         }
 
-        impl<'a> Imported<'a> {
+        impl<'a> Import<'a> {
             fn iter(self) -> ImportedIter<'a> {
                 ImportedIter {
                     self_import: self.self_import,
@@ -697,13 +513,10 @@ impl Rust {
     }
 }
 
-/// Language specialization for Rust.
-pub struct Rust(());
-
 impl Lang for Rust {
     type Config = Config;
     type Format = Format;
-    type Import = Type;
+    type Import = Import;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://doc.rust-lang.org/reference/tokens.html#literals
@@ -759,10 +572,10 @@ impl Lang for Rust {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let a = rust::imported("std::fmt", "Debug").prefixed();
-/// let b = rust::imported("std::fmt", "Debug").module_alias("fmt2");
-/// let c = rust::imported("std::fmt", "Debug");
-/// let d = rust::imported("std::fmt", "Debug").alias("FmtDebug");
+/// let a = rust::import("std::fmt", "Debug").qualified();
+/// let b = rust::import("std::fmt", "Debug").with_module_alias("fmt2");
+/// let c = rust::import("std::fmt", "Debug");
+/// let d = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
 ///
 /// let toks = quote!{
 ///     #a
@@ -792,7 +605,7 @@ impl Lang for Rust {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let ty = rust::imported("std::fmt", "Debug").alias("FmtDebug");
+/// let ty = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
 ///
 /// let toks = quote!{
 ///     #ty
@@ -816,7 +629,7 @@ impl Lang for Rust {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let ty = rust::imported("std::fmt", "Debug").module_alias("fmt2");
+/// let ty = rust::import("std::fmt", "Debug").with_module_alias("fmt2");
 ///
 /// let toks = quote!{
 ///     #ty
@@ -840,8 +653,8 @@ impl Lang for Rust {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let a = rust::imported("std::fmt", "Debug").alias("FmtDebug");
-/// let b = rust::imported("std::fmt", "Debug").alias("FmtDebug2");
+/// let a = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
+/// let b = rust::import("std::fmt", "Debug").with_alias("FmtDebug2");
 ///
 /// let toks = quote!{
 ///     #a
@@ -860,69 +673,17 @@ impl Lang for Rust {
 /// # Ok(())
 /// # }
 /// ```
-pub fn imported<M, N>(module: M, name: N) -> Type
+pub fn import<M, N>(module: M, name: N) -> Import
 where
     M: Into<ItemStr>,
     N: Into<ItemStr>,
 {
-    Type {
-        reference: None,
-        dyn_type: false,
+    Import {
         module: Module::Module {
             import: None,
             module: module.into(),
         },
         name: name.into(),
-        arguments: vec![],
-        alias: None,
-    }
-}
-
-/// Setup a local element.
-///
-/// Local elements do not generate an import statement when added to a file.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(rust::local("MyType")));
-/// assert_eq!(vec!["MyType"], toks.to_file_vec()?);
-/// # Ok(())
-/// # }
-/// ```
-pub fn local<N>(name: N) -> Type
-where
-    N: Into<ItemStr>,
-{
-    Type {
-        module: Module::Local,
-        reference: None,
-        dyn_type: false,
-        name: name.into(),
-        arguments: vec![],
-        alias: None,
-    }
-}
-
-/// Helper function to construct a constant local type.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// const MY_TYPE: rust::Type = rust::const_local("MyType");
-/// ```
-pub const fn const_local(name: &'static str) -> Type {
-    Type {
-        module: Module::Local,
-        reference: None,
-        dyn_type: false,
-        name: ItemStr::Static(name),
-        arguments: Vec::new(),
         alias: None,
     }
 }

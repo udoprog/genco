@@ -3,14 +3,14 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let console = &csharp::using("System", "Console");
-    let file = &csharp::using("System.IO", "File");
-    let stream = &csharp::using("System.IO", "Stream");
-    let soap_formatter = &csharp::using(
+    let console = &csharp::import("System", "Console");
+    let file = &csharp::import("System.IO", "File");
+    let stream = &csharp::import("System.IO", "Stream");
+    let soap_formatter = &csharp::import(
         "System.Runtime.Serialization.Formatters.Soap",
         "SoapFormatter",
     );
-    let simple_object = &csharp::local("TestSimpleObject");
+    let simple_object = "TestSimpleObject";
 
     // Note: Comments have to be escaped as raw expressions, since they are
     // filtered out from procedural macros.

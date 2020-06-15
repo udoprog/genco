@@ -20,12 +20,67 @@
 use crate as genco;
 use crate::fmt;
 use crate::lang::Lang;
-use crate::quote_in;
 use crate::tokens::ItemStr;
-use std::collections::BTreeSet;
+use crate::{quote, quote_in};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Tokens container specialization for Python.
 pub type Tokens = crate::Tokens<Python>;
+
+impl_dynamic_types! {
+    /// Language specialization for Python.
+    pub Python
+    =>
+    trait TypeTrait {
+    }
+
+    Import {
+        impl TypeTrait {
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                if let TypeModule::Qualified { module, alias }  = &self.module {
+                    out.write_str(alias.as_ref().unwrap_or(module))?;
+                    out.write_str(SEP)?;
+                }
+
+                let name = match &self.alias {
+                    Some(alias) => alias,
+                    None => &self.name,
+                };
+
+                out.write_str(name)?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+
+    ImportModule {
+        impl TypeTrait {
+        }
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                let module = match &self.alias {
+                    Some(alias) => alias,
+                    None => &self.module,
+                };
+
+                out.write_str(module)?;
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+}
 
 /// Formatting state for python.
 #[derive(Debug, Default)]
@@ -36,102 +91,269 @@ pub struct Config {}
 
 static SEP: &'static str = ".";
 
-/// Python token specialization.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type {
-    /// Module of the imported name.
-    module: Option<ItemStr>,
-
-    /// Alias of module.
-    alias: Option<ItemStr>,
-
-    /// Name imported.
-    ///
-    /// If `None`, last component of module will be used.
-    name: Option<ItemStr>,
+enum TypeModule {
+    Unqualified {
+        /// Name of imported module.
+        module: ItemStr,
+    },
+    Qualified {
+        /// Name of imported module.
+        module: ItemStr,
+        /// Alias of imported module.
+        alias: Option<ItemStr>,
+    },
 }
 
-impl_lang_item! {
-    impl LangItem<Python> for Type {
-        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-            let has_module = match self.module {
-                Some(ref module) => match self.alias {
-                    Some(ref alias) => {
-                        out.write_str(alias)?;
-                        true
-                    }
-                    None => {
-                        if let Some(part) = module.split(SEP).last() {
-                            out.write_str(part)?;
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                },
-                None => false,
-            };
-
-            if let Some(ref name) = self.name {
-                if has_module {
-                    out.write_str(SEP)?;
-                }
-
-                out.write_str(name.as_ref())?;
-            }
-
-            Ok(())
+impl TypeModule {
+    fn qualified(self) -> Self {
+        match self {
+            Self::Unqualified { module } => Self::Qualified {
+                module,
+                alias: None,
+            },
+            other => other,
         }
+    }
 
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
+    fn with_alias<T>(self, alias: T) -> Self
+    where
+        T: Into<ItemStr>,
+    {
+        match self {
+            Self::Qualified { module, .. } | Self::Unqualified { module } => Self::Qualified {
+                module,
+                alias: Some(alias.into()),
+            },
         }
     }
 }
 
-impl Type {
-    /// Set alias for python element.
-    pub fn alias<N: Into<ItemStr>>(self, new_alias: N) -> Self {
+/// Imported python type.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Import {
+    /// Module of the imported name.
+    module: TypeModule,
+    /// The name that was imported.
+    name: ItemStr,
+    /// Alias of the name imported.
+    alias: Option<ItemStr>,
+}
+
+impl Import {
+    /// Configure the importe name with the specified alias.
+    ///
+    /// This implised that the import is not qualified.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let toks = quote! {
+    ///     #(python::import("collections", "namedtuple").with_alias("nt"))
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "from collections import namedtuple as nt",
+    ///         "",
+    ///         "nt",
+    ///     ],
+    ///     toks.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_alias<T>(self, alias: T) -> Self
+    where
+        T: Into<ItemStr>,
+    {
+        Self {
+            alias: Some(alias.into()),
+            ..self
+        }
+    }
+
+    /// Indicate that the import is qualified (module prefixed).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let toks = quote! {
+    ///     #(python::import("collections", "namedtuple").qualified())
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import collections",
+    ///         "",
+    ///         "collections.namedtuple",
+    ///     ],
+    ///     toks.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn qualified(self) -> Self {
+        Self {
+            module: self.module.qualified(),
+            ..self
+        }
+    }
+
+    /// Configure the imported name with the specified alias.
+    ///
+    /// This implies that the import is qualified.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let toks = quote! {
+    ///     #(python::import("collections", "namedtuple").with_module_alias("c"))
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import collections as c",
+    ///         "",
+    ///         "c.namedtuple",
+    ///     ],
+    ///     toks.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_module_alias<T>(self, module_alias: T) -> Self
+    where
+        T: Into<ItemStr>,
+    {
+        Self {
+            module: self.module.with_alias(module_alias),
+            ..self
+        }
+    }
+}
+
+/// Import python module.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct ImportModule {
+    /// Module of the imported name.
+    module: ItemStr,
+
+    /// Alias of module imported.
+    alias: Option<ItemStr>,
+}
+
+impl ImportModule {
+    /// Set alias for imported module.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let toks = quote! {
+    ///     #(python::import_module("collections").with_alias("c"))
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "import collections as c",
+    ///         "",
+    ///         "c",
+    ///     ],
+    ///     toks.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_alias<N>(self, new_alias: N) -> Self
+    where
+        N: Into<ItemStr>,
+    {
         Self {
             alias: Some(new_alias.into()),
             ..self
         }
     }
-
-    /// Set name for python element.
-    pub fn name<N: Into<ItemStr>>(self, new_name: N) -> Self {
-        Self {
-            name: Some(new_name.into()),
-            ..self
-        }
-    }
 }
-
-/// Language specialization for Python.
-pub struct Python(());
 
 impl Python {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
-        let mut modules = BTreeSet::new();
+        let mut imported_from = BTreeMap::new();
+        let mut imports = BTreeSet::new();
 
-        for Type { module, alias, .. } in tokens.walk_imports() {
-            if let Some(module) = module {
-                modules.insert((module.clone(), alias.clone()));
+        for import in tokens.walk_imports() {
+            match import.as_enum() {
+                AnyRef::Import(Import {
+                    module,
+                    alias,
+                    name,
+                }) => match module {
+                    TypeModule::Qualified { module, alias } => {
+                        imports.insert((module, alias));
+                    }
+                    TypeModule::Unqualified { module } => {
+                        imported_from
+                            .entry(module)
+                            .or_insert_with(BTreeSet::new)
+                            .insert((name, alias));
+                    }
+                },
+                AnyRef::ImportModule(ImportModule { module, alias }) => {
+                    imports.insert((module, alias));
+                }
             }
         }
 
-        if !modules.is_empty() {
-            quote_in! { *out => #(for (module, alias) in modules =>
-                #<push>import #(module)#(if let Some(alias) = alias => #<space>as #alias)
-            )#<line>}
+        if imported_from.is_empty() && imports.is_empty() {
+            return;
         }
+
+        for (module, imports) in imported_from {
+            out.push();
+
+            let imports = imports
+                .into_iter()
+                .map(|(name, alias)| quote!(#name#(if let Some(a) = alias => #<space>as #a)))
+                .collect::<Vec<_>>();
+
+            if imports.len() == 1 {
+                quote_in! {*out =>
+                    from #module import #(imports.into_iter().next())
+                }
+            } else {
+                quote_in! {*out =>
+                    from #module import #(for i in imports join (, ) => #i)
+                }
+            }
+        }
+
+        for (module, alias) in imports {
+            out.push();
+
+            quote_in! {*out =>
+                import #module#(if let Some(a) = alias => #<space>as #a)
+            }
+        }
+
+        out.line();
     }
 }
 
 impl Lang for Python {
     type Config = Config;
     type Format = Format;
-    type Import = Type;
+    type Import = dyn TypeTrait;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
@@ -152,7 +374,7 @@ impl Lang for Python {
     }
 }
 
-/// Setup an imported element.
+/// Setup an imported item.
 ///
 /// # Examples
 ///
@@ -161,41 +383,43 @@ impl Lang for Python {
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(python::imported("collections").name("named_tuple"))
-///     #(python::imported("collections"))
-///     #(python::imported("collections").alias("c").name("named_tuple"))
-///     #(python::imported("collections").alias("c"))
+///     #(python::import("collections", "namedtuple").with_alias("nt"))
+///     #(python::import("collections", "namedtuple"))
+///     #(python::import("collections", "namedtuple").qualified())
+///     #(python::import("collections", "namedtuple").with_module_alias("c"))
 /// };
 ///
 /// assert_eq!(
 ///     vec![
+///         "from collections import namedtuple, namedtuple as nt",
 ///         "import collections",
 ///         "import collections as c",
 ///         "",
-///         "collections.named_tuple",
-///         "collections",
-///         "c.named_tuple",
-///         "c",
+///         "nt",
+///         "namedtuple",
+///         "collections.namedtuple",
+///         "c.namedtuple",
 ///     ],
 ///     toks.to_file_vec()?
 /// );
 /// # Ok(())
 /// # }
 /// ```
-pub fn imported<M>(module: M) -> Type
+pub fn import<M, N>(module: M, name: N) -> Import
 where
     M: Into<ItemStr>,
+    N: Into<ItemStr>,
 {
-    Type {
-        module: Some(module.into()),
+    Import {
+        module: TypeModule::Unqualified {
+            module: module.into(),
+        },
+        name: name.into(),
         alias: None,
-        name: None,
     }
 }
 
-/// Setup a local element.
-///
-/// Local elements do not generate an import statement when added to a file.
+/// Setup an imported module.
 ///
 /// # Examples
 ///
@@ -203,18 +427,30 @@ where
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(python::local("dict")));
-/// assert_eq!(vec!["dict"], toks.to_file_vec()?);
+/// let toks = quote! {
+///     #(python::import_module("collections"))
+///     #(python::import_module("collections").with_alias("c"))
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "import collections",
+///         "import collections as c",
+///         "",
+///         "collections",
+///         "c",
+///     ],
+///     toks.to_file_vec()?
+/// );
 /// # Ok(())
 /// # }
 /// ```
-pub fn local<N>(name: N) -> Type
+pub fn import_module<M>(module: M) -> ImportModule
 where
-    N: Into<ItemStr>,
+    M: Into<ItemStr>,
 {
-    Type {
-        module: None,
+    ImportModule {
+        module: module.into(),
         alias: None,
-        name: Some(name.into()),
     }
 }

@@ -44,7 +44,7 @@
 
 use crate as genco;
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::collections::BTreeSet;
@@ -52,24 +52,20 @@ use std::collections::BTreeSet;
 /// Tokens container specialization for Go.
 pub type Tokens = crate::Tokens<Go>;
 
-impl_dynamic_types! { Go =>
+impl_dynamic_types! {
+    /// Language specialization for Go.
+    pub Go
+    =>
     trait TypeTrait {
-        /// Handle imports for the given type.
-        fn type_imports(&self, _: &mut BTreeSet<ItemStr>) {}
     }
 
-    Type {
+    Import {
         impl TypeTrait {
-            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-                if let Some(module) = &self.module {
-                    modules.insert(module.clone());
-                }
-            }
         }
 
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                if let Some(module) = self.module.as_ref().and_then(|m| m.split("/").last()) {
+                if let Some(module) = self.module.split("/").last() {
                     out.write_str(module)?;
                     out.write_str(SEP)?;
                 }
@@ -78,31 +74,20 @@ impl_dynamic_types! { Go =>
                 Ok(())
             }
 
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
+            fn as_import(&self) -> Option<&Self> {
                 Some(self)
             }
         }
     }
 
-    Map {
+    Local {
         impl TypeTrait {
-            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-                self.key.type_imports(modules);
-                self.value.type_imports(modules);
-            }
         }
 
         impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-                out.write_str("map[")?;
-                self.key.format(out, config, format)?;
-                out.write_str("]")?;
-                self.value.format(out, config, format)?;
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(&self.name)?;
                 Ok(())
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
             }
         }
     }
@@ -113,31 +98,6 @@ impl_dynamic_types! { Go =>
         impl LangItem {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
                 out.write_str("interface{}")
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
-            }
-        }
-    }
-
-    Array {
-        impl TypeTrait {
-            fn type_imports(&self, modules: &mut BTreeSet<ItemStr>) {
-                self.inner.type_imports(modules);
-            }
-        }
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
-                out.write_str("[")?;
-                out.write_str("]")?;
-                self.inner.format(out, config, format)?;
-                Ok(())
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
             }
         }
     }
@@ -150,9 +110,16 @@ const SEP: &str = ".";
 
 /// A Go type.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Type {
+pub struct Import {
     /// Module of the imported name.
-    module: Option<ItemStr>,
+    module: ItemStr,
+    /// Name imported.
+    name: ItemStr,
+}
+
+/// A locally defined Go type.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Local {
     /// Name imported.
     name: ItemStr,
 }
@@ -197,15 +164,12 @@ impl Config {
     }
 }
 
-/// Language specialization for Go.
-pub struct Go(());
-
 impl Go {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            import.type_imports(&mut modules);
+            modules.insert(&import.module);
         }
 
         if modules.is_empty() {
@@ -224,7 +188,7 @@ impl Go {
 impl Lang for Go {
     type Config = Config;
     type Format = Format;
-    type Import = dyn TypeTrait;
+    type Import = Import;
 
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
         // From: https://golang.org/src/strconv/quote.go
@@ -259,7 +223,7 @@ impl Lang for Go {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let ty = go::imported("foo", "Debug");
+/// let ty = go::import("foo", "Debug");
 ///
 /// let toks = quote! {
 ///     #ty
@@ -276,13 +240,13 @@ impl Lang for Go {
 /// # Ok(())
 /// # }
 /// ```
-pub fn imported<M, N>(module: M, name: N) -> Type
+pub fn import<M, N>(module: M, name: N) -> Import
 where
     M: Into<ItemStr>,
     N: Into<ItemStr>,
 {
-    Type {
-        module: Some(module.into()),
+    Import {
+        module: module.into(),
         name: name.into(),
     }
 }
@@ -300,14 +264,11 @@ where
 /// # Ok(())
 /// # }
 /// ```
-pub fn local<N>(name: N) -> Type
+pub fn local<N>(name: N) -> Local
 where
     N: Into<ItemStr>,
 {
-    Type {
-        module: None,
-        name: name.into(),
-    }
+    Local { name: name.into() }
 }
 
 /// Setup a map.
@@ -318,10 +279,10 @@ where
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let ty = go::map(go::imported("foo", "Debug"), go::INTERFACE);
+/// let ty = go::import("foo", "Debug");
 ///
 /// let toks = quote! {
-///     #ty
+///     map[#ty]#(go::INTERFACE)
 /// };
 ///
 /// assert_eq!(
@@ -354,9 +315,9 @@ where
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let import = go::array(go::imported("foo", "Debug"));
+/// let import = go::import("foo", "Debug");
 ///
-/// let toks = quote!(#import);
+/// let toks = quote!([]#import);
 ///
 /// assert_eq!(
 ///     vec![

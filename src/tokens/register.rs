@@ -8,13 +8,12 @@ use crate::Tokens;
 ///
 /// ```rust
 /// use genco::prelude::*;
-/// use rust::{imported, Config};
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
-/// let read_bytes_ext = imported("byteorder", "ReadBytesExt").alias("_");
-/// let cursor = &imported("std::io", "Cursor");
-/// let big_endian = &imported("byteorder", "BigEndian");
+/// let write_bytes_ext = rust::import("byteorder", "WriteBytesExt").with_alias("_");
+/// let read_bytes_ext = rust::import("byteorder", "ReadBytesExt").with_alias("_");
+/// let cursor = &rust::import("std::io", "Cursor");
+/// let big_endian = &rust::import("byteorder", "BigEndian");
 ///
 /// let tokens = quote! {
 ///     #(register((write_bytes_ext, read_bytes_ext)))

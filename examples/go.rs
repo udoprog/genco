@@ -2,7 +2,7 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let println = &go::imported("fmt", "Println");
+    let println = &go::import("fmt", "Println");
 
     let day = "tuesday";
     let name = "George";

@@ -46,7 +46,7 @@
 //! ```
 
 use crate::fmt;
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::tokens::ItemStr;
 use relative_path::RelativePathBuf;
 use std::collections::{BTreeMap, BTreeSet};
@@ -54,6 +54,48 @@ use std::fmt::Write as _;
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
+
+impl_dynamic_types! {
+    /// JavaScript language specialization.
+    pub JavaScript
+    =>
+    trait TypeTrait {}
+
+    Import {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                if let Some(alias) = &self.alias {
+                    out.write_str(alias)?;
+                } else {
+                    out.write_str(&self.name)?;
+                }
+
+                Ok(())
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+
+    ImportDefault {
+        impl TypeTrait {}
+
+        impl LangItem {
+            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+                out.write_str(&self.name)
+            }
+
+            fn as_import(&self) -> Option<&dyn TypeTrait> {
+                Some(self)
+            }
+        }
+    }
+}
+
 /// Format state for JavaScript.
 #[derive(Debug, Default)]
 pub struct Format {}
@@ -121,58 +163,6 @@ impl Config {
     }
 }
 
-impl_dynamic_types! { JavaScript =>
-    trait TypeTrait {}
-
-    Import {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                if let Some(alias) = &self.alias {
-                    out.write_str(alias)?;
-                } else {
-                    out.write_str(&self.name)?;
-                }
-
-                Ok(())
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
-            }
-        }
-    }
-
-    ImportDefault {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(&self.name)
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                Some(self)
-            }
-        }
-    }
-
-    Local {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(&self.name)
-            }
-
-            fn as_import(&self) -> Option<&dyn TypeTrait> {
-                None
-            }
-        }
-    }
-}
-
 /// An imported item in JavaScript.
 ///
 /// Created using the [import()] function.
@@ -208,7 +198,7 @@ impl Import {
     ///
     /// # fn main() -> genco::fmt::Result {
     /// let a = js::import("collections", "vec");
-    /// let b = js::import("collections", "vec").alias("list");
+    /// let b = js::import("collections", "vec").with_alias("list");
     ///
     /// let toks = quote! {
     ///     #a
@@ -227,7 +217,10 @@ impl Import {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn alias<N: Into<ItemStr>>(self, alias: N) -> Self {
+    pub fn with_alias<N>(self, alias: N) -> Self
+    where
+        N: Into<ItemStr>,
+    {
         Self {
             alias: Some(alias.into()),
             ..self
@@ -270,18 +263,6 @@ pub struct ImportDefault {
     name: ItemStr,
 }
 
-/// A local name.
-///
-/// Created using the [local()] function.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Local {
-    /// The local name.
-    name: ItemStr,
-}
-
-/// JavaScript language specialization.
-pub struct JavaScript(());
-
 impl JavaScript {
     /// Translate imports into the necessary tokens.
     fn imports(out: &mut Tokens, tokens: &Tokens, config: &Config) {
@@ -304,7 +285,6 @@ impl JavaScript {
                     let module = modules.entry(&this.module).or_default();
                     module.default_import = Some(&this.name);
                 }
-                _ => (),
             }
         }
 
@@ -472,7 +452,7 @@ impl Lang for JavaScript {
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let a = js::import("collections", "vec");
-/// let b = js::import("collections", "vec").alias("list");
+/// let b = js::import("collections", "vec").with_alias("list");
 ///
 /// let toks = quote! {
 ///     #a
@@ -516,7 +496,7 @@ where
 /// # fn main() -> genco::fmt::Result {
 /// let a = js::import_default("collections", "defaultVec");
 /// let b = js::import("collections", "vec");
-/// let c = js::import("collections", "vec").alias("list");
+/// let c = js::import("collections", "vec").with_alias("list");
 ///
 /// let toks = quote! {
 ///     #a
@@ -546,24 +526,4 @@ where
         module: module.into(),
         name: name.into(),
     }
-}
-
-/// Setup a local element.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(js::local("MyType")));
-/// assert_eq!(vec!["MyType"], toks.to_file_vec()?);
-/// # Ok(())
-/// # }
-/// ```
-pub fn local<N>(name: N) -> Local
-where
-    N: Into<ItemStr>,
-{
-    Local { name: name.into() }
 }

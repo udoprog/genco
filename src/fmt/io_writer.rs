@@ -11,7 +11,7 @@ use std::io;
 /// use genco::fmt;
 ///
 /// # fn main() -> anyhow::Result<()> {
-/// let map = rust::imported("std::collections", "HashMap");
+/// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens: rust::Tokens = quote! {
 ///     let mut m = #map::new();

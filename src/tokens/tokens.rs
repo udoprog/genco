@@ -286,12 +286,10 @@ where
     /// ```rust
     /// use genco::prelude::*;
     ///
-    /// let debug = rust::imported("std::fmt", "Debug");
+    /// let debug = rust::import("std::fmt", "Debug");
+    /// let ty = rust::import("std::collections", "HashMap");
     ///
-    /// let ty = rust::imported("std::collections", "HashMap")
-    ///     .with_arguments((rust::U32, debug.into_dyn()));
-    ///
-    /// let tokens = quote!(foo #ty baz);
+    /// let tokens = quote!(foo #ty<u32, dyn #debug> baz);
     ///
     /// for import in tokens.walk_imports() {
     ///     println!("{:?}", import);
@@ -311,12 +309,10 @@ where
     /// # Examples
     ///
     /// ```rust
-    ///
     /// use genco::prelude::*;
-    /// use rust::{imported, Config};
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let write_bytes_ext = imported("byteorder", "WriteBytesExt").alias("_");
+    /// let write_bytes_ext = rust::import("byteorder", "WriteBytesExt").with_alias("_");
     ///
     /// let tokens = quote!(#(register(write_bytes_ext)));
     ///
@@ -614,7 +610,7 @@ where
     /// use genco::fmt;
     ///
     /// # fn main() -> fmt::Result {
-    /// let map = rust::imported("std::collections", "HashMap");
+    /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
     ///     let mut m = #map::new();
@@ -749,7 +745,7 @@ where
     /// use genco::fmt;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let map = rust::imported("std::collections", "HashMap");
+    /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
     ///     let mut m = #map::new();
@@ -790,7 +786,7 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// use genco::fmt;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let map = rust::imported("std::collections", "HashMap");
+    /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
     ///     let mut m = #map::new();
@@ -826,7 +822,7 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// use genco::prelude::*;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let map = rust::imported("std::collections", "HashMap");
+    /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
     ///     let mut m = #map::new();
@@ -863,7 +859,7 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// use genco::prelude::*;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let map = rust::imported("std::collections", "HashMap");
+    /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
     ///     let mut m = #map::new();
@@ -904,7 +900,7 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// use genco::prelude::*;
     ///
     /// # fn main() -> genco::fmt::Result {
-    /// let map = rust::imported("std::collections", "HashMap");
+    /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
     ///     let mut m = #map::new();
@@ -1138,24 +1134,31 @@ mod tests {
     use crate::{quote, Tokens};
 
     /// Own little custom language for this test.
-    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     struct Import(u32);
 
-    impl_lang_item! {
-        impl LangItem<Lang> for Import {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
-                use std::fmt::Write as _;
-                write!(out, "{}", self.0)
+    impl_dynamic_types! {
+        Lang
+        =>
+        trait TypeTrait {
+        }
+
+        Import {
+            impl TypeTrait {
             }
 
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
+            impl LangItem {
+                fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
+                    use std::fmt::Write as _;
+                    write!(out, "{}", self.0)
+                }
+
+                fn as_import(&self) -> Option<&Self> {
+                    Some(self)
+                }
             }
         }
     }
-
-    #[derive(Clone, Copy)]
-    struct Lang(());
 
     impl crate::lang::Lang for Lang {
         type Config = ();

@@ -15,8 +15,9 @@ with solving the following:
 * **Imports** — genco generates and groups import statements according to
   conventions for the language being generated for.
 
-* **String Quoting** — Strings can be quoted using the [`<stmt>.quoted()`]
-  trait function.
+* **String Quoting** — Strings can be quoted in a language specific way
+  either by including them literally in the token stream using
+  `quote!("hello")`, or by through the [quoted()] function.
 
 * **Structural Indentation** — genco's quasi quoting utilizes
   [whitespace detection] to structurally sort out spaces and indentation.
@@ -62,7 +63,7 @@ configuration:
 use genco::prelude::*;
 use genco::fmt;
 
-let map = rust::imported("std::collections", "HashMap");
+let map = rust::import("std::collections", "HashMap");
 
 let tokens: rust::Tokens = quote! {
     fn main() {
@@ -105,4 +106,4 @@ fn main() {
 [Python Example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 [quote!]: https://docs.rs/genco/0/genco/macro.quote.html
 [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
-[`<stmt>.quoted()`]: https://docs.rs/genco/0/genco/trait.QuotedExt.html
+[quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html

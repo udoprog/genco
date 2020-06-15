@@ -2,9 +2,9 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let car = &java::imported("se.tedro", "Car");
-    let list = &java::imported("java.util", "List");
-    let array_list = &java::imported("java.util", "ArrayList");
+    let car = &java::import("se.tedro", "Car");
+    let list = &java::import("java.util", "List");
+    let array_list = &java::import("java.util", "ArrayList");
 
     let tokens = quote! {
         public class HelloWorld {

@@ -156,12 +156,11 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let field_ty = rust::imported("std::collections", "HashMap")
-///     .with_arguments((rust::U32, rust::U32));
+/// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens: rust::Tokens = quote! {
 ///     struct Quoted {
-///         field: #field_ty,
+///         field: #map<u32, u32>,
 ///     }
 /// };
 ///

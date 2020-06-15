@@ -23,8 +23,8 @@ mod private {
 /// # fn main() -> genco::fmt::Result {
 /// let mut tokens = rust::Tokens::new();
 ///
-/// let hash_map = rust::imported("std::collections", "HashMap");
-/// let btree_map = rust::imported("std::collections", "BTreeMap");
+/// let hash_map = rust::import("std::collections", "HashMap");
+/// let btree_map = rust::import("std::collections", "BTreeMap");
 ///
 /// tokens.register((hash_map, btree_map));
 ///
