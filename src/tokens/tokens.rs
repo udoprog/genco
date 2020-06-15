@@ -588,7 +588,7 @@ where
     ///
     /// The configurations and `format` arguments will be provided to all
     /// registered language items as well, and can be used to customize
-    /// formatting through [LangItem::format].
+    /// formatting through [LangItem::format()].
     ///
     /// The `format` argument is primarily used internally by
     /// [Lang::format_file] to provide intermediate state that can be affect how
@@ -632,6 +632,8 @@ where
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// [LangItem::format()]: crate::lang::LangItem::format()
     pub fn format(
         &self,
         out: &mut fmt::Formatter<'_>,

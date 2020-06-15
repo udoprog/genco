@@ -196,7 +196,9 @@ impl Module {
     }
 }
 
-/// An imported name in Rust.
+/// The import of a Rust name `use std::collections::HashMap`.
+///
+/// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// How the type is imported.
@@ -241,7 +243,7 @@ impl Import {
 
     /// Alias the module being imported.
     ///
-    /// This also implies that the import is [prefixed].
+    /// This also implies that the import is [qualified()].
     ///
     /// # Examples
     ///
@@ -265,7 +267,7 @@ impl Import {
     /// # }
     /// ```
     ///
-    /// [prefixed]: Self::prefixed()
+    /// [qualified()]: Self::qualified()
     pub fn with_module_alias<A: Into<ItemStr>>(self, alias: A) -> Self {
         Self {
             module: self.module.into_module_aliased(alias),

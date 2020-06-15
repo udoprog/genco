@@ -129,7 +129,9 @@ impl TypeModule {
     }
 }
 
-/// Imported python type.
+/// The import of a Python name `from module import foo`.
+///
+/// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// Module of the imported name.
@@ -242,7 +244,9 @@ impl Import {
     }
 }
 
-/// Import python module.
+/// The import of a Python module `import module`.
+///
+/// Created through the [import_module()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct ImportModule {
     /// Module of the imported name.

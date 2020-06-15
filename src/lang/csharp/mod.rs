@@ -5,7 +5,7 @@
 //! Since C# uses UTF-16 internally, but literal strings support C-style family
 //! of escapes.
 //!
-//! See [c_family_escape][super::c_family_escape].
+//! See [c_family_write_quoted][super::c_family_write_quoted].
 //!
 //! ```rust
 //! use genco::prelude::*;
@@ -55,16 +55,7 @@ impl_dynamic_types! {
                     }
                 }
 
-                {
-                    out.write_str(self.name.as_ref())?;
-
-                    let mut it = self.path.iter();
-
-                    while let Some(n) = it.next() {
-                        out.write_str(".")?;
-                        out.write_str(n.as_ref())?;
-                    }
-                }
+                out.write_str(&self.name)?;
 
                 return Ok(());
 
@@ -127,27 +118,20 @@ impl Config {
     }
 }
 
-/// A class.
+/// The import of a C# type `using System.IO;`
+///
+/// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// namespace of the class.
     namespace: ItemStr,
     /// Name  of class.
     name: ItemStr,
-    /// Path of class when nested.
-    path: Vec<ItemStr>,
     /// Use as qualified type.
     qualified: bool,
 }
 
 impl Import {
-    /// Specify the path of the imported element.
-    ///
-    /// This discards any arguments associated with it.
-    pub fn with_path(self, path: Vec<ItemStr>) -> Self {
-        Self { path, ..self }
-    }
-
     /// Make this type into a qualified type that is always used with a
     /// namespace.
     pub fn qualified(self) -> Self {
@@ -282,7 +266,6 @@ where
     Import {
         namespace: namespace.into(),
         name: name.into(),
-        path: vec![],
         qualified: false,
     }
 }
@@ -320,7 +303,7 @@ where
     BlockComment(comment)
 }
 
-/// Format a doc comment where each line is preceeded by `///`.
+/// Format a doc comment where each line is preceeded by `//`.
 ///
 /// # Examples
 ///

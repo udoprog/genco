@@ -79,32 +79,7 @@ impl_dynamic_types! {
             }
         }
     }
-
-    Local {
-        impl TypeTrait {
-        }
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str(&self.name)?;
-                Ok(())
-            }
-        }
-    }
-
-    Interface {
-        impl TypeTrait {}
-
-        impl LangItem {
-            fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
-                out.write_str("interface{}")
-            }
-        }
-    }
 }
-
-/// The interface type `interface{}`.
-pub const INTERFACE: Interface = Interface(());
 
 const SEP: &str = ".";
 
@@ -116,33 +91,6 @@ pub struct Import {
     /// Name imported.
     name: ItemStr,
 }
-
-/// A locally defined Go type.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Local {
-    /// Name imported.
-    name: ItemStr,
-}
-
-/// A map `map[<key>]<value>`.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Map {
-    /// Key of the map.
-    key: Any,
-    /// Value of the map.
-    value: Any,
-}
-
-/// An array `[]<inner>`.
-#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Array {
-    /// Inner value of the array.
-    inner: Any,
-}
-
-/// The interface type `interface{}`.
-#[derive(Debug, Clone, Copy, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Interface(());
 
 /// Format for Go.
 #[derive(Debug, Default)]
@@ -248,93 +196,5 @@ where
     Import {
         module: module.into(),
         name: name.into(),
-    }
-}
-
-/// Setup a local element.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(go::local("MyType")));
-/// assert_eq!(vec!["MyType"], toks.to_file_vec()?);
-/// # Ok(())
-/// # }
-/// ```
-pub fn local<N>(name: N) -> Local
-where
-    N: Into<ItemStr>,
-{
-    Local { name: name.into() }
-}
-
-/// Setup a map.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let ty = go::import("foo", "Debug");
-///
-/// let toks = quote! {
-///     map[#ty]#(go::INTERFACE)
-/// };
-///
-/// assert_eq!(
-///     vec![
-///         "import \"foo\"",
-///         "",
-///         "map[foo.Debug]interface{}",
-///     ],
-///     toks.to_file_vec()?
-/// );
-/// # Ok(())
-/// # }
-/// ```
-pub fn map<K, V>(key: K, value: V) -> Map
-where
-    K: Into<Any>,
-    V: Into<Any>,
-{
-    Map {
-        key: key.into(),
-        value: value.into(),
-    }
-}
-
-/// Setup an array.
-///
-/// # Examples
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let import = go::import("foo", "Debug");
-///
-/// let toks = quote!([]#import);
-///
-/// assert_eq!(
-///     vec![
-///         "import \"foo\"",
-///         "",
-///         "[]foo.Debug",
-///     ],
-///     toks.to_file_vec()?
-/// );
-/// # Ok(())
-/// # }
-/// ```
-pub fn array<I>(inner: I) -> Array
-where
-    I: Into<Any>,
-{
-    Array {
-        inner: inner.into(),
     }
 }

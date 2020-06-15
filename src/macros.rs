@@ -21,9 +21,9 @@ macro_rules! impl_dynamic_types {
         $(#[$($meta)*])*
         $vis struct $lang(());
 
-        /// Trait implemented by all types
+        /// Trait implemented by all language items.
         $vis trait TypeTrait: 'static + std::fmt::Debug + crate::lang::LangItem<$lang> {
-            /// Coerce trait into an enum that can be used for type-specific operations
+            /// Coerce trait into an enum that can be used for type-specific operations.
             fn as_enum(&self) -> AnyRef<'_>;
 
             $($type_trait_item)*

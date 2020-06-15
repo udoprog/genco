@@ -163,9 +163,9 @@ impl Config {
     }
 }
 
-/// An imported item in JavaScript.
+/// An imported JavaScript item `import {foo} from "module.js"`.
 ///
-/// Created using the [import()] function.
+/// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// Module of the imported name.
@@ -252,9 +252,10 @@ impl From<String> for Module {
     }
 }
 
-/// The default imported item.
+/// The import of a default JavaScript item from a module
+/// `import foo from "module.js"`.
 ///
-/// Created using the [import_default()] function.
+/// Created through the [import_default()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct ImportDefault {
     /// Module of the imported name.

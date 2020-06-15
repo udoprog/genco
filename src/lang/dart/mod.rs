@@ -44,6 +44,10 @@ use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::fmt::Write as _;
 
+const SEP: &'static str = ".";
+/// dart:core package.
+const DART_CORE: &'static str = "dart:core";
+
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;
 
@@ -74,11 +78,6 @@ impl_dynamic_types! {
     }
 }
 
-static SEP: &'static str = ".";
-
-/// dart:core package.
-pub static DART_CORE: &'static str = "dart:core";
-
 /// Format state for Dart.
 #[derive(Debug, Default)]
 pub struct Format {}
@@ -87,7 +86,9 @@ pub struct Format {}
 #[derive(Debug, Default)]
 pub struct Config {}
 
-/// A custom dart type.
+/// The import of a Dart type `import "dart:math";`
+///
+/// Created through the [import()] function.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Import {
     /// Path to import.

@@ -44,20 +44,12 @@ impl_dynamic_types! {
                 let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
                 let pkg = Some(self.package.as_ref());
 
-                if self.package.as_ref() != JAVA_LANG && imported != pkg && file_package != pkg {
+                if &*self.package != JAVA_LANG && imported != pkg && file_package != pkg {
                     out.write_str(self.package.as_ref())?;
                     out.write_str(SEP)?;
                 }
 
-                out.write_str(self.name.as_ref())?;
-
-                let mut it = self.path.iter();
-
-                while let Some(n) = it.next() {
-                    out.write_str(".")?;
-                    out.write_str(n.as_ref())?;
-                }
-
+                out.write_str(&self.name)?;
                 Ok(())
             }
 
@@ -128,22 +120,15 @@ impl Config {
     }
 }
 
-/// A class.
+/// The import of a Java type `import java.util.Optional;`
+///
+/// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// Package of the class.
     package: ItemStr,
     /// Name  of class.
     name: ItemStr,
-    /// Path of class when nested.
-    path: Vec<ItemStr>,
-}
-
-impl Import {
-    /// Modify the path of a nested type.
-    pub fn with_path(self, path: Vec<ItemStr>) -> Self {
-        Self { path, ..self }
-    }
 }
 
 /// A local name with no specific qualification.
@@ -257,25 +242,18 @@ impl Lang for Java {
 /// # fn main() -> genco::fmt::Result {
 /// let integer = java::import("java.lang", "Integer");
 /// let a = java::import("java.io", "A");
-/// let b = java::import("java.io", "B");
-/// let ob = java::import("java.util", "B");
 ///
 /// let toks = quote! {
 ///     #integer
 ///     #a
-///     #b
-///     #ob
 /// };
 ///
 /// assert_eq!(
 ///     vec![
 ///         "import java.io.A;",
-///         "import java.io.B;",
 ///         "",
 ///         "Integer",
 ///         "A",
-///         "B",
-///         "java.util.B",
 ///     ],
 ///     toks.to_file_vec()?
 /// );
@@ -290,7 +268,6 @@ where
     Import {
         package: package.into(),
         name: name.into(),
-        path: vec![],
     }
 }
 

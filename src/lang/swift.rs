@@ -54,7 +54,9 @@ pub struct Format {}
 #[derive(Debug, Default)]
 pub struct Config {}
 
-/// A regular type.
+/// The import of a name `import UIKit`.
+///
+/// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// Module of the imported name.
