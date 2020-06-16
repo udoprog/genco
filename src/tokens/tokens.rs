@@ -192,6 +192,7 @@ where
             Item::Push => self.push(),
             Item::Line => self.line(),
             Item::Space => self.space(),
+            Item::Indentation(n) => self.indentation(n.get()),
             other => self.items.push(other),
         }
     }
@@ -365,13 +366,17 @@ where
     /// # }
     /// ```
     pub fn push(&mut self) {
+        let item = loop {
+            match self.items.pop() {
+                Some(Item::Line) => continue,
+                Some(Item::Push) => continue,
+                item => break item,
+            }
+        };
+
+        self.items.extend(item);
         // Already a push or an empty line in the stream.
         // Another one will do nothing.
-        match self.items.last() {
-            Some(Item::Push) | Some(Item::Line) => return,
-            _ => (),
-        }
-
         self.items.push(Item::Push);
     }
 
@@ -409,13 +414,15 @@ where
     /// # }
     /// ```
     pub fn line(&mut self) {
-        match self.items.pop() {
-            Some(Item::Push) | Some(Item::Line) | None => self.items.push(Item::Line),
-            Some(other) => {
-                self.items.push(other);
-                self.items.push(Item::Line);
+        let item = loop {
+            match self.items.pop() {
+                Some(Item::Line) | Some(Item::Push) => continue,
+                item => break item,
             }
-        }
+        };
+
+        self.items.extend(item);
+        self.items.push(Item::Line);
     }
 
     /// Increase the indentation of the token stream.
@@ -456,18 +463,7 @@ where
     /// # }
     /// ```
     pub fn indent(&mut self) {
-        let n = match self.items.pop() {
-            None => NonZeroI16::new(1),
-            Some(Item::Indentation(level)) => NonZeroI16::new(level.get() + 1),
-            Some(item) => {
-                self.items.push(item);
-                NonZeroI16::new(1)
-            }
-        };
-
-        if let Some(n) = n {
-            self.items.push(Item::Indentation(n));
-        }
+        self.indentation(1);
     }
 
     /// Decrease the indentation of the token stream.
@@ -519,18 +515,7 @@ where
     /// # }
     /// ```
     pub fn unindent(&mut self) {
-        let n = match self.items.pop() {
-            None => NonZeroI16::new(-1),
-            Some(Item::Indentation(level)) => NonZeroI16::new(level.get() - 1),
-            Some(item) => {
-                self.items.push(item);
-                NonZeroI16::new(-1)
-            }
-        };
-
-        if let Some(n) = n {
-            self.items.push(Item::Indentation(n));
-        }
+        self.indentation(-1);
     }
 
     /// Formatting function for token streams that gives full control over the
@@ -719,6 +704,26 @@ where
     pub fn format_file(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result {
         L::format_file(self, out, &config)?;
         Ok(())
+    }
+
+    /// Internal function to modify the indentation of the token stream.
+    fn indentation(&mut self, mut n: i16) {
+        let item = loop {
+            // flush all whitespace preceeding the indentation change.
+            match self.items.pop() {
+                Some(Item::Push) => continue,
+                Some(Item::Space) => continue,
+                Some(Item::Line) => continue,
+                Some(Item::Indentation(u)) => n += u.get(),
+                item => break item,
+            }
+        };
+
+        self.items.extend(item);
+
+        if let Some(n) = NonZeroI16::new(n) {
+            self.items.push(Item::Indentation(n));
+        }
     }
 }
 

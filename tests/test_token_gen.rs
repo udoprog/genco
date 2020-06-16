@@ -439,10 +439,13 @@ fn test_indentation_management() {
         if a:
             if b:
                 foo
+
+        #(if false => bar)
+
+        #(if true => baz)
     };
 
     assert_eq! {
-        tokens,
         vec![
             Literal(Static("if")),
             Space,
@@ -454,6 +457,9 @@ fn test_indentation_management() {
             Indentation(num(1)),
             Literal(Static("foo")),
             Indentation(num(-2)),
-        ] as Vec<Item<Rust>>
+            Line,
+            Literal(Static("baz")),
+        ] as Vec<Item<Rust>>,
+        tokens,
     };
 }
