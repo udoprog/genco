@@ -138,6 +138,11 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    /// Get an identical underlying configuration.
+    pub(crate) fn config(&self) -> Config {
+        self.config.clone()
+    }
+
     /// Write the given string.
     pub(crate) fn write_str(&mut self, s: &str) -> fmt::Result {
         if s.len() > 0 {

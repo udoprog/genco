@@ -36,6 +36,24 @@ use crate::tokens::{FormatInto, Item, Tokens};
 /// # }
 /// ```
 ///
+/// # Example: A quote inside a quote
+///
+/// Note that this requires extra buffering to occur when formatting the token stream.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let tokens: python::Tokens = quote!(#_(Hello #(quoted("World 😊"))));
+///
+/// assert_eq!(
+///     "\"Hello \\\"World \\U0001f60a\\\"\"",
+///     tokens.to_string()?,
+/// );
+/// # Ok(())
+/// # }
+/// ```
+///
 /// [quote!]: macro.quote.html
 pub fn quoted<T>(inner: T) -> QuotedFn<T> {
     QuotedFn { inner }

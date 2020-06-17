@@ -107,6 +107,36 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
+    /// Extend the content of the string with the given raw stream.
+    pub(crate) fn raw_expr(
+        &mut self,
+        expr: &syn::Expr,
+        from: LineColumn,
+        to: Option<LineColumn>,
+    ) -> Result<()> {
+        self.flush(Some(from), to)?;
+        let receiver = self.receiver;
+        self.stream.extend(quote::quote! {
+            #receiver.append(#expr);
+        });
+        Ok(())
+    }
+
+    /// Extend the content of the string with the given raw identifier.
+    pub(crate) fn raw_ident(
+        &mut self,
+        ident: &syn::Ident,
+        from: LineColumn,
+        to: Option<LineColumn>,
+    ) -> Result<()> {
+        self.flush(Some(from), to)?;
+        let receiver = self.receiver;
+        self.stream.extend(quote::quote! {
+            #receiver.append(#ident);
+        });
+        Ok(())
+    }
+
     pub(crate) fn extend_tt(
         &mut self,
         tt: &TokenTree,
@@ -194,6 +224,13 @@ impl<'a> StringParser<'a> {
                 continue;
             }
 
+            if input.peek(syn::Token![#]) && input.peek2(syn::Token![#]) {
+                let start = input.parse::<syn::Token![#]>()?;
+                let escape = input.parse::<syn::Token![#]>()?;
+                encoder.encode_char('#', start.span().start(), escape.span().end())?;
+                continue;
+            }
+
             if input.peek(syn::Token![$]) {
                 let hash = input.parse::<syn::Token![$]>()?;
 
@@ -207,6 +244,22 @@ impl<'a> StringParser<'a> {
                 } else {
                     let ident = input.parse::<syn::Ident>()?;
                     encoder.eval_ident(&ident, hash.span().start(), Some(ident.span().end()))?;
+                };
+
+                continue;
+            }
+
+            if input.peek(syn::Token![#]) {
+                let hash = input.parse::<syn::Token![#]>()?;
+
+                if input.peek(token::Paren) {
+                    let content;
+                    let paren = syn::parenthesized!(content in input);
+                    let expr = content.parse::<syn::Expr>()?;
+                    encoder.raw_expr(&expr, hash.span().start(), Some(paren.span.end()))?;
+                } else {
+                    let ident = input.parse::<syn::Ident>()?;
+                    encoder.raw_ident(&ident, hash.span().start(), Some(ident.span().end()))?;
                 };
 
                 continue;

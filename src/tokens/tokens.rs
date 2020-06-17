@@ -576,11 +576,39 @@ where
         format: &L::Format,
     ) -> fmt::Result {
         use crate::tokens::cursor;
+        let mut cursor = cursor::Cursor::new(&self.items);
+        Self::format_inner(&mut cursor, out, config, format, false)
+    }
+
+    /// Support for evaluating an interior quote and returning it as a string.
+    fn quoted_quote<'a>(
+        cursor: &mut crate::tokens::cursor::Cursor<'_, L>,
+        buf: &'a mut String,
+        out: &mut fmt::Formatter<'_>,
+        config: &L::Config,
+        format: &L::Format,
+    ) -> fmt::Result<&'a str> {
+        let mut w = fmt::FmtWriter::new(buf);
+        let out = &mut w.as_formatter(out.config());
+        L::open_quote(out, config, format, false)?;
+        Self::format_inner(cursor, out, config, format, true)?;
+        L::close_quote(out, config, format, false)?;
+        Ok(w.into_inner().as_str())
+    }
+
+    /// Internal function for formatting.
+    fn format_inner(
+        cursor: &mut crate::tokens::cursor::Cursor<'_, L>,
+        out: &mut fmt::Formatter<'_>,
+        config: &L::Config,
+        format: &L::Format,
+        close_on_close_quote: bool,
+    ) -> fmt::Result {
+        use crate::tokens::cursor;
         use std::mem;
 
-        let mut cursor = cursor::Cursor::new(&self.items);
-
         let mut stack = smallvec::SmallVec::<[Frame; 2]>::new();
+
         stack.push(Frame::default());
 
         while let (Some(item), Some(head)) = (cursor.next(), stack.last_mut()) {
@@ -588,6 +616,7 @@ where
                 in_quote,
                 has_eval,
                 end_on_eval,
+                quote_buf,
             } = head;
 
             match item {
@@ -603,6 +632,18 @@ where
                     *has_eval = *e;
                     *in_quote = true;
                     L::open_quote(out, config, format, *has_eval)?;
+                }
+                // Warning: slow path which will buffer a string internally.
+                // This is used for expressions like: `#_(Hello #(quoted(world)))`.
+                //
+                // Evaluating quotes are not supported.
+                Item::OpenQuote(false) if *in_quote => {
+                    let quote = Self::quoted_quote(cursor, quote_buf, out, config, format)?;
+                    L::write_quoted(out, &quote)?;
+                    quote_buf.clear();
+                }
+                Item::CloseQuote if close_on_close_quote => {
+                    return Ok(());
                 }
                 Item::CloseQuote if *in_quote => {
                     *in_quote = false;
@@ -636,6 +677,7 @@ where
                             in_quote: false,
                             has_eval: false,
                             end_on_eval: true,
+                            quote_buf: String::new(),
                         });
                     }
                 }
@@ -653,11 +695,13 @@ where
 
         return Ok(());
 
-        #[derive(Default, Clone, Copy)]
+        #[derive(Default, Clone)]
         struct Frame {
             in_quote: bool,
             has_eval: bool,
             end_on_eval: bool,
+            // Buffer used to implement "quotes within quotes".
+            quote_buf: String,
         }
     }
 

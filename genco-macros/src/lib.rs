@@ -128,18 +128,24 @@ pub(crate) use self::item_buffer::ItemBuffer;
 /// interpreted the same as in the [quote!] macro, but is whitespace sensitive.
 /// So `$(foo)` is not the same as `$(foo )` (note the space at the end).
 ///
+/// Raw items can be interpolated with `#(<expr>)` or `#<ident>`. Escaping `#`
+/// is done similarly with `##`. These do not support the full range of
+/// expression like conditionals and loop.
+///
 /// ```rust
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let t: dart::Tokens = quote!(#_(Hello $(world)));
-/// assert_eq!("\"Hello $world\"", t.to_string()?);
+/// let brave = "brave new";
 ///
-/// let t: dart::Tokens = quote!(#_(Hello $(a + b)));
-/// assert_eq!("\"Hello ${a + b}\"", t.to_string()?);
+/// let t: dart::Tokens = quote!(#_(Hello #brave $(world)));
+/// assert_eq!("\"Hello brave new $world\"", t.to_string()?);
 ///
-/// let t: js::Tokens = quote!(#_(Hello $(world)));
-/// assert_eq!("`Hello ${world}`", t.to_string()?);
+/// let t: dart::Tokens = quote!(#_(Hello #brave $(a + b)));
+/// assert_eq!("\"Hello brave new ${a + b}\"", t.to_string()?);
+///
+/// let t: js::Tokens = quote!(#_(Hello #brave $(world)));
+/// assert_eq!("`Hello brave new ${world}`", t.to_string()?);
 /// # Ok(())
 /// # }
 /// ```
