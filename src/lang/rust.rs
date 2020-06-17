@@ -224,7 +224,22 @@ impl Module {
         }
     }
 
-    /// Convert into a prefixed, or keep as same in case that's not feasible.
+    /// Switch to a direct import mode.
+    ///
+    /// See [ImportMode::Direct].
+    fn direct(self) -> Self {
+        match self {
+            Self::Module { module, .. } => Self::Module {
+                module,
+                import: Some(ImportMode::Direct),
+            },
+            other => other,
+        }
+    }
+
+    /// Switch into a qualified import mode.
+    ///
+    /// See [ImportMode::Qualified].
     fn qualified(self) -> Self {
         match self {
             Self::Module { module, .. } => Self::Module {
@@ -315,8 +330,9 @@ impl Import {
         }
     }
 
-    /// Perform a qualified import by prefixing the module the type is being
-    /// imported from.
+    /// Switch to a qualified import mode.
+    ///
+    /// See [ImportMode::Qualified].
     ///
     /// So importing `std::fmt::Debug` will cause the module to be referenced as
     /// `fmt::Debug` instead of `Debug`.
@@ -347,6 +363,38 @@ impl Import {
     pub fn qualified(self) -> Self {
         Self {
             module: self.module.qualified(),
+            ..self
+        }
+    }
+
+    /// Switch into a direct import mode.
+    ///
+    /// See [ImportMode::Direct].
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let ty = rust::import("std::fmt", "Debug").direct();
+    ///
+    /// let toks = quote!(#ty);
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "use std::fmt::Debug;",
+    ///         "",
+    ///         "Debug",
+    ///     ],
+    ///     toks.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn direct(self) -> Self {
+        Self {
+            module: self.module.direct(),
             ..self
         }
     }
