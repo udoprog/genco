@@ -14,7 +14,6 @@ use crate::lang::Lang;
 use crate::tokens::{FormatInto, Item, Register};
 use std::cmp;
 use std::iter::FromIterator;
-use std::num::NonZeroI16;
 use std::slice;
 use std::vec;
 
@@ -181,8 +180,8 @@ where
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.append(ItemStr::Static("foo"));
-    /// tokens.item(Item::Space);
-    /// tokens.item(Item::Space); // Note: second space ignored
+    /// tokens.space();
+    /// tokens.space(); // Note: second space ignored
     /// tokens.append(ItemStr::Static("bar"));
     ///
     /// assert_eq!(tokens, quote!(foo bar));
@@ -192,7 +191,7 @@ where
             Item::Push => self.push(),
             Item::Line => self.line(),
             Item::Space => self.space(),
-            Item::Indentation(n) => self.indentation(n.get()),
+            Item::Indentation(n) => self.indentation(n),
             other => self.items.push(other),
         }
     }
@@ -375,8 +374,6 @@ where
         };
 
         self.items.extend(item);
-        // Already a push or an empty line in the stream.
-        // Another one will do nothing.
         self.items.push(Item::Push);
     }
 
@@ -758,14 +755,14 @@ where
                 Some(Item::Push) => continue,
                 Some(Item::Space) => continue,
                 Some(Item::Line) => continue,
-                Some(Item::Indentation(u)) => n += u.get(),
+                Some(Item::Indentation(u)) => n += u,
                 item => break item,
             }
         };
 
         self.items.extend(item);
 
-        if let Some(n) = NonZeroI16::new(n) {
+        if n != 0 {
             self.items.push(Item::Indentation(n));
         }
     }
@@ -873,6 +870,34 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     ///         "",
     ///         "let mut m = HashMap::new();",
     ///         "m.insert(1u32, 2u32);"
+    ///     ],
+    ///     tokens.to_file_vec()?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// # Example with Python indentation
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    ///
+    /// # fn main() -> genco::fmt::Result {
+    /// let tokens: python::Tokens = quote! {
+    ///     def foo():
+    ///         pass
+    ///
+    ///     def bar():
+    ///         pass
+    /// };
+    ///
+    /// assert_eq!(
+    ///     vec![
+    ///         "def foo():",
+    ///         "    pass",
+    ///         "",
+    ///         "def bar():",
+    ///         "    pass",
     ///     ],
     ///     tokens.to_file_vec()?
     /// );

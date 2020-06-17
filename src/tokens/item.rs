@@ -4,7 +4,6 @@ use crate::lang::{Lang, LangBox};
 use crate::tokens;
 use crate::Tokens;
 use std::cmp;
-use std::num::NonZeroI16;
 use std::rc::Rc;
 
 /// A single element in a set of tokens.
@@ -19,9 +18,10 @@ where
     LangBox(LangBox<L>),
     /// A language-specific boxed item that is not rendered.
     Registered(LangBox<L>),
-    /// Push a new line unless the current line is empty.
+    /// Push a new line unless the current line is empty. Will be flushed on
+    /// indentation changes.
     Push,
-    /// Unconditionally push a line.
+    /// Push a line. Will be flushed on indentation changes.
     Line,
     /// Space between language items. Typically a single space.
     ///
@@ -29,7 +29,7 @@ where
     /// A spacing does nothing if at the beginning of a line.
     Space,
     /// Manage indentation.
-    Indentation(NonZeroI16),
+    Indentation(i16),
     /// Switch to handling input as a quote.
     ///
     /// The argument indicates whether the string contains any interpolated

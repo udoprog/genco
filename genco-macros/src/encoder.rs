@@ -402,8 +402,7 @@ impl<'a> Encoder<'a> {
 
         debug_assert!(from.line < to.line);
 
-        let line_spaced = if to.line - from.line > 1 {
-            self.output.extend(quote::quote!(#r.line();));
+        let line = if to.line - from.line > 1 {
             true
         } else {
             false
@@ -413,19 +412,35 @@ impl<'a> Encoder<'a> {
             if last_start_column < to.column {
                 self.indents.push((last_start_column, to_span));
                 self.output.extend(quote::quote!(#r.indent();));
+
+                if line {
+                    self.output.extend(quote::quote!(#r.line();));
+                }
             } else if last_start_column > to.column {
                 while let Some((column, _)) = self.indents.pop() {
                     if column > to.column && !self.indents.is_empty() {
                         self.output.extend(quote::quote!(#r.unindent();));
+
+                        if line {
+                            self.output.extend(quote::quote!(#r.line();));
+                        }
+
                         continue;
                     } else if column == to.column {
                         self.output.extend(quote::quote!(#r.unindent();));
+
+                        if line {
+                            self.output.extend(quote::quote!(#r.line();));
+                        }
+
                         break;
                     }
 
                     return Err(indentation_error(to.column, column, to_span));
                 }
-            } else if !line_spaced {
+            } else if line {
+                self.output.extend(quote::quote!(#r.line();));
+            } else {
                 self.output.extend(quote::quote!(#r.push();));
             }
         }

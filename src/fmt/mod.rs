@@ -50,7 +50,6 @@
 
 use std::fmt;
 use std::mem;
-use std::num::NonZeroI16;
 
 mod config;
 mod fmt_writer;
@@ -78,7 +77,7 @@ pub(crate) trait Write: std::fmt::Write {
     fn write_line(&mut self, config: &Config) -> Result;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 enum Line {
     Initial,
     None,
@@ -179,9 +178,9 @@ impl<'a> Formatter<'a> {
     }
 
     /// Increase indentation level.
-    pub(crate) fn indentation(&mut self, n: NonZeroI16) {
+    pub(crate) fn indentation(&mut self, n: i16) {
         self.push();
-        self.indent += n.get();
+        self.indent += n;
     }
 
     // Realize any pending whitespace just prior to writing a non-whitespace
@@ -229,5 +228,16 @@ impl<'a> fmt::Write for Formatter<'a> {
         }
 
         Ok(())
+    }
+}
+
+impl<'a> fmt::Debug for Formatter<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("Formatter")
+            .field("line", &self.line)
+            .field("spaces", &self.spaces)
+            .field("indent", &self.indent)
+            .field("config", &self.config)
+            .finish()
     }
 }

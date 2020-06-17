@@ -4,14 +4,9 @@
 //! we do comparisons based on `fmt::Debug` representation, which is already
 //! available. But do note that they will not represent language items.
 
-use std::num::NonZeroI16;
-
+use genco::fmt;
 use genco::prelude::*;
 use genco::tokens::{Item, Item::*, ItemStr::*};
-
-fn num(n: i16) -> NonZeroI16 {
-    NonZeroI16::new(n).expect("non-valid non-zero u16")
-}
 
 #[test]
 fn test_token_gen() {
@@ -29,9 +24,9 @@ fn test_token_gen() {
             Literal(Static("bar")),
             Push,
             Literal(Static("baz")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("hello")),
-            Indentation(num(-1)),
+            Indentation(-1),
             Literal(Static("out?"))
         ] as Vec<Item<Rust>>
     }
@@ -125,9 +120,9 @@ fn test_indentation() {
         a,
         vec![
             Literal(Static("a")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("b")),
-            Indentation(num(-1)),
+            Indentation(-1),
             Literal(Static("c"))
         ] as Vec<Item<Rust>>
     };
@@ -145,9 +140,9 @@ fn test_indentation() {
         b,
         vec![
             Literal(Static("a")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("b")),
-            Indentation(num(-1)),
+            Indentation(-1),
             Literal(Static("c"))
         ] as Vec<Item<Rust>>
     };
@@ -421,17 +416,17 @@ fn test_indentation_management() {
             Literal(Static("if")),
             Space,
             Literal(Static("a:")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("if")),
             Space,
             Literal(Static("b:")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("foo")),
-            Indentation(num(-2)),
+            Indentation(-2),
             Literal(Static("else:")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("c")),
-            Indentation(num(-1))
+            Indentation(-1)
         ] as Vec<Item<Rust>>
     };
 
@@ -450,16 +445,53 @@ fn test_indentation_management() {
             Literal(Static("if")),
             Space,
             Literal(Static("a:")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("if")),
             Space,
             Literal(Static("b:")),
-            Indentation(num(1)),
+            Indentation(1),
             Literal(Static("foo")),
-            Indentation(num(-2)),
+            Indentation(-2),
             Line,
             Literal(Static("baz")),
         ] as Vec<Item<Rust>>,
         tokens,
     };
+}
+
+#[test]
+fn test_indentation_management2() -> fmt::Result {
+    let tokens = quote! {
+        def foo():
+            pass
+
+        def bar():
+            pass
+    };
+
+    assert_eq! {
+        vec![
+            Literal(Static("def")),
+            Space,
+            Literal(Static("foo():")),
+            Indentation(1),
+            Literal(Static("pass")),
+            Indentation(-1),
+            Line,
+            Literal(Static("def")),
+            Space,
+            Literal(Static("bar():")),
+            Indentation(1),
+            Literal(Static("pass")),
+            Indentation(-1)
+        ] as Vec<Item<Python>>,
+        tokens.clone(),
+    };
+
+    assert_eq!(
+        vec!["def foo():", "    pass", "", "def bar():", "    pass",],
+        tokens.to_file_vec()?
+    );
+
+    Ok(())
 }
