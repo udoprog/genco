@@ -17,9 +17,6 @@ use std::iter::FromIterator;
 use std::slice;
 use std::vec;
 
-#[derive(Default, Clone, Copy)]
-struct EndOnEval(bool);
-
 /// A stream of tokens.
 ///
 /// # Structural Guarantees
@@ -47,7 +44,6 @@ struct EndOnEval(bool);
 /// [space]: Self::space()
 /// [push]: Self::push()
 /// [line]: Self::line()
-#[derive(Default)]
 pub struct Tokens<L = ()>
 where
     L: Lang,
@@ -765,6 +761,15 @@ where
         if n != 0 {
             self.items.push(Item::Indentation(n));
         }
+    }
+}
+
+impl<L> Default for Tokens<L>
+where
+    L: Lang,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 
