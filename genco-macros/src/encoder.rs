@@ -208,11 +208,16 @@ impl<'a> Encoder<'a> {
         }
     }
 
-    pub(crate) fn encode_scope(&mut self, binding: syn::Ident, content: TokenStream) {
+    pub(crate) fn encode_scope(&mut self, binding: Option<syn::Ident>, content: TokenStream) {
         let receiver = self.receiver;
-        self.item_buffer.flush(&mut self.output);
 
-        let binding = quote::quote_spanned!(binding.span() => let #binding = &mut *#receiver;);
+        if binding.is_some() {
+            self.item_buffer.flush(&mut self.output);
+        }
+
+        let binding = binding.map(|b| {
+            quote::quote_spanned!(b.span() => let #b = &mut *#receiver;)
+        });
 
         self.output.extend(quote::quote! {{
             #binding

@@ -41,7 +41,7 @@ enum Item {
     },
     /// A bound scope.
     Scope {
-        binding: syn::Ident,
+        binding: Option<syn::Ident>,
         content: TokenStream,
     },
     /// A loop repetition.
@@ -412,7 +412,13 @@ fn parse_match(input: ParseStream, receiver: &syn::Ident) -> Result<Item> {
 /// Parse evaluation: `[*]<binding> => <expr>`.
 fn parse_scope(input: ParseStream) -> Result<Item> {
     input.parse::<Token![ref]>()?;
-    let binding = input.parse()?;
+
+    let binding = if input.peek(Token![_]) {
+        input.parse::<Token![_]>()?;
+        None
+    } else {
+        Some(input.parse()?)
+    };
 
     let content;
 
