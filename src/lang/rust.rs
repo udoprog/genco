@@ -473,7 +473,7 @@ impl Rust {
         let mut has_any = false;
 
         for (m, module) in modules {
-            let mut render = module.iter();
+            let mut render = module.iter(m);
 
             if let Some(first) = render.next() {
                 has_any = true;
@@ -532,8 +532,9 @@ impl Rust {
         }
 
         impl<'a> Import<'a> {
-            fn iter(self) -> ImportedIter<'a> {
+            fn iter(self, module: &'a str) -> ImportedIter<'a> {
                 ImportedIter {
+                    module,
                     self_import: self.self_import,
                     self_aliases: self.self_aliases.into_iter(),
                     names: self.names.into_iter(),
@@ -542,6 +543,7 @@ impl Rust {
         }
 
         struct ImportedIter<'a> {
+            module: &'a str,
             self_import: bool,
             self_aliases: btree_set::IntoIter<&'a ItemStr>,
             names: btree_set::IntoIter<(&'a ItemStr, Option<&'a ItemStr>)>,
@@ -552,7 +554,10 @@ impl Rust {
 
             fn next(&mut self) -> Option<Self::Item> {
                 if std::mem::take(&mut self.self_import) {
-                    return Some(RenderItem::SelfImport);
+                    // Only render self-import if it's not a top level module.
+                    if self.module.split(SEP).count() > 1 {
+                        return Some(RenderItem::SelfImport);
+                    }
                 }
 
                 if let Some(alias) = self.self_aliases.next() {
