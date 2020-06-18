@@ -363,7 +363,11 @@ where
     pub fn push(&mut self) {
         let item = loop {
             match self.items.pop() {
-                Some(Item::Line) => continue,
+                // NB: never reconfigure a line into a push.
+                Some(Item::Line) => {
+                    self.items.push(Item::Line);
+                    return;
+                }
                 Some(Item::Push) => continue,
                 item => break item,
             }

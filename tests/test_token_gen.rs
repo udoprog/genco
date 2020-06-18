@@ -495,3 +495,47 @@ fn test_indentation_management2() -> fmt::Result {
 
     Ok(())
 }
+
+#[test]
+fn test_lines() -> fmt::Result {
+    let mut tokens = quote! {
+        fn foo() {
+        }
+    };
+
+    tokens.line();
+
+    quote_in! { tokens =>
+        #(if false =>)
+        fn bar() {
+        }
+    };
+
+    assert_eq! {
+        vec![
+            Literal(Static("fn")),
+            Space,
+            Literal(Static("foo()")),
+            Space,
+            Literal(Static("{")),
+            Push,
+            Literal(Static("}")),
+            Line,
+            Literal(Static("fn")),
+            Space,
+            Literal(Static("bar()")),
+            Space,
+            Literal(Static("{")),
+            Push,
+            Literal(Static("}"))
+        ] as Vec<Item<Python>>,
+        tokens.clone(),
+    };
+
+    assert_eq!(
+        vec!["fn foo() {", "}", "", "fn bar() {", "}",],
+        tokens.to_file_vec()?
+    );
+
+    Ok(())
+}
