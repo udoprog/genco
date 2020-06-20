@@ -29,12 +29,16 @@ with solving the following:
 
 <br>
 
-We depend on `proc_macro_hygiene` stabilizations. Until then, you must build
-and run with the `nightly` branch.
+In order to do whitespace detection, we depend on the
+[`proc_macro_span` feature] to access information on spans.
+Until this is stable, you must build and run projects using genco with the
+`nightly` compiler.
 
 ```bash
 cargo +nightly run --example rust
 ```
+
+[`proc_macro_span` feature]: https://github.com/rust-lang/rust/issues/54725
 
 <br>
 

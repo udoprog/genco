@@ -1,6 +1,5 @@
 //! Helper to parse quoted strings.
 
-use crate::quote_parser::QuoteParser;
 use proc_macro2::{LineColumn, Span, TokenStream, TokenTree};
 use syn::parse::ParseStream;
 use syn::spanned::Spanned;
@@ -77,7 +76,7 @@ impl<'a> Encoder<'a> {
 
         let ident = syn::LitStr::new(&ident.to_string(), ident.span());
 
-        self.stream.extend(quote::quote! {
+        self.stream.extend(q::quote! {
             #receiver.item(genco::tokens::Item::OpenEval);
             #receiver.item(genco::tokens::Item::Literal(genco::tokens::ItemStr::Static(#ident)));
             #receiver.item(genco::tokens::Item::CloseEval);
@@ -97,7 +96,7 @@ impl<'a> Encoder<'a> {
         self.flush(Some(from), to)?;
         let receiver = self.receiver;
 
-        self.stream.extend(quote::quote! {
+        self.stream.extend(q::quote! {
             #receiver.item(genco::tokens::Item::OpenEval);
             #expr
             #receiver.item(genco::tokens::Item::CloseEval);
@@ -116,7 +115,7 @@ impl<'a> Encoder<'a> {
     ) -> Result<()> {
         self.flush(Some(from), to)?;
         let receiver = self.receiver;
-        self.stream.extend(quote::quote! {
+        self.stream.extend(q::quote! {
             #receiver.append(#expr);
         });
         Ok(())
@@ -131,7 +130,7 @@ impl<'a> Encoder<'a> {
     ) -> Result<()> {
         self.flush(Some(from), to)?;
         let receiver = self.receiver;
-        self.stream.extend(quote::quote! {
+        self.stream.extend(q::quote! {
             #receiver.append(#ident);
         });
         Ok(())
@@ -161,7 +160,7 @@ impl<'a> Encoder<'a> {
 
         self.count += 1;
 
-        self.stream.extend(quote::quote! {
+        self.stream.extend(q::quote! {
             #receiver.append(genco::tokens::ItemStr::Static(#lit));
         });
 
@@ -237,7 +236,7 @@ impl<'a> StringParser<'a> {
                 if input.peek(token::Paren) {
                     let content;
                     let paren = syn::parenthesized!(content in input);
-                    let stream = QuoteParser::new(self.receiver)
+                    let stream = crate::quote::Quote::new(self.receiver)
                         .with_span(paren.span)
                         .parse(&content)?;
                     encoder.eval_stream(stream, hash.span().start(), Some(paren.span.end()))?;

@@ -13,7 +13,7 @@ Macros used by Genco, the even simpler code generator for Rust.
 
 [dependencies]
 syn = { version = "1.0.31", features = ["full"] }
-quote = "1.0.3"
+q = {package = "quote", version = "1.0.3"}
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 
 [dev-dependencies]

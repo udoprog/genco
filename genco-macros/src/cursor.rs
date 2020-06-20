@@ -34,7 +34,7 @@ impl Cursor {
     }
 
     /// Calculate the start character for the span.
-    pub(crate) fn start_character(self) -> Self {
+    pub(crate) fn first_character(self) -> Self {
         Cursor {
             start: self.start,
             end: LineColumn {
@@ -44,8 +44,8 @@ impl Cursor {
         }
     }
 
-    /// Calculate the end character for the span.
-    pub(crate) fn end_character(self) -> Self {
+    /// Calculate the span for the end character.
+    pub(crate) fn last_character(self) -> Self {
         Cursor {
             start: LineColumn {
                 line: self.end.line,

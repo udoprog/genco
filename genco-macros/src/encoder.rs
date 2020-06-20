@@ -1,93 +1,8 @@
-use crate::{Cursor, ItemBuffer};
+use crate::ast::{Ast, Control, ControlKind, Delimiter, MatchArm};
+use crate::cursor::Cursor;
+use crate::static_buffer::StaticBuffer;
 use proc_macro2::{LineColumn, Span, TokenStream};
-use syn::parse::{Parse, ParseStream};
 use syn::Result;
-
-/// A delimiter that can be encoded.
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum Delimiter {
-    Parenthesis,
-    Brace,
-    Bracket,
-}
-
-pub(crate) struct MatchArm {
-    pub(crate) pattern: syn::Pat,
-    pub(crate) condition: Option<syn::Expr>,
-    pub(crate) block: TokenStream,
-}
-
-impl Delimiter {
-    pub(crate) fn encode_start(self, output: &mut ItemBuffer) {
-        let c = match self {
-            Self::Parenthesis => '(',
-            Self::Brace => '{',
-            Self::Bracket => '[',
-        };
-
-        output.push(c);
-    }
-
-    pub(crate) fn encode_end(self, output: &mut ItemBuffer) {
-        let c = match self {
-            Self::Parenthesis => ')',
-            Self::Brace => '}',
-            Self::Bracket => ']',
-        };
-
-        output.push(c);
-    }
-}
-
-#[derive(Debug)]
-pub(crate) enum ControlKind {
-    Space,
-    Push,
-    Line,
-}
-
-#[derive(Debug)]
-pub(crate) struct Control {
-    pub(crate) kind: ControlKind,
-    pub(crate) span: Span,
-}
-
-impl Parse for Control {
-    fn parse(input: ParseStream) -> Result<Self> {
-        syn::custom_keyword!(space);
-        syn::custom_keyword!(push);
-        syn::custom_keyword!(line);
-
-        if input.peek(space) {
-            let space = input.parse::<space>()?;
-
-            return Ok(Self {
-                kind: ControlKind::Space,
-                span: space.span,
-            });
-        }
-
-        if input.peek(push) {
-            let push = input.parse::<push>()?;
-
-            return Ok(Self {
-                kind: ControlKind::Push,
-                span: push.span,
-            });
-        }
-
-        if input.peek(line) {
-            let line = input.parse::<line>()?;
-
-            return Ok(Self {
-                kind: ControlKind::Line,
-                span: line.span,
-            });
-        }
-
-        return Err(input.error("Expected one of: `space`, `push`, or `line`."));
-    }
-}
 
 /// Struct to deal with emitting the necessary spacing.
 pub(crate) struct Encoder<'a> {
@@ -103,7 +18,7 @@ pub(crate) struct Encoder<'a> {
     /// unless it specifically reached the end of the span.
     span_end: Option<LineColumn>,
     /// TODO: make private.
-    item_buffer: ItemBuffer<'a>,
+    item_buffer: StaticBuffer<'a>,
     /// The token stream we are constructing.
     output: TokenStream,
     /// Currently stored cursor.
@@ -124,7 +39,7 @@ impl<'a> Encoder<'a> {
             receiver,
             span_start,
             span_end,
-            item_buffer: ItemBuffer::new(receiver),
+            item_buffer: StaticBuffer::new(receiver),
             output: TokenStream::new(),
             last: None,
             last_start_column: None,
@@ -132,14 +47,76 @@ impl<'a> Encoder<'a> {
         }
     }
 
+    /// Encode a single item into the encoder.
+    pub(crate) fn encode(&mut self, span: Span, cursor: Cursor, ast: Ast) -> Result<()> {
+        cursor.check_compat()?;
+
+        self.step(cursor, span)?;
+
+        match ast {
+            Ast::Tree { tt, .. } => {
+                self.encode_literal(&tt.to_string());
+            }
+            Ast::String { has_eval, stream } => {
+                self.encode_string(has_eval, stream);
+            }
+            Ast::Quoted { s } => {
+                self.encode_quoted(s);
+            }
+            Ast::Literal { string } => {
+                self.encode_literal(&string);
+            }
+            Ast::Control { control, .. } => {
+                self.encode_control(control);
+            }
+            Ast::Scope {
+                binding, content, ..
+            } => {
+                self.encode_scope(binding, content);
+            }
+            Ast::EvalIdent { ident } => {
+                self.encode_eval_ident(ident);
+            }
+            Ast::Eval { expr, .. } => {
+                self.encode_eval(expr);
+            }
+            Ast::Loop {
+                pattern,
+                expr,
+                join,
+                stream,
+                ..
+            } => {
+                self.encode_repeat(pattern, expr, join, stream);
+            }
+            Ast::DelimiterOpen { delimiter, .. } => {
+                self.encode_open_delimiter(delimiter);
+            }
+            Ast::DelimiterClose { delimiter, .. } => {
+                self.encode_close_delimiter(delimiter);
+            }
+            Ast::Condition {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                self.encode_condition(condition, then_branch, else_branch);
+            }
+            Ast::Match {
+                condition, arms, ..
+            } => {
+                self.encode_match(condition, arms);
+            }
+        }
+
+        Ok(())
+    }
+
     /// Finalize and translate into a token stream.
     pub(crate) fn into_output(mut self) -> Result<TokenStream> {
         self.finalize()?;
         Ok(self.output)
-    }
-
-    pub(crate) fn set_current(&mut self, last: Cursor) {
-        self.last = Some(last);
     }
 
     pub(crate) fn step(&mut self, next: Cursor, to_span: Span) -> Result<()> {
@@ -154,12 +131,12 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
-    pub(crate) fn encode_start_delimiter(&mut self, d: Delimiter) {
-        d.encode_start(&mut self.item_buffer);
+    pub(crate) fn encode_open_delimiter(&mut self, d: Delimiter) {
+        d.encode_open(&mut self.item_buffer);
     }
 
-    pub(crate) fn encode_end_delimiter(&mut self, d: Delimiter) {
-        d.encode_end(&mut self.item_buffer);
+    pub(crate) fn encode_close_delimiter(&mut self, d: Delimiter) {
+        d.encode_close(&mut self.item_buffer);
     }
 
     pub(crate) fn encode_literal(&mut self, string: &str) {
@@ -170,7 +147,7 @@ impl<'a> Encoder<'a> {
         self.item_buffer.flush(&mut self.output);
         let receiver = self.receiver;
 
-        self.output.extend(quote::quote! {
+        self.output.extend(q::quote! {
             #receiver.item(genco::tokens::Item::OpenQuote(#has_eval));
             #stream
             #receiver.item(genco::tokens::Item::CloseQuote);
@@ -181,7 +158,7 @@ impl<'a> Encoder<'a> {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);
 
-        self.output.extend(quote::quote! {
+        self.output.extend(q::quote! {
             #receiver.item(genco::tokens::Item::OpenQuote(false));
             #receiver.append(genco::tokens::ItemStr::Static(#s));
             #receiver.item(genco::tokens::Item::CloseQuote);
@@ -195,15 +172,15 @@ impl<'a> Encoder<'a> {
         match control.kind {
             ControlKind::Space => {
                 self.output
-                    .extend(quote::quote_spanned!(control.span => #receiver.space();));
+                    .extend(q::quote_spanned!(control.span => #receiver.space();));
             }
             ControlKind::Push => {
                 self.output
-                    .extend(quote::quote_spanned!(control.span => #receiver.push();));
+                    .extend(q::quote_spanned!(control.span => #receiver.push();));
             }
             ControlKind::Line => {
                 self.output
-                    .extend(quote::quote_spanned!(control.span => #receiver.line();));
+                    .extend(q::quote_spanned!(control.span => #receiver.line();));
             }
         }
     }
@@ -215,9 +192,9 @@ impl<'a> Encoder<'a> {
             self.item_buffer.flush(&mut self.output);
         }
 
-        let binding = binding.map(|b| quote::quote_spanned!(b.span() => let #b = &mut *#receiver;));
+        let binding = binding.map(|b| q::quote_spanned!(b.span() => let #b = &mut *#receiver;));
 
-        self.output.extend(quote::quote! {{
+        self.output.extend(q::quote! {{
             #binding
             #content
         }});
@@ -227,7 +204,7 @@ impl<'a> Encoder<'a> {
     pub(crate) fn encode_eval_ident(&mut self, ident: syn::Ident) {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);
-        self.output.extend(quote::quote! {
+        self.output.extend(q::quote! {
             #receiver.append(#ident);
         });
     }
@@ -236,7 +213,7 @@ impl<'a> Encoder<'a> {
     pub(crate) fn encode_eval(&mut self, expr: syn::Expr) {
         let receiver = self.receiver;
         self.item_buffer.flush(&mut self.output);
-        self.output.extend(quote::quote! {
+        self.output.extend(q::quote! {
             #receiver.append(#expr);
         });
     }
@@ -251,7 +228,7 @@ impl<'a> Encoder<'a> {
         self.item_buffer.flush(&mut self.output);
 
         if let Some(join) = join {
-            self.output.extend(quote::quote! {
+            self.output.extend(q::quote! {
                 {
                     let mut __it = IntoIterator::into_iter(#expr).peekable();
 
@@ -265,7 +242,7 @@ impl<'a> Encoder<'a> {
                 }
             });
         } else {
-            self.output.extend(quote::quote! {
+            self.output.extend(q::quote! {
                 for #pattern in #expr {
                     #stream
                 }
@@ -282,9 +259,9 @@ impl<'a> Encoder<'a> {
     ) {
         self.item_buffer.flush(&mut self.output);
 
-        let else_branch = else_branch.map(|stream| quote::quote!(else { #stream }));
+        let else_branch = else_branch.map(|stream| q::quote!(else { #stream }));
 
-        self.output.extend(quote::quote! {
+        self.output.extend(q::quote! {
             if #condition { #then_branch } #else_branch
         });
     }
@@ -301,11 +278,11 @@ impl<'a> Encoder<'a> {
             block,
         } in arms
         {
-            let condition = condition.map(|c| quote::quote!(if #c));
-            stream.extend(quote::quote!(#pattern #condition => { #block },));
+            let condition = condition.map(|c| q::quote!(if #c));
+            stream.extend(q::quote!(#pattern #condition => { #block },));
         }
 
-        let m = quote::quote! {
+        let m = q::quote! {
             match #condition { #stream }
         };
 
@@ -363,7 +340,7 @@ impl<'a> Encoder<'a> {
         let receiver = self.receiver;
 
         while let Some(_) = self.indents.pop() {
-            self.output.extend(quote::quote!(#receiver.unindent();));
+            self.output.extend(q::quote!(#receiver.unindent();));
         }
 
         Ok(())
@@ -388,7 +365,7 @@ impl<'a> Encoder<'a> {
             // Same line, but next item doesn't match.
             if from.column < to.column {
                 self.item_buffer.flush(&mut self.output);
-                self.output.extend(quote::quote!(#r.space();));
+                self.output.extend(q::quote!(#r.space();));
             }
 
             return Ok(());
@@ -405,26 +382,26 @@ impl<'a> Encoder<'a> {
         if let Some(last_start_column) = self.last_start_column.take() {
             if last_start_column < to.column {
                 self.indents.push((last_start_column, to_span));
-                self.output.extend(quote::quote!(#r.indent();));
+                self.output.extend(q::quote!(#r.indent();));
 
                 if line {
-                    self.output.extend(quote::quote!(#r.line();));
+                    self.output.extend(q::quote!(#r.line();));
                 }
             } else if last_start_column > to.column {
                 while let Some((column, _)) = self.indents.pop() {
                     if column > to.column && !self.indents.is_empty() {
-                        self.output.extend(quote::quote!(#r.unindent();));
+                        self.output.extend(q::quote!(#r.unindent();));
 
                         if line {
-                            self.output.extend(quote::quote!(#r.line();));
+                            self.output.extend(q::quote!(#r.line();));
                         }
 
                         continue;
                     } else if column == to.column {
-                        self.output.extend(quote::quote!(#r.unindent();));
+                        self.output.extend(q::quote!(#r.unindent();));
 
                         if line {
-                            self.output.extend(quote::quote!(#r.line();));
+                            self.output.extend(q::quote!(#r.line();));
                         }
 
                         break;
@@ -433,9 +410,9 @@ impl<'a> Encoder<'a> {
                     return Err(indentation_error(to.column, column, to_span));
                 }
             } else if line {
-                self.output.extend(quote::quote!(#r.line();));
+                self.output.extend(q::quote!(#r.line();));
             } else {
-                self.output.extend(quote::quote!(#r.push();));
+                self.output.extend(q::quote!(#r.push();));
             }
         }
 

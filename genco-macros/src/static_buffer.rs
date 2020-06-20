@@ -1,11 +1,12 @@
 use proc_macro2::{Span, TokenStream};
 
-pub(crate) struct ItemBuffer<'a> {
+/// Buffer used to resolve static items.
+pub(crate) struct StaticBuffer<'a> {
     receiver: &'a syn::Ident,
     buffer: String,
 }
 
-impl<'a> ItemBuffer<'a> {
+impl<'a> StaticBuffer<'a> {
     /// Construct a new line buffer.
     pub(crate) fn new(receiver: &'a syn::Ident) -> Self {
         Self {
@@ -29,7 +30,7 @@ impl<'a> ItemBuffer<'a> {
         if !self.buffer.is_empty() {
             let receiver = self.receiver;
             let s = syn::LitStr::new(&self.buffer, Span::call_site());
-            tokens.extend(quote::quote!(#receiver.append(genco::tokens::ItemStr::Static(#s));));
+            tokens.extend(q::quote!(#receiver.append(genco::tokens::ItemStr::Static(#s));));
             self.buffer.clear();
         }
     }

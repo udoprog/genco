@@ -5,17 +5,14 @@ extern crate proc_macro;
 use proc_macro2::Span;
 use syn::parse::{ParseStream, Parser as _};
 
+mod ast;
 mod cursor;
 mod encoder;
-mod item_buffer;
+mod quote;
 mod quote_in;
-mod quote_parser;
+mod static_buffer;
 mod string_parser;
 mod token;
-
-pub(crate) use self::cursor::Cursor;
-pub(crate) use self::encoder::{Control, Delimiter, Encoder, MatchArm};
-pub(crate) use self::item_buffer::ItemBuffer;
 
 /// Language neutral whitespace sensitive quasi-quoting.
 ///
@@ -581,7 +578,7 @@ pub(crate) use self::item_buffer::ItemBuffer;
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let receiver = &syn::Ident::new("__genco_macros_toks", Span::call_site());
 
-    let parser = quote_parser::QuoteParser::new(receiver);
+    let parser = crate::quote::Quote::new(receiver);
 
     let parser = move |stream: ParseStream| parser.parse(stream);
 
@@ -590,8 +587,8 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         Err(e) => return proc_macro::TokenStream::from(e.to_compile_error()),
     };
 
-    let gen = quote::quote! {{
-        let mut #receiver = genco::Tokens::new();
+    let gen = q::quote! {{
+        let mut #receiver = genco::tokens::Tokens::new();
 
         {
             let mut #receiver = &mut #receiver;
