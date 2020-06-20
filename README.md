@@ -115,5 +115,5 @@ fn main() {
 [Python Example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 [quote!]: https://docs.rs/genco/0/genco/macro.quote.html
 [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
-[impl_lang!]: https://docs.rs/genco/0/genco/fn.impl_lang.html
+[impl_lang!]: https://docs.rs/genco/0/genco/macro.impl_lang.html
 [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html

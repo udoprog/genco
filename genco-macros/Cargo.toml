@@ -1,6 +1,6 @@
 [package]
 name = "genco-macros"
-version = "0.10.4"
+version = "0.10.5"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 license = "MIT/Apache-2.0"
 edition = "2018"
@@ -10,7 +10,7 @@ documentation = "https://docs.rs/genco"
 keywords = ["template", "code-generation"]
 categories = ["template-engine"]
 description = """
-Code quasi-quoter macro `quote!(..)` and utilities.
+Code quasi-quoter macro quote!(..) and language utilities.
 """
 
 [dependencies]
@@ -19,7 +19,7 @@ q = {package = "quote", version = "1.0.3"}
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 
 [dev-dependencies]
-genco = { path = "..", version = "0.10.4" }
+genco = { path = "..", version = "0.10.5" }
 
 [lib]
 proc-macro = true
