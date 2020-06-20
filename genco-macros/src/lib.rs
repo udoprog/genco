@@ -8,7 +8,7 @@ use syn::parse::{ParseStream, Parser as _};
 mod cursor;
 mod encoder;
 mod item_buffer;
-mod quote_in_parser;
+mod quote_in;
 mod quote_parser;
 mod string_parser;
 mod token;
@@ -673,20 +673,6 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// [quote!]: macro.quote.html
 #[proc_macro]
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let quote_in_parser::QuoteInParser;
-
-    let parser = quote_in_parser::QuoteInParser;
-
-    let parser = move |stream: ParseStream| parser.parse(stream);
-
-    let output = match parser.parse(input) {
-        Ok(data) => data,
-        Err(e) => return proc_macro::TokenStream::from(e.to_compile_error()),
-    };
-
-    let gen = quote::quote! {{
-        #output
-    }};
-
-    gen.into()
+    let quote_in = syn::parse_macro_input!(input as quote_in::QuoteIn);
+    quote_in.stream.into()
 }

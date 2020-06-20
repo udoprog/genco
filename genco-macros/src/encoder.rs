@@ -215,9 +215,7 @@ impl<'a> Encoder<'a> {
             self.item_buffer.flush(&mut self.output);
         }
 
-        let binding = binding.map(|b| {
-            quote::quote_spanned!(b.span() => let #b = &mut *#receiver;)
-        });
+        let binding = binding.map(|b| quote::quote_spanned!(b.span() => let #b = &mut *#receiver;));
 
         self.output.extend(quote::quote! {{
             #binding
@@ -402,11 +400,7 @@ impl<'a> Encoder<'a> {
 
         debug_assert!(from.line < to.line);
 
-        let line = if to.line - from.line > 1 {
-            true
-        } else {
-            false
-        };
+        let line = if to.line - from.line > 1 { true } else { false };
 
         if let Some(last_start_column) = self.last_start_column.take() {
             if last_start_column < to.column {

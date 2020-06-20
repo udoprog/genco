@@ -1,14 +1,16 @@
 use proc_macro2::TokenStream;
-use syn::parse::ParseStream;
+use syn::parse::{Parse, ParseStream};
 use syn::spanned::Spanned as _;
 use syn::{Result, Token};
 
 use crate::quote_parser;
 
-pub(crate) struct QuoteInParser;
+pub(crate) struct QuoteIn {
+    pub(crate) stream: TokenStream,
+}
 
-impl QuoteInParser {
-    pub(crate) fn parse(self, input: ParseStream) -> Result<TokenStream> {
+impl Parse for QuoteIn {
+    fn parse(input: ParseStream) -> Result<Self> {
         // Input expression, assign to a variable.
         let expr = input.parse::<syn::Expr>()?;
         input.parse::<Token![=>]>()?;
@@ -22,9 +24,11 @@ impl QuoteInParser {
             let #receiver: &mut genco::Tokens<_> = &mut #expr
         };
 
-        Ok(quote::quote! {
-            #assign_mut;
-            #output
+        Ok(Self {
+            stream: quote::quote! {
+                #assign_mut;
+                #output
+            },
         })
     }
 }
