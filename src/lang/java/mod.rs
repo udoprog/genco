@@ -272,7 +272,7 @@ where
     Local { name: name.into() }
 }
 
-/// Format a doc comment where each line is preceeded by `///`.
+/// Format a block comment, starting with `/**`, and ending in `*/`.
 ///
 /// # Examples
 ///
