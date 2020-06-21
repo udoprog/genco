@@ -17,47 +17,50 @@ mod token;
 /// Language neutral whitespace sensitive quasi-quoting.
 ///
 /// ```rust
-/// # use genco::prelude::*;
+/// use genco::prelude::*;
 ///
-/// # fn generate() -> Tokens<()> {
-/// quote!(hello world)
-/// # }
+/// # fn main() -> genco::fmt::Result {
+/// let hash_map = &dart::import("dart:collection", "HashMap");
 ///
-/// # fn generate_multiline() -> Tokens<()> {
-/// quote! {
-///     hello...
-///     world!
-/// }
+/// let tokens: dart::Tokens = quote! {
+///     print_greeting(String name) {
+///         print(#_(Hello $(name)));
+///     }
+///
+///     #hash_map<int, String> map() {
+///         return new #hash_map<int, String>();
+///     }
+/// };
+///
+/// println!("{}", tokens.to_file_string()?);
+/// # Ok(())
 /// # }
 /// ```
 ///
 /// # String Quoting
 ///
-/// Literal strings like `quote!("hello")` are automatically quoted for the
-/// target language according to its [Lang::quote_string] implementation.
+/// Literal strings like `"hello"` are automatically quoted for the target
+/// language according to its [Lang::write_quoted] implementation.
 ///
-/// To avoid this, you would have to produce a string literal. This can be done
-/// through interpolation as shown below in the third example.
-///
-/// [Lang::quote_string]: https://docs.rs/genco/0/genco/trait.Lang.html#method.quote_string
+/// [Lang::write_quoted]: https://docs.rs/genco/0/genco/lang/trait.Lang.html#method.write_quoted
 ///
 /// ```rust
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let tokens: rust::Tokens = quote! {
-///     "hello world"
-///     #(quoted("hello world"))
-///     #("\"hello world\"")
-///     #_(hello world)
+/// let tokens: java::Tokens = quote! {
+///     "hello world 😊"
+///     #(quoted("hello world 😊"))
+///     #("\"hello world 😊\"")
+///     #_(hello world #("😊"))
 /// };
 ///
 /// assert_eq!(
 ///     vec![
-///         "\"hello world\"",
-///         "\"hello world\"",
-///         "\"hello world\"",
-///         "\"hello world\"",
+///         "\"hello world \\ud83d\\ude0a\"",
+///         "\"hello world \\ud83d\\ude0a\"",
+///         "\"hello world 😊\"",
+///         "\"hello world \\ud83d\\ude0a\"",
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
@@ -65,20 +68,32 @@ mod token;
 /// # }
 /// ```
 ///
-/// The items produced in the token stream above are however subtly different.
+/// # Efficient String Quoting
 ///
-/// The first one is a static *quoted string*. The second one is a boxed *quoted
-/// string*, who's content is stored on the heap. And the third one is a static
-/// *literal* which bypasses language quoting entirely.
+/// It's worth investigating the different forms of tokens produced by the
+/// above example.
+///
+/// * The first one is a static *quoted string*.
+/// * The second one is a boxed *quoted string*, who's content will be copied
+///   and is stored on the heap.
+/// * The third one is a static *literal* which bypasses language quoting
+///   entirely.
+/// * Finally the fourth one is an interpolated string. They are really neat,
+///   and will be covered more in the next section. It's worth noting that
+///   `#("😊")` is used, because 😊 is not a valid identifier in Rust. So this
+///   example showcases how strings can be directly embedded in an
+///   interpolation.
+///
+/// Here you can see the items produced by the macro.
 ///
 /// ```rust
 /// # use genco::prelude::*;
 /// # fn main() -> genco::fmt::Result {
 /// # let tokens: rust::Tokens = quote! {
-/// #     "hello world"
-/// #     #(quoted("hello world"))
-/// #     #("\"hello world\"")
-/// #     #_(hello world)
+/// #     "hello world 😊"
+/// #     #(quoted("hello world 😊"))
+/// #     #("\"hello world 😊\"")
+/// #     #_(hello world #("😊"))
 /// # };
 /// #
 /// use genco::tokens::{Item, ItemStr};
@@ -86,17 +101,17 @@ mod token;
 /// assert_eq!(
 ///     vec![
 ///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::Static("hello world")),
+///         Item::Literal(ItemStr::Static("hello world 😊")),
 ///         Item::CloseQuote,
 ///         Item::Push,
 ///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::Box("hello world".into())),
+///         Item::Literal(ItemStr::Box("hello world 😊".into())),
 ///         Item::CloseQuote,
 ///         Item::Push,
-///         Item::Literal(ItemStr::Static("\"hello world\"")),
+///         Item::Literal(ItemStr::Static("\"hello world 😊\"")),
 ///         Item::Push,
 ///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::Static("hello world")),
+///         Item::Literal(ItemStr::Static("hello world 😊")),
 ///         Item::CloseQuote
 ///     ],
 ///     tokens,

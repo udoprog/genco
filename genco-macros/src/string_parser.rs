@@ -64,6 +64,18 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
+    /// Encode a string directly to the static buffer as an optimization.
+    pub(crate) fn encode_str(
+        &mut self,
+        s: &str,
+        from: LineColumn,
+        to: Option<LineColumn>,
+    ) -> Result<()> {
+        self.flush_whitespace(Some(from), to)?;
+        self.buffer.push_str(s);
+        Ok(())
+    }
+
     /// Eval the given identifier.
     pub(crate) fn eval_ident(
         &mut self,
@@ -251,15 +263,23 @@ impl<'a> StringParser<'a> {
             if input.peek(syn::Token![#]) {
                 let hash = input.parse::<syn::Token![#]>()?;
 
-                if input.peek(token::Paren) {
-                    let content;
-                    let paren = syn::parenthesized!(content in input);
-                    let expr = content.parse::<syn::Expr>()?;
-                    encoder.raw_expr(&expr, hash.span().start(), Some(paren.span.end()))?;
-                } else {
+                if !input.peek(token::Paren) {
                     let ident = input.parse::<syn::Ident>()?;
                     encoder.raw_ident(&ident, hash.span().start(), Some(ident.span().end()))?;
-                };
+                    continue;
+                }
+
+                let content;
+                let paren = syn::parenthesized!(content in input);
+
+                // Literal string optimization. A single, enclosed literal string can be added to the existing static buffer.
+                if content.peek(syn::LitStr) && content.peek2(crate::token::Eof) {
+                    let s = content.parse::<syn::LitStr>()?;
+                    encoder.encode_str(&s.value(), hash.span().start(), Some(paren.span.end()))?;
+                } else {
+                    let expr = content.parse::<syn::Expr>()?;
+                    encoder.raw_expr(&expr, hash.span().start(), Some(paren.span.end()))?;
+                }
 
                 continue;
             }

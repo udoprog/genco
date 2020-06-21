@@ -2,30 +2,15 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let sqrt = dart::import("dart:math", "sqrt");
+    let hash_map = &dart::import("dart:collection", "HashMap");
 
     let tokens = quote! {
-        class Position {
-            int x;
-            int y;
-
-            double distanceTo(Position other) {
-                var dx = other.x - x;
-                var dy = other.y - y;
-                return #sqrt(dx * dx + dy * dy);
-            }
+        print_greeting(String name) {
+            print(#_(Hello $(name)));
         }
 
-        main() {
-            var origin = new Position()
-                ..x = 0
-                ..y = 0;
-
-            var p = new Position()
-                ..x = -5
-                ..y = 6;
-
-            print(origin.distanceTo(p));
+        #hash_map<int, String> map() {
+            return new #hash_map<int, String>();
         }
     };
 
