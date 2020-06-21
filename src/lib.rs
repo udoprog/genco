@@ -118,7 +118,7 @@
 //! [impl_lang!]: https://docs.rs/genco/0/genco/macro.impl_lang.html
 //! [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html
 
-#![doc(html_root_url = "https://docs.rs/genco/0.10.5")]
+#![doc(html_root_url = "https://docs.rs/genco/0.10.6")]
 #![deny(missing_docs)]
 #![deny(intra_doc_link_resolution_failure)]
 
