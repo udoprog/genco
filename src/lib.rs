@@ -1,21 +1,23 @@
-//! genco is a language neutral quasi quoter.
+//! A whitespace-aware quasiquoter for beautiful code generation.
 //!
 //! Central to genco are the [quote!] and [quote_in!] procedural macros which
 //! ease the construction of [token streams].
 //!
-//! This projects solves the following, language-specific concerns:
+//! This project solves the following language-specific concerns:
 //!
-//! * **Imports** — genco generates and groups [import statements] as they are
-//!   used. What you use is what you get, with no redundancy or mess. We also
-//!   do our best to solve namespacing conflicts transparently for you.
+//! * **Imports** — Generates and groups [import statements] as they are used.
+//!   What you use is what you get with no redundancy and consistency. We also
+//!   do our best to [solve namespace conflicts] for you.
 //!
 //! * **String Quoting** — genco knows how to [quote strings]. And can even
 //!   [interpolate] values *into* the quoted string if it's supported by the
-//!   language ([like `"Hello $name"` in Dart](https://dart.dev/guides/language/language-tour#strings)).
+//!   language.
 //!
 //! * **Structural Indentation** — The quoter relies on intuitive
 //!   [whitespace detection] to structurally sort out spacings and indentation.
 //!   Allowing genco to generate beautiful readable code with minimal effort.
+//!   This is also a requirement for generating correctly behaving code in
+//!   languages like Python where [indentation is meaningful].
 //!
 //! * **Language Customization** — Building support for new languages is a
 //!   piece of cake with the help of the [impl_lang!] macro.
@@ -100,6 +102,8 @@
 //!
 //! <br>
 //!
+//! [solve namespace conflicts]: file:///home/udoprog/repo/genco/target/doc/genco/lang/csharp/fn.import.html
+//! [indentation is meaningful]: https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements
 //! [token streams]: https://docs.rs/genco/0/genco/tokens/struct.Tokens.html
 //! [import statements]: https://docs.rs/genco/0/genco/macro.quote.html#imports
 //! [quote strings]: https://docs.rs/genco/0/genco/macro.quote.html#string-quoting
@@ -118,7 +122,7 @@
 //! [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html
 //! [Open an issue!]: https://github.com/udoprog/genco/issues/new
 
-#![doc(html_root_url = "https://docs.rs/genco/0.11.0")]
+#![doc(html_root_url = "https://docs.rs/genco/0.11.1")]
 #![deny(missing_docs)]
 #![deny(intra_doc_link_resolution_failure)]
 
