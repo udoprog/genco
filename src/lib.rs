@@ -11,8 +11,8 @@
 //!   conflicts? We've got you covered.
 //!
 //! * **String Quoting** — we figure out how to correctly [quote strings]
-//!   for your language. We even know how to [interpolate] values into the
-//!   quoted string.
+//!   for your language. We even know how to generate code to [interpolate]
+//!   values *into* the quoted string ([like `"Hello $name"` in Dart](https://dart.dev/guides/language/language-tour#strings)).
 //!
 //! * **Structural Indentation** — our quasi quoter performs efficient
 //!   [whitespace detection] to structurally sort out spaces and indentation.
