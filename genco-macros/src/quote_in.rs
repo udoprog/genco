@@ -21,15 +21,17 @@ impl Parse for QuoteIn {
 
         // Give the assignment its own span to improve diagnostics.
         let assign_mut = q::quote_spanned! { expr.span() =>
-            let #receiver: &mut genco::tokens::Tokens<_> = &mut #expr
+            let #receiver: &mut genco::tokens::Tokens<_> = &mut #expr;
         };
 
+        let stream = q::quote! {{
+            #assign_mut
+            #output
+            #check
+        }};
+
         Ok(Self {
-            stream: q::quote! {
-                #assign_mut;
-                #output
-                #check
-            },
+            stream,
         })
     }
 }
