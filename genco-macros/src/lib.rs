@@ -295,9 +295,9 @@ mod token;
 /// macro for convenience.
 /// The supported mechanisms are:
 ///
-/// * [Loops][#loops] - `#(for <bindings> in <expr> [join (<quoted>)] => <quoted>)`.
-/// * [Conditionals][#conditionals] - `#(if <pattern> => <quoted>)`.
-/// * [Match Statements][#match-statements] - `#(match <expr> { [<pattern> => <quoted>,]* })`.
+/// * [Loops](#loops) - `#(for <bindings> in <expr> [join (<quoted>)] => <quoted>)`.
+/// * [Conditionals](#conditionals) - `#(if <pattern> => <quoted>)`.
+/// * [Match Statements](#match-statements) - `#(match <expr> { [<pattern> => <quoted>,]* })`.
 ///
 /// <br>
 ///
