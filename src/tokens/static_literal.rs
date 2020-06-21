@@ -1,7 +1,24 @@
-use crate::lang;
-use crate::tokens;
+use crate::lang::Lang;
+use crate::tokens::{FormatInto, Item, ItemStr};
 
-/// Construct a formatter from a static string.
+/// A formatter from a static literal.
+///
+/// Created from the [static_literal()] function.
+#[derive(Debug, Clone, Copy)]
+pub struct StaticLiteral {
+    literal: &'static str,
+}
+
+impl<L> FormatInto<L> for StaticLiteral
+where
+    L: Lang,
+{
+    fn format_into(self, tokens: &mut crate::Tokens<L>) {
+        tokens.item(Item::Literal(ItemStr::Static(self.literal)));
+    }
+}
+
+/// A formatter from a static literal.
 ///
 /// This is typically more efficient than using [append()] with a string
 /// directly, since it can avoid copying the string.
@@ -20,11 +37,6 @@ use crate::tokens;
 /// ```
 ///
 /// [append()]: crate::Tokens::append()
-pub fn static_literal<L>(s: &'static str) -> impl tokens::FormatInto<L>
-where
-    L: lang::Lang,
-{
-    tokens::from_fn(move |t| {
-        t.item(tokens::Item::Literal(tokens::ItemStr::Static(s)));
-    })
+pub fn static_literal(literal: &'static str) -> StaticLiteral {
+    StaticLiteral { literal }
 }
