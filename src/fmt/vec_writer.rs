@@ -83,4 +83,9 @@ impl fmt::Write for VecWriter {
         self.line_buffer.clear();
         Ok(())
     }
+
+    // NB: trailing line is ignored for vector writer.
+    fn write_trailing_line(&mut self, _: &fmt::Config) -> fmt::Result {
+        Ok(())
+    }
 }

@@ -74,7 +74,13 @@ static TABS: &str =
 
 /// Trait that defines a line writer.
 pub(crate) trait Write: std::fmt::Write {
+    /// Implement for writing a line.
     fn write_line(&mut self, config: &Config) -> Result;
+
+    /// Implement for writing the trailing line ending of the file.
+    fn write_trailing_line(&mut self, config: &Config) -> fmt::Result {
+        self.write_line(config)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -183,13 +189,13 @@ impl<'a> Formatter<'a> {
         self.indent += n;
     }
 
-    /// Forcibly write a new line.
+    /// Forcibly write a line ending, at the end of a file.
     ///
     /// This will also reset any whitespace we have pending.
-    pub(crate) fn force_new_line(&mut self) -> fmt::Result {
+    pub(crate) fn write_trailing_line(&mut self) -> fmt::Result {
         self.line = Line::default();
         self.spaces = 0;
-        self.write.write_line(&self.config)?;
+        self.write.write_trailing_line(&self.config)?;
         Ok(())
     }
 

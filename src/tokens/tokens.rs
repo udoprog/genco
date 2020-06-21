@@ -234,7 +234,7 @@ where
     ///
     /// let tokens = quote!(#(register(write_bytes_ext)));
     ///
-    /// assert_eq!("use byteorder::WriteBytesExt as _;", tokens.to_file_string()?);
+    /// assert_eq!("use byteorder::WriteBytesExt as _;\n", tokens.to_file_string()?);
     /// # Ok(())
     /// # }
     /// ```
@@ -747,7 +747,7 @@ where
     /// ```
     pub fn format_file(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result {
         L::format_file(self, out, &config)?;
-        out.force_new_line()?;
+        out.write_trailing_line()?;
         Ok(())
     }
 
@@ -819,7 +819,7 @@ where
     /// };
     ///
     /// assert_eq!(
-    ///     "use std::collections::HashMap;\n\nlet mut m = HashMap::new();\nm.insert(1u32, 2u32);",
+    ///     "use std::collections::HashMap;\n\nlet mut m = HashMap::new();\nm.insert(1u32, 2u32);\n",
     ///     tokens.to_file_string()?
     /// );
     /// # Ok(())
