@@ -38,7 +38,6 @@ pub use self::swift::Swift;
 use crate::fmt;
 use crate::Tokens;
 use std::any::Any;
-use std::ops;
 
 /// Trait to implement for language specialization.
 ///
@@ -169,60 +168,6 @@ where
     /// This is used for import resolution for custom language items.
     fn as_import(&self) -> Option<&L::Import> {
         None
-    }
-}
-
-/// A box containing a lang item.
-pub struct LangBox<L>
-where
-    L: Lang,
-{
-    inner: Box<dyn LangItem<L>>,
-}
-
-impl<L> LangBox<L>
-where
-    L: Lang,
-{
-    /// Construct a new LangBox containing the given value.
-    pub fn new<T>(value: T) -> Self
-    where
-        T: LangItem<L>,
-    {
-        Self {
-            inner: Box::new(value),
-        }
-    }
-}
-
-impl<L> Clone for LangBox<L>
-where
-    L: Lang,
-{
-    fn clone(&self) -> Self {
-        Self {
-            inner: LangItem::__lang_item_clone(&*self.inner),
-        }
-    }
-}
-
-impl<L> std::fmt::Debug for LangBox<L>
-where
-    L: Lang,
-{
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-        write!(fmt, "{:?}", self.inner)
-    }
-}
-
-impl<L> ops::Deref for LangBox<L>
-where
-    L: Lang,
-{
-    type Target = dyn LangItem<L>;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.inner
     }
 }
 

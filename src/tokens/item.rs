@@ -1,6 +1,6 @@
 //! A single element
 
-use crate::lang::{Lang, LangBox};
+use crate::lang::{Lang, LangItem};
 use crate::tokens::{FormatInto, ItemStr, Tokens};
 use std::cmp;
 use std::rc::Rc;
@@ -14,9 +14,9 @@ where
     /// Is added as a raw string to the stream of tokens.
     Literal(ItemStr),
     /// A language-specific boxed item.
-    LangBox(LangBox<L>),
+    Lang(Box<dyn LangItem<L>>),
     /// A language-specific boxed item that is not rendered.
-    Registered(LangBox<L>),
+    Register(Box<dyn LangItem<L>>),
     /// Push a new line unless the current line is empty. Will be flushed on
     /// indentation changes.
     Push,
@@ -93,8 +93,8 @@ where
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(s) => write!(fmt, "Literal({:?})", s),
-            Self::LangBox(item) => write!(fmt, "LangBox({:?})", item),
-            Self::Registered(item) => write!(fmt, "Registered({:?})", item),
+            Self::Lang(item) => write!(fmt, "Lang({:?})", item),
+            Self::Register(item) => write!(fmt, "Register({:?})", item),
             Self::Push => write!(fmt, "Push"),
             Self::Line => write!(fmt, "Line"),
             Self::Space => write!(fmt, "Space"),
@@ -168,8 +168,8 @@ where
     fn clone(&self) -> Self {
         match self {
             Self::Literal(literal) => Self::Literal(literal.clone()),
-            Self::LangBox(lang) => Self::LangBox(lang.clone()),
-            Self::Registered(lang) => Self::Registered(lang.clone()),
+            Self::Lang(lang) => Self::Lang(lang.__lang_item_clone()),
+            Self::Register(lang) => Self::Register(lang.__lang_item_clone()),
             Self::Push => Self::Push,
             Self::Line => Self::Line,
             Self::Space => Self::Space,
@@ -189,8 +189,8 @@ where
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Literal(a), Self::Literal(b)) => a == b,
-            (Self::LangBox(a), Self::LangBox(b)) => a.__lang_item_eq(&**b),
-            (Self::Registered(a), Self::Registered(b)) => a.__lang_item_eq(&**b),
+            (Self::Lang(a), Self::Lang(b)) => a.__lang_item_eq(&**b),
+            (Self::Register(a), Self::Register(b)) => a.__lang_item_eq(&**b),
             (Self::Push, Self::Push) => true,
             (Self::Line, Self::Line) => true,
             (Self::Space, Self::Space) => true,

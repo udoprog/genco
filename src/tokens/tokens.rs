@@ -617,7 +617,7 @@ where
             } = head;
 
             match item {
-                Item::Registered(_) => {}
+                Item::Register(_) => {}
                 Item::Literal(literal) => {
                     if *in_quote {
                         L::write_quoted(out, &literal)?;
@@ -646,7 +646,7 @@ where
                     *in_quote = false;
                     L::close_quote(out, config, format, mem::take(has_eval))?;
                 }
-                Item::LangBox(lang) => {
+                Item::Lang(lang) => {
                     lang.format(out, config, format)?;
                 }
                 // whitespace below
@@ -1158,8 +1158,8 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.queue.next() {
             let import = match next {
-                Item::LangBox(item) => item.as_import(),
-                Item::Registered(item) => item.as_import(),
+                Item::Lang(item) => item.as_import(),
+                Item::Register(item) => item.as_import(),
                 _ => continue,
             };
 

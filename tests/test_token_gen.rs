@@ -1,8 +1,4 @@
 //! Test to assert that the tokens generated are equivalent.
-//!
-//! Note: Because of genco::LangBox, building Eq implementations are hard, so
-//! we do comparisons based on `fmt::Debug` representation, which is already
-//! available. But do note that they will not represent language items.
 
 use genco::fmt;
 use genco::prelude::*;

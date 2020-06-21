@@ -199,29 +199,25 @@ macro_rules! impl_lang {
 
             impl $crate::tokens::FormatInto<$lang> for $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let b = $crate::lang::LangBox::new(self);
-                    tokens.item($crate::tokens::Item::LangBox(b));
+                    tokens.item($crate::tokens::Item::Lang(Box::new(self)));
                 }
             }
 
             impl<'a> $crate::tokens::FormatInto<$lang> for &'a $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let b = $crate::lang::LangBox::new(self.clone());
-                    tokens.item($crate::tokens::Item::LangBox(b));
+                    tokens.item($crate::tokens::Item::Lang(Box::new(self.clone())));
                 }
             }
 
             impl $crate::tokens::Register<$lang> for $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let b = $crate::lang::LangBox::new(self);
-                    tokens.item($crate::tokens::Item::Registered(b));
+                    tokens.item($crate::tokens::Item::Register(Box::new(self)));
                 }
             }
 
             impl<'a> $crate::tokens::Register<$lang> for &'a $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let b = $crate::lang::LangBox::new(self.clone());
-                    tokens.item($crate::tokens::Item::Registered(b));
+                    tokens.item($crate::tokens::Item::Register(Box::new(self.clone())));
                 }
             }
 
