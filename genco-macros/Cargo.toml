@@ -1,6 +1,6 @@
 [package]
 name = "genco-macros"
-version = "0.10.7"
+version = "0.10.8"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 license = "MIT/Apache-2.0"
 edition = "2018"
@@ -19,7 +19,7 @@ q = {package = "quote", version = "1.0.3"}
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 
 [dev-dependencies]
-genco = { path = "..", version = "0.10.7" }
+genco = { path = "..", version = "0.10.8" }
 
 [lib]
 proc-macro = true

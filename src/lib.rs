@@ -118,7 +118,7 @@
 //! [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html
 //! [Open an issue!]: https://github.com/udoprog/genco/issues/new
 
-#![doc(html_root_url = "https://docs.rs/genco/0.10.7")]
+#![doc(html_root_url = "https://docs.rs/genco/0.10.8")]
 #![deny(missing_docs)]
 #![deny(intra_doc_link_resolution_failure)]
 
