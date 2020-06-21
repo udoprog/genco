@@ -407,7 +407,7 @@ where
     }
 }
 
-/// Setup an imported module.
+/// The import of a Python module `import module`.
 ///
 /// # Examples
 ///
