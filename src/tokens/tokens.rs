@@ -10,7 +10,7 @@
 //! ```
 
 use crate::fmt;
-use crate::lang::Lang;
+use crate::lang::{Lang, LangSupportsEval};
 use crate::tokens::{FormatInto, Item, Register};
 use std::cmp;
 use std::iter::FromIterator;
@@ -775,6 +775,13 @@ where
     fn default() -> Self {
         Self::new()
     }
+}
+
+impl<L: LangSupportsEval> Tokens<L> {
+    /// Helper function to determine if the token stream supports evaluation at compile time.
+    #[doc(hidden)]
+    #[inline]
+    pub fn lang_supports_eval(&self) {}
 }
 
 impl<C: Default, L: Lang<Config = C>> Tokens<L> {

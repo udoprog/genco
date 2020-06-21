@@ -131,6 +131,9 @@ where
     }
 }
 
+/// Marker trait to indicate that the given language supports string evaluations.
+pub trait LangSupportsEval: Lang {}
+
 impl Lang for () {
     type Config = ();
     type Format = ();

@@ -1,5 +1,6 @@
 use crate::ast::{Ast, Control, ControlKind, Delimiter, MatchArm};
 use crate::cursor::Cursor;
+use crate::requirements::Requirements;
 use crate::static_buffer::StaticBuffer;
 use proc_macro2::{LineColumn, Span, TokenStream};
 use syn::Result;
@@ -27,6 +28,9 @@ pub(crate) struct Encoder<'a> {
     last_start_column: Option<usize>,
     /// Indentation columns.
     indents: Vec<(usize, Option<Span>)>,
+    /// Indicates if the encoder has encountered a string which requires eval
+    /// support in the target language.
+    pub(crate) requirements: Requirements,
 }
 
 impl<'a> Encoder<'a> {
@@ -44,6 +48,7 @@ impl<'a> Encoder<'a> {
             last: None,
             last_start_column: None,
             indents: Vec::new(),
+            requirements: Requirements::default(),
         }
     }
 
@@ -58,6 +63,7 @@ impl<'a> Encoder<'a> {
                 self.encode_literal(&tt.to_string());
             }
             Ast::String { has_eval, stream } => {
+                self.requirements.lang_supports_eval |= has_eval;
                 self.encode_string(has_eval, stream);
             }
             Ast::Quoted { s } => {
@@ -114,9 +120,9 @@ impl<'a> Encoder<'a> {
     }
 
     /// Finalize and translate into a token stream.
-    pub(crate) fn into_output(mut self) -> Result<TokenStream> {
+    pub(crate) fn into_output(mut self) -> Result<(Requirements, TokenStream)> {
         self.finalize()?;
-        Ok(self.output)
+        Ok((self.requirements, self.output))
     }
 
     pub(crate) fn step(&mut self, next: Cursor, to_span: Span) -> Result<()> {

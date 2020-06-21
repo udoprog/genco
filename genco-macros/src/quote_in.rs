@@ -15,7 +15,9 @@ impl Parse for QuoteIn {
 
         let receiver = &syn::Ident::new("__genco_macros_toks", expr.span());
         let parser = crate::quote::Quote::new(receiver);
-        let output = parser.parse(input)?;
+        let (req, output) = parser.parse(input)?;
+
+        let check = req.into_check(&receiver);
 
         // Give the assignment its own span to improve diagnostics.
         let assign_mut = q::quote_spanned! { expr.span() =>
@@ -26,6 +28,7 @@ impl Parse for QuoteIn {
             stream: q::quote! {
                 #assign_mut;
                 #output
+                #check
             },
         })
     }

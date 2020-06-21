@@ -10,6 +10,7 @@ mod cursor;
 mod encoder;
 mod quote;
 mod quote_in;
+mod requirements;
 mod static_buffer;
 mod string_parser;
 mod token;
@@ -597,10 +598,12 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
     let parser = move |stream: ParseStream| parser.parse(stream);
 
-    let output = match parser.parse(input) {
+    let (req, output) = match parser.parse(input) {
         Ok(data) => data,
         Err(e) => return proc_macro::TokenStream::from(e.to_compile_error()),
     };
+
+    let check = req.into_check(&receiver);
 
     let gen = q::quote! {{
         let mut #receiver = genco::tokens::Tokens::new();
@@ -610,6 +613,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
             #output
         }
 
+        #check
         #receiver
     }};
 

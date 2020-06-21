@@ -54,6 +54,8 @@ use std::fmt::Write as _;
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
 
+impl crate::lang::LangSupportsEval for JavaScript {}
+
 impl_lang! {
     /// JavaScript language specialization.
     pub JavaScript {

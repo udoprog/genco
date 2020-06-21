@@ -50,6 +50,8 @@ const DART_CORE: &'static str = "dart:core";
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;
 
+impl genco::lang::LangSupportsEval for Dart {}
+
 impl_lang! {
     /// Language specialization for Dart.
     pub Dart {

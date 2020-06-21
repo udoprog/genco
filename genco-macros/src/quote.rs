@@ -7,6 +7,7 @@ use syn::{Result, Token};
 use crate::ast::{Ast, Control, Delimiter, MatchArm};
 use crate::cursor::Cursor;
 use crate::encoder::Encoder;
+use crate::requirements::Requirements;
 use crate::string_parser::StringParser;
 
 pub(crate) struct Quote<'a> {
@@ -72,32 +73,38 @@ impl<'a> Quote<'a> {
     }
 
     /// Parse until end of stream.
-    pub(crate) fn parse(self, input: ParseStream) -> Result<TokenStream> {
+    pub(crate) fn parse(self, input: ParseStream) -> Result<(Requirements, TokenStream)> {
         let mut encoder = Encoder::new(self.receiver, self.span_start, self.span_end);
         self.parse_inner(&mut encoder, input)?;
         encoder.into_output()
     }
 
     /// Parse `if <condition> { <quoted> } [else { <quoted> }]`.
-    fn parse_condition(&self, input: ParseStream) -> Result<Ast> {
+    fn parse_condition(&self, input: ParseStream) -> Result<(Requirements, Ast)> {
         input.parse::<Token![if]>()?;
         let condition = syn::Expr::parse_without_eager_brace(input)?;
 
         if input.peek(Token![=>]) {
             input.parse::<Token![=>]>()?;
-            let then_branch = Quote::new(self.receiver).parse(input)?;
+            let (req, then_branch) = Quote::new(self.receiver).parse(input)?;
 
-            return Ok(Ast::Condition {
-                condition,
-                then_branch,
-                else_branch: None,
-            });
+            return Ok((
+                req,
+                Ast::Condition {
+                    condition,
+                    then_branch,
+                    else_branch: None,
+                },
+            ));
         }
+
+        let mut req = Requirements::default();
 
         let content;
         syn::braced!(content in input);
 
-        let then_branch = Quote::new(self.receiver).parse(&content)?;
+        let (r, then_branch) = Quote::new(self.receiver).parse(&content)?;
+        req.merge_with(r);
 
         let else_branch = if input.peek(Token![else]) {
             input.parse::<Token![else]>()?;
@@ -105,21 +112,29 @@ impl<'a> Quote<'a> {
             let content;
             syn::braced!(content in input);
 
-            Some(Quote::new(self.receiver).parse(&content)?)
+            let (r, else_branch) = Quote::new(self.receiver).parse(&content)?;
+            req.merge_with(r);
+
+            Some(else_branch)
         } else {
             None
         };
 
-        Ok(Ast::Condition {
-            condition,
-            then_branch,
-            else_branch,
-        })
+        Ok((
+            req,
+            Ast::Condition {
+                condition,
+                then_branch,
+                else_branch,
+            },
+        ))
     }
 
     /// Parse `for <expr> in <iter> [join (<quoted>)] => <quoted>`.
-    fn parse_loop(&self, input: ParseStream) -> Result<Ast> {
+    fn parse_loop(&self, input: ParseStream) -> Result<(Requirements, Ast)> {
         syn::custom_keyword!(join);
+
+        let mut req = Requirements::default();
 
         input.parse::<Token![for]>()?;
         let pattern = input.parse::<syn::Pat>()?;
@@ -132,9 +147,12 @@ impl<'a> Quote<'a> {
             let content;
             let paren = syn::parenthesized!(content in input);
 
-            let parser = Quote::new(self.receiver).with_span(paren.span);
+            let (r, join) = Quote::new(self.receiver)
+                .with_span(paren.span)
+                .parse(&content)?;
+            req.merge_with(r);
 
-            Some(parser.parse(&content)?)
+            Some(join)
         } else {
             None
         };
@@ -150,23 +168,27 @@ impl<'a> Quote<'a> {
         };
 
         let parser = Quote::new(self.receiver);
-        let stream = parser.parse(&input)?;
+        let (r, stream) = parser.parse(&input)?;
+        req.merge_with(r);
 
-        return Ok(Ast::Loop {
+        let ast = Ast::Loop {
             pattern,
             join,
             expr,
             stream,
-        });
+        };
+
+        Ok((req, ast))
     }
 
-    fn parse_match(&self, input: ParseStream) -> Result<Ast> {
+    fn parse_match(&self, input: ParseStream) -> Result<(Requirements, Ast)> {
         input.parse::<Token![match]>()?;
         let condition = syn::Expr::parse_without_eager_brace(input)?;
 
         let body;
         syn::braced!(body in input);
 
+        let mut req = Requirements::default();
         let mut arms = Vec::new();
 
         while !body.is_empty() {
@@ -182,7 +204,7 @@ impl<'a> Quote<'a> {
 
             body.parse::<Token![=>]>()?;
 
-            let block = if body.peek(token::Brace) {
+            let (r, block) = if body.peek(token::Brace) {
                 let block;
                 syn::braced!(block in body);
 
@@ -192,6 +214,8 @@ impl<'a> Quote<'a> {
                 let parser = Quote::new_until_comma(self.receiver);
                 parser.parse(&body)?
             };
+
+            req.merge_with(r);
 
             arms.push(MatchArm {
                 pattern,
@@ -204,7 +228,7 @@ impl<'a> Quote<'a> {
             }
         }
 
-        Ok(Ast::Match { condition, arms })
+        Ok((req, Ast::Match { condition, arms }))
     }
 
     /// Parse evaluation: `[*]<binding> => <expr>`.
@@ -255,13 +279,20 @@ impl<'a> Quote<'a> {
         let cursor = Cursor::join(start, outer.span);
 
         let ast = if scope.peek(Token![if]) {
-            self.parse_condition(&scope)?
+            let (req, ast) = self.parse_condition(&scope)?;
+            encoder.requirements.merge_with(req);
+            ast
         } else if scope.peek(Token![for]) {
-            self.parse_loop(&scope)?
+            let (req, ast) = self.parse_loop(&scope)?;
+            encoder.requirements.merge_with(req);
+            ast
         } else if scope.peek(Token![match]) {
-            self.parse_match(&scope)?
+            let (req, ast) = self.parse_match(&scope)?;
+            encoder.requirements.merge_with(req);
+            ast
         } else if scope.peek(Token![ref]) {
-            self.parse_scope(&scope)?
+            let ast = self.parse_scope(&scope)?;
+            ast
         } else if scope.peek(syn::LitStr) && scope.peek2(crate::token::Eof) {
             let string = scope.parse::<syn::LitStr>()?.value();
 
@@ -307,7 +338,8 @@ impl<'a> Quote<'a> {
 
                 let parser = StringParser::new(self.receiver, paren.span);
 
-                let (options, stream) = parser.parse(&content)?;
+                let (options, r, stream) = parser.parse(&content)?;
+                encoder.requirements.merge_with(r);
 
                 let cursor = Cursor::join(start.span(), paren.span);
 

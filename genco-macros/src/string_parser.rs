@@ -1,15 +1,16 @@
 //! Helper to parse quoted strings.
 
+use crate::requirements::Requirements;
 use proc_macro2::{LineColumn, Span, TokenStream, TokenTree};
 use syn::parse::ParseStream;
 use syn::spanned::Spanned;
 use syn::token;
 use syn::Result;
 
-/// More detailed information on the quoted section.
-#[derive(Default)]
+/// Options for the parsed string.
+#[derive(Default, Clone, Copy)]
 pub(crate) struct Options {
-    /// If the section has any evaluated sections.
+    /// If the parsed string has any evaluation statements in it.
     pub(crate) has_eval: bool,
 }
 
@@ -34,7 +35,7 @@ struct Encoder<'a> {
     count: usize,
     buffer: String,
     stream: TokenStream,
-    options: Options,
+    pub(crate) options: Options,
 }
 
 impl<'a> Encoder<'a> {
@@ -224,7 +225,8 @@ impl<'a> StringParser<'a> {
         }
     }
 
-    pub(crate) fn parse(self, input: ParseStream) -> Result<(Options, TokenStream)> {
+    pub(crate) fn parse(self, input: ParseStream) -> Result<(Options, Requirements, TokenStream)> {
+        let mut requirements = Requirements::default();
         let mut encoder = Encoder::new(self.receiver, self.start, self.span);
 
         while !input.is_empty() {
@@ -248,9 +250,10 @@ impl<'a> StringParser<'a> {
                 if input.peek(token::Paren) {
                     let content;
                     let paren = syn::parenthesized!(content in input);
-                    let stream = crate::quote::Quote::new(self.receiver)
+                    let (req, stream) = crate::quote::Quote::new(self.receiver)
                         .with_span(paren.span)
                         .parse(&content)?;
+                    requirements.merge_with(req);
                     encoder.eval_stream(stream, hash.span().start(), Some(paren.span.end()))?;
                 } else {
                     let ident = input.parse::<syn::Ident>()?;
@@ -288,6 +291,7 @@ impl<'a> StringParser<'a> {
             encoder.extend_tt(&tt, tt.span().start(), Some(tt.span().end()))?;
         }
 
-        Ok(encoder.finalize(self.end)?)
+        let (options, stream) = encoder.finalize(self.end)?;
+        Ok((options, requirements, stream))
     }
 }
