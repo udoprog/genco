@@ -130,9 +130,13 @@ where
     }
 }
 
-/// Marker trait to indicate that the given language supports string evaluations.
+/// Marker trait indicating that a language supports
+/// [quoted string interpolation].
+///
+/// [quoted string interpolation]: https://docs.rs/genco/0/genco/macro.quote.html#quoted-string-interpolation
 pub trait LangSupportsEval: Lang {}
 
+/// Dummy implementation for a language.
 impl Lang for () {
     type Config = ();
     type Format = ();
@@ -146,13 +150,16 @@ impl Lang for () {
 /// work.
 pub trait LangItem<L>
 where
-    Self: Any + std::fmt::Debug,
+    Self: 'static + std::fmt::Debug,
     L: Lang,
 {
     /// Format the language item appropriately.
-    fn format(&self, _: &mut fmt::Formatter<'_>, _: &L::Config, _: &L::Format) -> fmt::Result {
-        Ok(())
-    }
+    fn format(
+        &self,
+        fmt: &mut fmt::Formatter<'_>,
+        config: &L::Config,
+        format: &L::Format,
+    ) -> fmt::Result;
 
     /// Coerce into an imported type.
     ///

@@ -139,13 +139,15 @@ macro_rules! impl_lang {
 
         /// Language-specific conversion trait implemented by all language
         /// items.
-        $vis trait AsAny: $crate::lang::LangItem<$lang> {
+        $vis trait AsAny where Self: $crate::lang::LangItem<$lang> {
             /// Coerce trait into an enum that can be used for type-specific
             /// operations.
             ///
             /// # Examples
             ///
             /// ```rust
+            /// use genco::fmt;
+            ///
             /// genco::impl_lang! {
             ///     MyLang {
             ///         type Config = ();
@@ -154,28 +156,45 @@ macro_rules! impl_lang {
             ///     }
             ///
             ///     Import {
+            ///         fn format(&self, fmt: &mut fmt::Formatter<'_>, config: &(), format: &()) -> fmt::Result {
+            ///             use std::fmt::Write as _;
+            ///
+            ///             write!(fmt, "{}", self.0)
+            ///         }
+            ///
             ///         fn as_import(&self) -> Option<&dyn AsAny> {
             ///             Some(self)
             ///         }
             ///     }
-            /// };
+            /// }
             ///
             /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
             /// struct Import(usize);
             ///
+            /// # fn main() -> genco::fmt::Result {
             /// use genco::{quote, Tokens};
             ///
-            /// let t: Tokens<MyLang> = quote! {
+            /// let tokens: Tokens<MyLang> = quote! {
             ///     #(Import(0))
             ///     #(Import(1))
             /// };
             ///
             /// /// Find and compare all imports.
-            /// assert_eq!(2, t.walk_imports().count());
+            /// assert_eq!(2, tokens.walk_imports().count());
             ///
-            /// for (i, import) in t.walk_imports().enumerate() {
+            /// for (i, import) in tokens.walk_imports().enumerate() {
             ///     assert_eq!(Any::Import(&Import(i)), import.as_any());
             /// }
+            ///
+            /// assert_eq!{
+            ///     vec![
+            ///         "0",
+            ///         "1",
+            ///     ],
+            ///     tokens.to_file_vec()?
+            /// };
+            /// # Ok(())
+            /// # }
             /// ```
             fn as_any(&self) -> Any<'_>;
         }

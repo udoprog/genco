@@ -780,14 +780,21 @@ where
     }
 }
 
-impl<L: LangSupportsEval> Tokens<L> {
+impl<L> Tokens<L>
+where
+    L: LangSupportsEval,
+{
     /// Helper function to determine if the token stream supports evaluation at compile time.
     #[doc(hidden)]
     #[inline]
     pub fn lang_supports_eval(&self) {}
 }
 
-impl<C: Default, L: Lang<Config = C>> Tokens<L> {
+impl<L> Tokens<L>
+where
+    L: Lang,
+    L::Config: Default,
+{
     /// Format the token stream as a file for the given target language to a
     /// string using the default configuration.
     ///
@@ -1086,7 +1093,7 @@ where
     iter: slice::Iter<'a, Item<L>>,
 }
 
-impl<'a, L: 'a> Iterator for Iter<'a, L>
+impl<'a, L> Iterator for Iter<'a, L>
 where
     L: Lang,
 {
@@ -1113,7 +1120,7 @@ where
     }
 }
 
-impl<'a, L: 'a> FromIterator<&'a Item<L>> for Tokens<L>
+impl<'a, L> FromIterator<&'a Item<L>> for Tokens<L>
 where
     L: Lang,
 {
