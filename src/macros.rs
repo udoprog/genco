@@ -199,25 +199,25 @@ macro_rules! impl_lang {
 
             impl $crate::tokens::FormatInto<$lang> for $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.item($crate::tokens::Item::Lang(Box::new(self)));
+                    tokens.append($crate::tokens::Item::Lang(Box::new(self)));
                 }
             }
 
             impl<'a> $crate::tokens::FormatInto<$lang> for &'a $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.item($crate::tokens::Item::Lang(Box::new(self.clone())));
+                    tokens.append($crate::tokens::Item::Lang(Box::new(self.clone())));
                 }
             }
 
             impl $crate::tokens::Register<$lang> for $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.item($crate::tokens::Item::Register(Box::new(self)));
+                    tokens.append($crate::tokens::Item::Register(Box::new(self)));
                 }
             }
 
             impl<'a> $crate::tokens::Register<$lang> for &'a $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.item($crate::tokens::Item::Register(Box::new(self.clone())));
+                    tokens.append($crate::tokens::Item::Register(Box::new(self.clone())));
                 }
             }
 

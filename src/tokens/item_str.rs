@@ -1,8 +1,7 @@
 //! Helper trait to take ownership of strings.
 
 use crate::lang::Lang;
-use crate::tokens;
-use crate::Tokens;
+use crate::tokens::{FormatInto, Item, Tokens};
 use std::borrow::Cow;
 use std::fmt;
 use std::ops::Deref;
@@ -11,35 +10,35 @@ use std::rc::Rc;
 /// A managed string that permits immutable borrowing.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum ItemStr {
-    /// A refcounted string.
+    /// A boxed string.
     Box(Box<str>),
     /// A static string.
     Static(&'static str),
 }
 
 /// Convert stringy things.
-impl<L> tokens::FormatInto<L> for ItemStr
+impl<L> FormatInto<L> for ItemStr
 where
     L: Lang,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(self.into());
+        tokens.append(Item::Literal(self));
     }
 }
 
-impl<'a, L> tokens::FormatInto<L> for &'a ItemStr
+impl<'a, L> FormatInto<L> for &'a ItemStr
 where
     L: Lang,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(self.clone().into());
+        tokens.append(Item::Literal(self.clone()));
     }
 }
 
 impl AsRef<str> for ItemStr {
     fn as_ref(&self) -> &str {
         match self {
-            Self::Box(rc) => &**rc,
+            Self::Box(b) => &**b,
             Self::Static(s) => s,
         }
     }
@@ -50,7 +49,7 @@ impl Deref for ItemStr {
 
     fn deref(&self) -> &str {
         match self {
-            Self::Box(rc) => &**rc,
+            Self::Box(b) => &**b,
             Self::Static(s) => s,
         }
     }
@@ -82,19 +81,13 @@ impl From<String> for ItemStr {
 
 impl<'a> From<&'a str> for ItemStr {
     fn from(value: &'a str) -> Self {
-        Self::Box(value.to_string().into_boxed_str())
+        Self::Box(value.to_owned().into_boxed_str())
     }
 }
 
-impl<'a> From<&'a &'a str> for ItemStr {
-    fn from(value: &'a &'a str) -> Self {
-        Self::Box(value.to_string().into_boxed_str())
-    }
-}
-
-impl From<Rc<String>> for ItemStr {
-    fn from(value: Rc<String>) -> Self {
-        Self::Box(value.to_string().into_boxed_str())
+impl<'a, 'b> From<&'b &'a str> for ItemStr {
+    fn from(value: &'b &'a str) -> Self {
+        Self::Box((*value).to_owned().into_boxed_str())
     }
 }
 
@@ -102,17 +95,23 @@ impl<'a> From<Cow<'a, str>> for ItemStr {
     fn from(value: Cow<'a, str>) -> Self {
         Self::Box(match value {
             Cow::Owned(string) => string.into_boxed_str(),
-            Cow::Borrowed(string) => string.to_string().into_boxed_str(),
+            Cow::Borrowed(string) => string.to_owned().into_boxed_str(),
         })
     }
 }
 
-impl<'a, 'b> From<&'a Cow<'b, str>> for ItemStr {
-    fn from(value: &'a Cow<'b, str>) -> Self {
+impl<'a, 'b> From<&'b Cow<'a, str>> for ItemStr {
+    fn from(value: &'b Cow<'a, str>) -> Self {
         Self::Box(match value {
-            Cow::Owned(string) => string.to_string().into_boxed_str(),
-            Cow::Borrowed(string) => string.to_string().into_boxed_str(),
+            Cow::Owned(string) => string.clone().into_boxed_str(),
+            Cow::Borrowed(string) => (*string).to_owned().into_boxed_str(),
         })
+    }
+}
+
+impl From<Rc<String>> for ItemStr {
+    fn from(value: Rc<String>) -> Self {
+        Self::Box((*value).clone().into())
     }
 }
 

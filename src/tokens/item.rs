@@ -3,7 +3,6 @@
 use crate::lang::{Lang, LangItem};
 use crate::tokens::{FormatInto, ItemStr, Tokens};
 use std::cmp;
-use std::rc::Rc;
 
 /// A single item in a stream of tokens.
 pub enum Item<L>
@@ -107,60 +106,6 @@ where
     }
 }
 
-impl<L> From<String> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: String) -> Self {
-        Item::Literal(value.into())
-    }
-}
-
-impl<'a, L> From<&'a str> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: &'a str) -> Self {
-        Item::Literal(value.into())
-    }
-}
-
-impl<L> From<Rc<String>> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: Rc<String>) -> Self {
-        Item::Literal(value.into())
-    }
-}
-
-impl<L> From<ItemStr> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: ItemStr) -> Self {
-        Item::Literal(value)
-    }
-}
-
-impl<'a, L> From<&'a Item<L>> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: &'a Item<L>) -> Self {
-        value.clone()
-    }
-}
-
-impl<L> From<Rc<Item<L>>> for Item<L>
-where
-    L: Lang,
-{
-    fn from(value: Rc<Item<L>>) -> Self {
-        (*value).clone()
-    }
-}
-
 impl<L> Clone for Item<L>
 where
     L: Lang,
@@ -205,13 +150,3 @@ where
 }
 
 impl<L> cmp::Eq for Item<L> where L: Lang {}
-
-#[cfg(test)]
-mod tests {
-    use super::Item;
-
-    #[test]
-    fn test_size() {
-        assert_eq!(std::mem::size_of::<Item<()>>(), 32);
-    }
-}

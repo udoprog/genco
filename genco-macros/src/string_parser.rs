@@ -90,9 +90,9 @@ impl<'a> Encoder<'a> {
         let ident = syn::LitStr::new(&ident.to_string(), ident.span());
 
         self.stream.extend(q::quote! {
-            #receiver.item(genco::tokens::Item::OpenEval);
-            #receiver.item(genco::tokens::Item::Literal(genco::tokens::ItemStr::Static(#ident)));
-            #receiver.item(genco::tokens::Item::CloseEval);
+            #receiver.append(genco::tokens::Item::OpenEval);
+            #receiver.append(genco::tokens::Item::Literal(genco::tokens::ItemStr::Static(#ident)));
+            #receiver.append(genco::tokens::Item::CloseEval);
         });
 
         self.options.has_eval = true;
@@ -110,9 +110,9 @@ impl<'a> Encoder<'a> {
         let receiver = self.receiver;
 
         self.stream.extend(q::quote! {
-            #receiver.item(genco::tokens::Item::OpenEval);
+            #receiver.append(genco::tokens::Item::OpenEval);
             #expr
-            #receiver.item(genco::tokens::Item::CloseEval);
+            #receiver.append(genco::tokens::Item::CloseEval);
         });
 
         self.options.has_eval = true;

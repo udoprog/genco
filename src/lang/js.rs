@@ -418,6 +418,12 @@ impl From<String> for Module {
     }
 }
 
+impl From<ItemStr> for Module {
+    fn from(value: ItemStr) -> Self {
+        Self::Global(value)
+    }
+}
+
 impl JavaScript {
     /// Translate imports into the necessary tokens.
     fn imports(out: &mut Tokens, tokens: &Tokens, config: &Config) {

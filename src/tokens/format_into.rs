@@ -1,5 +1,5 @@
 use crate::lang::Lang;
-use crate::Tokens;
+use crate::tokens::{Item, ItemStr, Tokens};
 use std::rc::Rc;
 
 /// Trait for types that can be formatted in-place into a token stream.
@@ -167,7 +167,7 @@ where
     L: Lang,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(self.to_string().into());
+        tokens.item(Item::Literal(ItemStr::from(self)));
     }
 }
 
@@ -193,7 +193,7 @@ where
     L: Lang,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(self.clone().into());
+        tokens.item(Item::Literal(ItemStr::from(self)));
     }
 }
 
@@ -220,7 +220,7 @@ where
     L: Lang,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(self.into());
+        tokens.item(Item::Literal(ItemStr::from(self)));
     }
 }
 
@@ -247,7 +247,7 @@ where
     L: Lang,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(self.into());
+        tokens.item(Item::Literal(ItemStr::from(self)));
     }
 }
 
@@ -275,7 +275,7 @@ where
     L: Lang,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(self.clone().into());
+        tokens.item(Item::Literal(ItemStr::from(self.clone())));
     }
 }
 

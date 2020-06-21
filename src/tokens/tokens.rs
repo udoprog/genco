@@ -164,34 +164,6 @@ where
         tokens.format_into(self)
     }
 
-    /// Push a single item to the stream while checking for structural
-    /// guarantees.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    /// use genco::tokens::{Item, ItemStr};
-    ///
-    /// let mut tokens = Tokens::<()>::new();
-    ///
-    /// tokens.append(ItemStr::Static("foo"));
-    /// tokens.space();
-    /// tokens.space(); // Note: second space ignored
-    /// tokens.append(ItemStr::Static("bar"));
-    ///
-    /// assert_eq!(tokens, quote!(foo bar));
-    /// ```
-    pub fn item(&mut self, item: Item<L>) {
-        match item {
-            Item::Push => self.push(),
-            Item::Line => self.line(),
-            Item::Space => self.space(),
-            Item::Indentation(n) => self.indentation(n),
-            other => self.items.push(other),
-        }
-    }
-
     /// Extend with another stream of tokens.
     ///
     /// This respects the structural requirements of adding one element at a
@@ -575,6 +547,34 @@ where
         use crate::tokens::cursor;
         let mut cursor = cursor::Cursor::new(&self.items);
         Self::format_inner(&mut cursor, out, config, format, false)
+    }
+
+    /// Push a single item to the stream while checking for structural
+    /// guarantees.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use genco::prelude::*;
+    /// use genco::tokens::{Item, ItemStr};
+    ///
+    /// let mut tokens = Tokens::<()>::new();
+    ///
+    /// tokens.append(ItemStr::Static("foo"));
+    /// tokens.space();
+    /// tokens.space(); // Note: second space ignored
+    /// tokens.append(ItemStr::Static("bar"));
+    ///
+    /// assert_eq!(tokens, quote!(foo bar));
+    /// ```
+    pub(crate) fn item(&mut self, item: Item<L>) {
+        match item {
+            Item::Push => self.push(),
+            Item::Line => self.line(),
+            Item::Space => self.space(),
+            Item::Indentation(n) => self.indentation(n),
+            other => self.items.push(other),
+        }
     }
 
     /// Support for evaluating an interior quote and returning it as a string.

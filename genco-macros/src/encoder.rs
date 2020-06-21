@@ -154,9 +154,9 @@ impl<'a> Encoder<'a> {
         let receiver = self.receiver;
 
         self.output.extend(q::quote! {
-            #receiver.item(genco::tokens::Item::OpenQuote(#has_eval));
+            #receiver.append(genco::tokens::Item::OpenQuote(#has_eval));
             #stream
-            #receiver.item(genco::tokens::Item::CloseQuote);
+            #receiver.append(genco::tokens::Item::CloseQuote);
         });
     }
 
@@ -165,9 +165,9 @@ impl<'a> Encoder<'a> {
         self.item_buffer.flush(&mut self.output);
 
         self.output.extend(q::quote! {
-            #receiver.item(genco::tokens::Item::OpenQuote(false));
+            #receiver.append(genco::tokens::Item::OpenQuote(false));
             #receiver.append(genco::tokens::ItemStr::Static(#s));
-            #receiver.item(genco::tokens::Item::CloseQuote);
+            #receiver.append(genco::tokens::Item::CloseQuote);
         });
     }
 
