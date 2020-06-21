@@ -139,7 +139,7 @@ macro_rules! impl_lang {
 
         /// Language-specific conversion trait implemented by all language
         /// items.
-        $vis trait AsAny where Self: $crate::lang::LangItem<$lang> {
+        $vis trait AsAny where Self: 'static {
             /// Coerce trait into an enum that can be used for type-specific
             /// operations.
             ///
