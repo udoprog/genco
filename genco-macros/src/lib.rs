@@ -246,43 +246,48 @@ mod token;
 ///
 /// Some languages support interpolating values into strings.
 ///
-/// Examples of this is:
+/// Examples of this are:
 ///
-/// * JavaScript - `` `Hello ${a}` `` (note the backticks).
-/// * Dart - `"Hello $a"` or `"Hello ${a + b}"`.
+/// * JavaScript - With [template literals] `` `Hello ${a}` `` (note the backticks).
+/// * Dart - With [interpolated strings] like `"Hello $a"` or `"Hello ${a + b}"`.
 ///
-/// The `quote!` macro supports this through a special form of string quoting
-/// through the form: `#_(<string>)`. This will produce literal strings but
-/// with the appropriate language-specific string interpolation method used.
+/// The [quote!] macro supports this through `#_(<content>)`. This will produce
+/// literal strings with the appropriate language-specific quoting and string
+/// interpolation formats used.
 ///
 /// Interpolated values are specified with `$(<quoted>)`. And `$` itself is
-/// escaped by repeating it twice with `$$`. The `<quoted>` section is
-/// interpreted the same as in the [quote!] macro, but is whitespace sensitive.
-/// So `$(foo)` is not the same as `$(foo )` (note the space at the end).
+/// escaped by repeating it twice through `$$`.
+/// The `<quoted>` section is interpreted the same as in the [quote!] macro,
+/// but is whitespace sensitive.
+/// This means that `$(foo)` is not the same as `$(foo )` since the latter will
+/// have a space preserved at the end.
 ///
 /// Raw items can be interpolated with `#(<expr>)` or `#<ident>`. Escaping `#`
-/// is done similarly with `##`. These do not support the full range of
-/// expression like conditionals and loop.
+/// is done similarly with `##`. Note that [control flow][#control-flow]
+/// is *not* supported inside of quoted strings.
 ///
 /// ```rust
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let brave = "brave new";
+/// let smile = "😊";
 ///
-/// let t: dart::Tokens = quote!(#_(Hello #brave $(world)));
-/// assert_eq!("\"Hello brave new $world\"", t.to_string()?);
+/// let t: dart::Tokens = quote!(#_(Hello #smile $(world)));
+/// assert_eq!("\"Hello 😊 $world\"", t.to_string()?);
 ///
-/// let t: dart::Tokens = quote!(#_(Hello #brave $(a + b)));
-/// assert_eq!("\"Hello brave new ${a + b}\"", t.to_string()?);
+/// let t: dart::Tokens = quote!(#_(Hello #smile $(a + b)));
+/// assert_eq!("\"Hello 😊 ${a + b}\"", t.to_string()?);
 ///
-/// let t: js::Tokens = quote!(#_(Hello #brave $(world)));
-/// assert_eq!("`Hello brave new ${world}`", t.to_string()?);
+/// let t: js::Tokens = quote!(#_(Hello #smile $(world)));
+/// assert_eq!("`Hello 😊 ${world}`", t.to_string()?);
 /// # Ok(())
 /// # }
 /// ```
 ///
 /// <br>
+///
+/// [template literals]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals
+/// [interpolated strings]: https://medium.com/run-dart/dart-dartlang-introduction-string-interpolation-8ed99174119a
 ///
 /// # Control Flow
 ///

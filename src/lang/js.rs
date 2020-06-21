@@ -30,17 +30,21 @@
 //! # }
 //! ```
 //!
-//! String quoting in JavaScript:
+//! # String Quoting in JavaScript
+//!
+//! JavaScript uses c-style string quoting, with indefinitely long unicode
+//! escape sequences. But any non-control character can be embedded directly
+//! into the string literal (like `"😊"`).
 //!
 //! ```rust
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: js::Tokens = quote!("hello \n world");
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: js::Tokens = quote!("start π 😊 \n \x7f ÿ $ \\ end");
+//! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ \\\\ end\"", toks.to_string()?);
 //!
-//! let toks: js::Tokens = quote!(#(quoted("hello \n world")));
-//! assert_eq!("\"hello \\n world\"", toks.to_string()?);
+//! let toks: js::Tokens = quote!(#(quoted("start π 😊 \n \x7f ÿ $ \\ end")));
+//! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ \\\\ end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
 //! ```
@@ -118,17 +122,35 @@ impl_lang! {
         }
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+            // Reference: https://mathiasbynens.be/notes/javascript-escapes
+
             for c in input.chars() {
                 match c {
-                    '\t' => out.write_str("\\t")?,
-                    '\u{0007}' => out.write_str("\\b")?,
+                    // backspace
+                    '\u{0008}' => out.write_str("\\b")?,
+                    // form feed
+                    '\u{0012}' => out.write_str("\\f")?,
+                    // new line
                     '\n' => out.write_str("\\n")?,
+                    // carriage return
                     '\r' => out.write_str("\\r")?,
-                    '\u{0014}' => out.write_str("\\f")?,
-                    '\'' => out.write_str("\\'")?,
+                    // horizontal tab
+                    '\t' => out.write_str("\\t")?,
+                    // vertical tab
+                    '\u{0011}' => out.write_str("\\v")?,
+                    // null character.
+                    '\0' => out.write_str("\\0")?,
+                    // Note: only relevant if we were to use single-quoted strings.
+                    // '\'' => out.write_str("\\'")?,
                     '"' => out.write_str("\\\"")?,
                     '\\' => out.write_str("\\\\")?,
-                    c => out.write_char(c)?,
+                    c if !c.is_control() => out.write_char(c)?,
+                    c if (c as u32) < 0x100 => {
+                        write!(out, "\\x{:02x}", c as u32)?;
+                    }
+                    c => {
+                        write!(out, "\\u{{{:x}}}", c as u32)?;
+                    }
                 };
             }
 
