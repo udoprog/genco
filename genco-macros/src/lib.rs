@@ -1,5 +1,5 @@
 #![recursion_limit = "256"]
-#![doc(html_root_url = "https://docs.rs/genco/0.14.0")]
+#![doc(html_root_url = "https://docs.rs/genco/0.14.1")]
 
 extern crate proc_macro;
 
