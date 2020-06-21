@@ -12,8 +12,8 @@ ease the construction of [token streams].
 This project solves the following language-specific concerns:
 
 * **Imports** — Generates and groups [import statements] as they are used.
-  What you use is what you get with no redundancy and consistency. We also
-  do our best to [solve namespace conflicts] for you.
+  So you only import what you use, with no redundancy. We also do our best
+  to [solve namespace conflicts].
 
 * **String Quoting** — genco knows how to [quote strings]. And can even
   [interpolate] values *into* the quoted string if it's supported by the
@@ -30,10 +30,11 @@ This project solves the following language-specific concerns:
 
 <br>
 
-To do whitespace detection, we depend on the [`proc_macro_span` feature].
+To do [whitespace detection], we depend on the nightly
+[`proc_macro_span` feature].
 
-Until this is stabilized, you must build and run projects using genco with
-the `nightly` compiler.
+*Until this is stabilized*, you must build and run projects using genco
+with a `nightly` compiler.
 
 ```bash
 cargo +nightly run --example rust
