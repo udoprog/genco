@@ -1,6 +1,6 @@
 [package]
 name = "genco"
-version = "0.10.9"
+version = "0.10.10"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 license = "MIT/Apache-2.0"
 edition = "2018"
@@ -15,7 +15,7 @@ Code quasi-quoter macro quote!(..) and language utilities.
 """
 
 [dependencies]
-genco-macros = {path = "genco-macros", version = "0.10.9"}
+genco-macros = {path = "genco-macros", version = "0.10.10"}
 relative-path = "1.2.0"
 smallvec = "1.4.0"
 
