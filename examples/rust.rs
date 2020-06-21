@@ -7,27 +7,31 @@ fn main() -> anyhow::Result<()> {
     let little_endian = rust::import("byteorder", "LittleEndian");
     let big_endian = rust::import("byteorder", "BigEndian").qualified();
 
-    // This is a trait, so only import it into the scope (unless we intent to
-    // implement it).
+    // Trait that we need to import to make use of write_u16.
     let write_bytes_ext = rust::import("byteorder", "WriteBytesExt").with_alias("_");
-    let read_bytes_ext = rust::import("byteorder", "ReadBytesExt").with_alias("_");
-    let error = rust::import("std::error", "Error");
+
+    // Trait that we import since we want to return it.
+    let result = rust::import("anyhow", "Result");
 
     let tokens = quote! {
-        #(register((write_bytes_ext, read_bytes_ext)))
+        #(register(write_bytes_ext))
 
-        fn test() -> Result<(), Box<dyn #error>> {
-            let mut wtr = vec![];
-            wtr.write_u16::<#little_endian>(517)?;
-            wtr.write_u16::<#big_endian>(768)?;
+        fn test() -> #result {
+            let mut data = vec![];
+            data.write_u16::<#little_endian>(517)?;
+            data.write_u16::<#big_endian>(768)?;
+            println!("{:?}", data);
         }
     };
 
     let stdout = std::io::stdout();
     let mut w = fmt::IoWriter::new(stdout.lock());
 
-    let fmt = fmt::Config::from_lang::<Rust>().with_indentation(fmt::Indentation::Space(2));
-    let config = rust::Config::default();
+    let fmt = fmt::Config::from_lang::<Rust>().with_indentation(fmt::Indentation::Space(4));
+
+    let config = rust::Config::default()
+        // Prettier imports and use.
+        .with_default_import(rust::ImportMode::Qualified);
 
     tokens.format_file(&mut w.as_formatter(fmt), &config)?;
     Ok(())

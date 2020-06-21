@@ -747,6 +747,7 @@ where
     /// ```
     pub fn format_file(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result {
         L::format_file(self, out, &config)?;
+        out.force_new_line()?;
         Ok(())
     }
 

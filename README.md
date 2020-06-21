@@ -46,20 +46,34 @@ cargo +nightly run --example rust
 ### Supported Languages
 
 The following are languages which have built-in support in genco.
-Is your favorite language missing? [Open an issue!]
 
-* [Rust Example]
-* [Java Example]
-* [C# Example]
-* [Go Example]
-* [Dart Example]
-* [JavaScript Example]
-* [Python Example]
+* [🦀 <b>Rust</b>][rust]<br>
+  <small>[Example][rust-example]</small>
 
-You can run one of the examples using:
+* [☕ <b>Java</b>][java]<br>
+  <small>[Example][java-example]</small>
+
+* [🎼 <b>C#</b>][c#]<br>
+  <small>[Example][c#-example]</small>
+
+* [🐿️ <b>Go</b>][go]<br>
+  <small>[Example][go-example]</small>
+
+* [🎯 <b>Dart</b>][dart]<br>
+  <small>[Example][dart-example]</small>
+
+* [🌐 <b>JavaScript</b>][js]<br>
+  <small>[Example][js-example]</small>
+
+* [🐍 <b>Python</b>][python]<br>
+  <small>[Example][python-example]</small>
+
+<small>Is your favorite language missing? <b>[Open an issue!]</b></small>
+
+You can run one of the examples by:
 
 ```bash
-cargo run --example go
+cargo +nightly run --example rust
 ```
 
 <br>
@@ -71,25 +85,17 @@ configuration:
 
 ```rust
 use genco::prelude::*;
-use genco::fmt;
 
-let map = rust::import("std::collections", "HashMap");
+let hash_map = rust::import("std::collections", "HashMap");
 
 let tokens: rust::Tokens = quote! {
     fn main() {
-        let mut m = #map::new();
+        let mut m = #hash_map::new();
         m.insert(1u32, 2u32);
     }
 };
 
-let stdout = std::io::stdout();
-let mut w = fmt::IoWriter::new(stdout.lock());
-
-let fmt = fmt::Config::from_lang::<Rust>()
-    .with_indentation(fmt::Indentation::Space(2));
-let config = rust::Config::default();
-
-tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+println!("{}", tokens.to_file_string()?);
 ```
 
 This would produce:
@@ -105,6 +111,20 @@ fn main() {
 
 <br>
 
+[rust]: https://docs.rs/genco/0/genco/lang/rust/index.html
+[rust-example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
+[java]: https://docs.rs/genco/0/genco/lang/java/index.html
+[java-example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
+[c#]: https://docs.rs/genco/0/genco/lang/csharp/index.html
+[c#-example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
+[go]: https://docs.rs/genco/0/genco/lang/go/index.html
+[go-example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
+[dart]: https://docs.rs/genco/0/genco/lang/dart/index.html
+[dart-example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
+[js]: https://docs.rs/genco/0/genco/lang/js/index.html
+[js-example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
+[python]: https://docs.rs/genco/0/genco/lang/python/index.html
+[python-example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 [solve namespace conflicts]: file:///home/udoprog/repo/genco/target/doc/genco/lang/csharp/fn.import.html
 [indentation is meaningful]: https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements
 [token streams]: https://docs.rs/genco/0/genco/tokens/struct.Tokens.html
@@ -112,13 +132,6 @@ fn main() {
 [quote strings]: https://docs.rs/genco/0/genco/macro.quote.html#string-quoting
 [interpolate]: https://docs.rs/genco/0/genco/macro.quote.html#quoted-string-interpolation
 [whitespace detection]: https://docs.rs/genco/0/genco/macro.quote.html#whitespace-detection
-[Rust Example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
-[Java Example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
-[C# Example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
-[Go Example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
-[Dart Example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
-[JavaScript Example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
-[Python Example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 [quote!]: https://docs.rs/genco/0/genco/macro.quote.html
 [quote_in!]: https://docs.rs/genco/0/genco/macro.quote_in.html
 [impl_lang!]: https://docs.rs/genco/0/genco/macro.impl_lang.html

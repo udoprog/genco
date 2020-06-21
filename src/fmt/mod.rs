@@ -183,6 +183,16 @@ impl<'a> Formatter<'a> {
         self.indent += n;
     }
 
+    /// Forcibly write a new line.
+    ///
+    /// This will also reset any whitespace we have pending.
+    pub(crate) fn force_new_line(&mut self) -> fmt::Result {
+        self.line = Line::default();
+        self.spaces = 0;
+        self.write.write_line(&self.config)?;
+        Ok(())
+    }
+
     // Realize any pending whitespace just prior to writing a non-whitespace
     // item.
     fn flush_whitespace(&mut self) -> fmt::Result {
