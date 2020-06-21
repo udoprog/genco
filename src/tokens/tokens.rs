@@ -659,6 +659,9 @@ where
                 Item::Space => {
                     out.space();
                 }
+                Item::Indentation(0) => {
+                    // NB: Should we error due to structural violation?
+                }
                 Item::Indentation(n) => {
                     out.indentation(*n);
                 }
@@ -850,7 +853,7 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn to_string(self) -> fmt::Result<String> {
+    pub fn to_string(&self) -> fmt::Result<String> {
         let mut w = fmt::FmtWriter::new(String::new());
         let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
         let config = L::Config::default();
@@ -959,7 +962,7 @@ impl<C: Default, L: Lang<Config = C>> Tokens<L> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn to_vec(self) -> fmt::Result<Vec<String>> {
+    pub fn to_vec(&self) -> fmt::Result<Vec<String>> {
         let mut w = fmt::VecWriter::new();
         let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
         let config = L::Config::default();

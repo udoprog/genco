@@ -1,19 +1,18 @@
 //! A single element
 
 use crate::lang::{Lang, LangBox};
-use crate::tokens;
-use crate::Tokens;
+use crate::tokens::{FormatInto, ItemStr, Tokens};
 use std::cmp;
 use std::rc::Rc;
 
-/// A single element in a set of tokens.
+/// A single item in a stream of tokens.
 pub enum Item<L>
 where
     L: Lang,
 {
     /// A literal item.
     /// Is added as a raw string to the stream of tokens.
-    Literal(tokens::ItemStr),
+    Literal(ItemStr),
     /// A language-specific boxed item.
     LangBox(LangBox<L>),
     /// A language-specific boxed item that is not rendered.
@@ -29,6 +28,8 @@ where
     /// A spacing does nothing if at the beginning of a line.
     Space,
     /// Manage indentation.
+    ///
+    /// An indentation of 0 has no effect.
     Indentation(i16),
     /// Switch to handling input as a quote.
     ///
@@ -46,7 +47,37 @@ where
     CloseEval,
 }
 
-impl<L> tokens::FormatInto<L> for Item<L>
+/// Formatting an item is the same as adding said item to the token stream
+/// through [item()][Tokens::item()].
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use genco::tokens::{Item, ItemStr};
+///
+/// # fn main() -> genco::fmt::Result {
+/// let foo = Item::Literal(ItemStr::Static("foo"));
+/// let bar = Item::Literal(ItemStr::Box("bar".into()));
+///
+/// let result: Tokens = quote!(#foo #bar baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+///
+/// assert_eq!{
+///     vec![
+///         Item::Literal(ItemStr::Static("foo")),
+///         Item::Space,
+///         Item::Literal(ItemStr::Box("bar".into())),
+///         Item::Space,
+///         Item::Literal(ItemStr::Static("baz")),
+///     ] as Vec<Item<()>>,
+///     result,
+/// };
+/// # Ok(())
+/// # }
+/// ```
+impl<L> FormatInto<L> for Item<L>
 where
     L: Lang,
 {
@@ -103,11 +134,11 @@ where
     }
 }
 
-impl<L> From<tokens::ItemStr> for Item<L>
+impl<L> From<ItemStr> for Item<L>
 where
     L: Lang,
 {
-    fn from(value: tokens::ItemStr) -> Self {
+    fn from(value: ItemStr) -> Self {
         Item::Literal(value)
     }
 }

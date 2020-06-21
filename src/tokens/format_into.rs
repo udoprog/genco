@@ -40,7 +40,10 @@ where
 {
     /// Convert the type into tokens in-place.
     ///
-    /// # Examples
+    /// A simple way to build ad-hoc format_into implementations is by using
+    /// the [from_fn()] function.
+    ///
+    /// [from_fn()]: crate::tokens::from_fn()
     fn format_into(self, tokens: &mut Tokens<L>);
 }
 
@@ -53,6 +56,23 @@ where
     }
 }
 
+/// Formatting a reference to a token stream is exactly the same as extending
+/// the token stream with a copy of the stream being formatted.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let a: &Tokens = &quote!(foo bar);
+///
+/// let result = quote!(#a baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 impl<'a, L> FormatInto<L> for &'a Tokens<L>
 where
     L: Lang,
@@ -62,19 +82,86 @@ where
     }
 }
 
-/// Convert collection to tokens.
-impl<L> FormatInto<L> for Vec<Tokens<L>>
+/// Formatting a vector of token streams is like formatting each, one after
+/// another.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let mut vec = Vec::<Tokens>::new();
+/// vec.push(quote!(foo));
+/// vec.push(quote!(#<space>bar));
+///
+/// let result = quote!(#vec baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
+impl<L, T> FormatInto<L> for Vec<T>
 where
     L: Lang,
+    T: FormatInto<L>,
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
         for t in self {
-            tokens.extend(t);
+            tokens.append(t);
         }
     }
 }
 
-/// Convert borrowed strings.
+/// Formatting a slice of token streams is like formatting each, one after
+/// another.
+///
+/// This will cause each token stream to be cloned into the destination stream.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let vec = vec!["foo", " ", "bar"];
+/// let slice = &vec[..];
+///
+/// let result: Tokens = quote!(#slice baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
+impl<'a, L, T> FormatInto<L> for &'a [T]
+where
+    L: Lang,
+    T: Clone + FormatInto<L>,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        for t in self {
+            tokens.append(t.clone());
+        }
+    }
+}
+
+/// Formatting borrowed string boxed them on the heap.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let foo = "foo";
+/// let bar = "bar";
+///
+/// let result: Tokens = quote!(#foo #bar baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 impl<'a, L> FormatInto<L> for &'a str
 where
     L: Lang,
@@ -84,7 +171,23 @@ where
     }
 }
 
-/// Convert borrowed strings.
+/// Formatting borrowed string boxed them on the heap.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let foo = String::from("foo");
+/// let bar = String::from("bar");
+///
+/// let result: Tokens = quote!(#(&foo) #(&bar) baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 impl<'a, L> FormatInto<L> for &'a String
 where
     L: Lang,
@@ -94,7 +197,24 @@ where
     }
 }
 
-/// Convert strings.
+/// Formatting owned strings takes ownership of the string directly from the
+/// heap.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let foo = String::from("foo");
+/// let bar = String::from("bar");
+///
+/// let result: Tokens = quote!(#foo #bar baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 impl<L> FormatInto<L> for String
 where
     L: Lang,
@@ -104,7 +224,24 @@ where
     }
 }
 
-/// Convert refcounted strings.
+/// Refcounted strings are moved into the token stream without copying.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use std::rc::Rc;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let foo = Rc::new(String::from("foo"));
+/// let bar = Rc::new(String::from("bar"));
+///
+/// let result: Tokens = quote!(#foo #bar baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 impl<L> FormatInto<L> for Rc<String>
 where
     L: Lang,
@@ -114,7 +251,25 @@ where
     }
 }
 
-/// Convert reference to refcounted strings.
+/// Refcounted strings are cloned and moved into the token stream without
+/// copying.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use std::rc::Rc;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let foo = Rc::new(String::from("foo"));
+/// let bar = Rc::new(String::from("bar"));
+///
+/// let result: Tokens = quote!(#(&foo) #(&bar) baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 impl<'a, L> FormatInto<L> for &'a Rc<String>
 where
     L: Lang,
@@ -124,7 +279,25 @@ where
     }
 }
 
-/// Convert stringy things.
+/// Optional items are formatted if they are present.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use std::rc::Rc;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let foo = Some("foo");
+/// let bar = Some("bar");
+/// let biz = None::<&str>;
+///
+/// let result: Tokens = quote!(#foo #bar baz #biz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
 impl<L, T> FormatInto<L> for Option<T>
 where
     L: Lang,
@@ -140,6 +313,9 @@ where
 macro_rules! impl_display {
     ($($ty:ty),*) => {
         $(
+            /// Implementation for primitive type. Uses the corresponding
+            /// [Display][std::fmt::Display] implementation for the
+            /// primitive type.
             impl<L> FormatInto<L> for $ty
             where
                 L: Lang,
