@@ -84,7 +84,7 @@ pub struct Format {}
 #[derive(Debug, Default)]
 pub struct Config {}
 
-/// The import of a name `import UIKit`.
+/// The import of a Swift type `import UIKit`.
 ///
 /// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -116,7 +116,7 @@ impl Swift {
     }
 }
 
-/// Setup an imported element.
+/// The import of a Swift type `import UIKit`.
 ///
 /// # Examples
 ///

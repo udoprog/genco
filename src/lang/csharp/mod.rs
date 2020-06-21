@@ -145,7 +145,7 @@ impl Config {
     }
 }
 
-/// The import of a C# type `using System.IO;`
+/// The import of a C# type `using System.IO;`.
 ///
 /// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -216,7 +216,7 @@ impl Csharp {
     }
 }
 
-/// Construct an imported type.
+/// The import of a C# type `using System.IO;`.
 ///
 /// # Examples
 ///

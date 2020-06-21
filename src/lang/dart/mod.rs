@@ -166,7 +166,7 @@ pub struct Format {}
 #[derive(Debug, Default)]
 pub struct Config {}
 
-/// The import of a Dart type `import "dart:math";`
+/// The import of a Dart type `import "dart:math";`.
 ///
 /// Created through the [import()] function.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -222,7 +222,7 @@ impl Dart {
     }
 }
 
-/// Setup an imported element.
+/// The import of a Dart type `import "dart:math";`.
 ///
 /// # Examples
 ///

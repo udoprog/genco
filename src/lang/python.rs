@@ -362,7 +362,7 @@ impl Python {
     }
 }
 
-/// Setup an imported item.
+/// The import of a Python name `from module import foo`.
 ///
 /// # Examples
 ///

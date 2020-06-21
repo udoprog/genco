@@ -240,7 +240,7 @@ enum ImportKind {
     Wildcard,
 }
 
-/// An imported JavaScript item `import {foo} from "module.js"`.
+/// The import of a JavaScript type `import {foo} from "module.js"`.
 ///
 /// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -502,7 +502,7 @@ impl JavaScript {
     }
 }
 
-/// Import an element from a module
+/// The import of a JavaScript type `import {foo} from "module.js"`.
 ///
 /// # Examples
 ///

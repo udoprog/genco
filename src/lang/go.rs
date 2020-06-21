@@ -103,7 +103,9 @@ impl_lang! {
     }
 }
 
-/// A Go type.
+/// The import of a Go type `import "foo/bar"`.
+///
+/// Created using the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Import {
     /// Module of the imported name.
@@ -153,7 +155,7 @@ impl Go {
     }
 }
 
-/// Setup an imported element.
+/// The import of a Go type `import "foo/bar"`.
 ///
 /// # Examples
 ///

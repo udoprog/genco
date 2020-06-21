@@ -151,7 +151,7 @@ pub struct Config {
 }
 
 impl Config {
-    /// Configure the default import policy to use.
+    /// Configure the default import mode to use.
     ///
     /// See [Import] for more details.
     pub fn with_default_import(self, default_import: ImportMode) -> Self {
@@ -170,7 +170,7 @@ impl Default for Config {
     }
 }
 
-/// The import policy to use when generating import statements.
+/// The import mode to use when generating import statements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ImportMode {
     /// Import names without a module prefix.
@@ -187,7 +187,7 @@ pub enum ImportMode {
 
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 enum Module {
-    /// Type imported directly from module with the specified policy.
+    /// Type imported directly from module with the specified mode.
     Module {
         import: Option<ImportMode>,
         module: ItemStr,
@@ -251,7 +251,7 @@ impl Module {
     }
 }
 
-/// The import of a Rust name `use std::collections::HashMap`.
+/// The import of a Rust type `use std::collections::HashMap`.
 ///
 /// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -608,7 +608,7 @@ impl Rust {
     }
 }
 
-/// Setup an imported element.
+/// The import of a Rust type `use std::collections::HashMap`.
 ///
 /// # Examples
 ///

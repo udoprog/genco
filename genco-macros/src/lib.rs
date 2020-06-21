@@ -38,6 +38,124 @@ mod token;
 /// # }
 /// ```
 ///
+/// # Interpolation
+///
+/// Variables are interpolated using `#`, so to include the variable `test`,
+/// you could write `#test`. Interpolated variables implements [FormatInto].
+///
+/// Expressions can be interpolated with `#(<expr>)`.
+///
+/// **Note:** `#` can be escaped by repeating it twice. So `##` would produce a
+/// single `#` token.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let hash_map = rust::import("std::collections", "HashMap");
+///
+/// let tokens: rust::Tokens = quote! {
+///     struct Quoted {
+///         field: #hash_map<u32, u32>,
+///     }
+/// };
+///
+/// assert_eq!(
+///     vec![
+///         "use std::collections::HashMap;",
+///         "",
+///         "struct Quoted {",
+///         "    field: HashMap<u32, u32>,",
+///         "}",
+///     ],
+///     tokens.to_file_vec()?,
+/// );
+/// # Ok(())
+/// # }
+/// ```
+///
+/// <br>
+///
+/// Expressions interpolated with `#(<expr>)`.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+///
+/// let tokens: genco::Tokens = quote! {
+///     hello #("world".to_uppercase())
+/// };
+///
+/// assert_eq!("hello WORLD", tokens.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// <br>
+///
+/// Interpolations are evaluated in the same scope as the macro, so you can
+/// freely make use of the try keyword (`?`) when appropriate.
+///
+/// ```rust
+/// use std::error::Error;
+///
+/// use genco::prelude::*;
+///
+/// fn age_fn(age: &str) -> Result<rust::Tokens, Box<dyn Error>> {
+///     Ok(quote! {
+///         fn age() {
+///             println!("You are {} years old!", #(str::parse::<u32>(age)?));
+///         }
+///     })
+/// }
+/// ```
+///
+/// [FormatInto]: https://docs.rs/genco/0/genco/tokens/trait.FormatInto.html
+///
+/// <br>
+///
+/// # Escape Sequences
+///
+/// Because this macro is _whitespace sensitive_, it might sometimes be
+/// necessary to provide hints of where they should be inserted.
+///
+/// `quote!` trims any trailing and leading whitespace that it sees. So
+/// `quote!(Hello )` is the same as `quote!(Hello)`. To include a space at the
+/// end, we can use the special `#<space>` escape sequence: `quote!(Hello#<space>)`.
+///
+/// The available escape sequences are:
+///
+/// * `#<space>` — Inserts a space between tokens. This corresponds to the
+///   [Tokens::space] function.
+///
+/// * `#<push>` — Inserts a push operation. Push operations makes sure that
+///   any following tokens are on their own dedicated line. This corresponds to
+///   the [Tokens::push] function.
+///
+/// * `#<line>` — Inserts a forced line. Line operations makes sure that
+///   any following tokens have an empty line separating them. This corresponds
+///   to the [Tokens::line] function.
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let numbers = 3..=5;
+///
+/// let tokens: Tokens<()> = quote!(foo#<push>bar#<line>baz#<space>biz);
+///
+/// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// <br>
+///
+/// [Tokens::space]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.space
+/// [Tokens::push]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.push
+/// [Tokens::line]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.line
+///
 /// # String Quoting
 ///
 /// Literal strings like `"hello"` are automatically quoted for the target
@@ -163,118 +281,19 @@ mod token;
 /// # }
 /// ```
 ///
-/// # Interpolation
-///
-/// Elements are interpolated using `#`, so to include the variable `test`,
-/// you could write `#test`. Returned elements must implement [FormatInto].
-///
-/// **Note:** `#` can be escaped by repeating it twice. So `##` would produce a
-/// single `#` token.
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let map = rust::import("std::collections", "HashMap");
-///
-/// let tokens: rust::Tokens = quote! {
-///     struct Quoted {
-///         field: #map<u32, u32>,
-///     }
-/// };
-///
-/// assert_eq!(
-///     vec![
-///         "use std::collections::HashMap;",
-///         "",
-///         "struct Quoted {",
-///         "    field: HashMap<u32, u32>,",
-///         "}",
-///     ],
-///     tokens.to_file_vec()?,
-/// );
-/// # Ok(())
-/// # }
-/// ```
-///
 /// <br>
 ///
-/// Inline code can be evaluated through `#(<expr>)`.
+/// # Control Flow
 ///
-/// ```rust
-/// use genco::prelude::*;
+/// [quote!] provides some limited mechanisms for control flow inside of the
+/// macro for convenience.
+/// The supported mechanisms are:
 ///
-/// # fn main() -> genco::fmt::Result {
-/// let world = "world";
-///
-/// let tokens: genco::Tokens = quote!(hello #(world.to_uppercase()));
-///
-/// assert_eq!("hello WORLD", tokens.to_string()?);
-/// # Ok(())
-/// # }
-/// ```
+/// * [Loops][#loops] - `#(for <bindings> in <expr> [join (<quoted>)] => <quoted>)`.
+/// * [Conditionals][#conditionals] - `#(if <pattern> => <quoted>)`.
+/// * [Match Statements][#match-statements] - `#(match <expr> { [<pattern> => <quoted>,]* })`.
 ///
 /// <br>
-///
-/// Interpolations are evaluated in the same scope as where the macro is
-/// invoked, so you can make use of keywords like `?` (try) when appropriate.
-///
-/// ```rust
-/// use std::error::Error;
-///
-/// use genco::prelude::*;
-///
-/// fn age_fn(age: &str) -> Result<rust::Tokens, Box<dyn Error>> {
-///     Ok(quote! {
-///         fn age() {
-///             println!("You are {} years old!", #(str::parse::<u32>(age)?));
-///         }
-///     })
-/// }
-/// ```
-///
-/// [FormatInto]: https://docs.rs/genco/0/genco/tokens/trait.FormatInto.html
-///
-/// # Escape Sequences
-///
-/// Because this macro is _whitespace sensitive_, it might sometimes be
-/// necessary to provide hints of where they should be inserted.
-///
-/// `quote!` trims any trailing and leading whitespace that it sees. So
-/// `quote!(Hello )` is the same as `quote!(Hello)`. To include a space at the
-/// end, we can use the special `#<space>` escape sequence: `quote!(Hello#<space>)`.
-///
-/// The available escape sequences are:
-///
-/// * `#<space>` — Inserts a space between tokens. This corresponds to the
-///   [Tokens::space] function.
-///
-/// * `#<push>` — Inserts a push operation. Push operations makes sure that
-///   any following tokens are on their own dedicated line. This corresponds to
-///   the [Tokens::push] function.
-///
-/// * `#<line>` — Inserts a forced line. Line operations makes sure that
-///   any following tokens have an empty line separating them. This corresponds
-///   to the [Tokens::line] function.
-///
-/// ```rust
-/// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
-/// let numbers = 3..=5;
-///
-/// let tokens: Tokens<()> = quote!(foo#<push>bar#<line>baz#<space>biz);
-///
-/// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string()?);
-/// # Ok(())
-/// # }
-/// ```
-///
-/// <br>
-///
-/// [Tokens::space]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.space
-/// [Tokens::push]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.push
-/// [Tokens::line]: https://docs.rs/genco/0/genco/struct.Tokens.html#method.line
 ///
 /// # Loops
 ///
@@ -337,13 +356,13 @@ mod token;
 ///
 /// # Conditionals
 ///
-/// You can specify a conditional with `#(if <condition> => <then>)` where
-/// <condition> is an expression evaluating to a `bool`, and `<then>` and
-/// `<else>` are quoted expressions.
+/// You can specify a conditional with `#(if <pattern> => <then>)` where
+/// <pattern> is an pattern or expression evaluating to a `bool`, and `<then>`
+/// is a quoted expressions.
 ///
 /// It's also possible to specify a condition with an else branch, by using
-/// `#(if <condition> { <then> } else { <else> })`. In this instance, `<else>`
-/// is also a quoted expression.
+/// `#(if <pattern> { <then> } else { <else> })`. `<else>` is also a quoted
+/// expression.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -395,7 +414,7 @@ mod token;
 /// # Match Statements
 ///
 /// You can specify a match statement with
-/// `#(match <condition> { [<pattern> => <quoted>,]* }`, where <condition> is an
+/// `#(match <expr> { [<pattern> => <quoted>,]* }`, where <expr> is an
 /// evaluated expression that is match against each subsequent <pattern>. If a
 /// pattern matches, the arm with the matching `<quoted>` block is evaluated.
 ///
@@ -428,12 +447,12 @@ mod token;
 ///
 /// # Scopes
 ///
-/// You can use `#(ref <binding> { <quoted> })` to gain mutable access to the current
-/// token stream. This is an alternative to existing control flow operators if
-/// you want to execute more complex logic during evaluation.
+/// You can use `#(ref <binding> { <expr> })` to gain mutable access to the
+/// active token stream. This is an alternative to existing control flow
+/// operators if you want to run something custom during evaluation.
 ///
-/// For a more compact version, you can also omit the braces by doing
-/// `#(ref <binding> => <quoted>)`.
+/// For a more compact variant you can omit the braces with
+/// `#(ref <binding> => <expr>)`.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -663,9 +682,9 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// }
 /// ```
 ///
-/// # Example use inside of [quote!]
+/// # Use with scopes
 ///
-/// [quote_in!] can be used inside of a [quote!] macro by using a scope.
+/// [quote_in!] can be used inside of a [quote!] through [a scope].
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -685,8 +704,9 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// };
 /// ```
 ///
-/// [quote_in!] macro.quote_in.html
+/// [quote_in!]: macro.quote_in.html
 /// [quote!]: macro.quote.html
+/// [a scope]: macro.quote.html#scopes
 #[proc_macro]
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let quote_in = syn::parse_macro_input!(input as quote_in::QuoteIn);

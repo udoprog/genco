@@ -163,7 +163,7 @@ impl Config {
     }
 }
 
-/// The import of a Java type `import java.util.Optional;`
+/// The import of a Java type `import java.util.Optional;`.
 ///
 /// Created through the [import()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -171,13 +171,6 @@ pub struct Import {
     /// Package of the class.
     package: ItemStr,
     /// Name  of class.
-    name: ItemStr,
-}
-
-/// A local name with no specific qualification.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Local {
-    /// Name of class.
     name: ItemStr,
 }
 
@@ -223,7 +216,7 @@ impl Java {
     }
 }
 
-/// Setup an imported element.
+/// The import of a Java type `import java.util.Optional;`.
 ///
 /// # Examples
 ///
@@ -260,16 +253,6 @@ where
         package: package.into(),
         name: name.into(),
     }
-}
-
-/// Setup a local type.
-///
-/// Local types are not imported.
-pub fn local<N>(name: N) -> Local
-where
-    N: Into<ItemStr>,
-{
-    Local { name: name.into() }
 }
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
