@@ -10,6 +10,7 @@ mod ast;
 mod cursor;
 mod encoder;
 mod quote;
+mod quote_fn;
 mod quote_in;
 mod requirements;
 mod static_buffer;
@@ -443,7 +444,7 @@ mod token;
 /// # Ok(())
 /// # }
 /// ```
-/// 
+///
 /// Example with more complex matching:
 ///
 /// ```rust
@@ -743,4 +744,87 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let quote_in = syn::parse_macro_input!(input as quote_in::QuoteIn);
     quote_in.stream.into()
+}
+
+/// Convenience macro for constructing a [FormatInto] implementation in-place.
+///
+/// Constructing [FormatInto] implementation instead of short lived
+/// [token streams] can be more beneficial for memory use and performance.
+///
+/// [FormatInto]: https://docs.rs/genco/0/genco/tokens/trait.FormatInto.html
+/// [token streams]: https://docs.rs/genco/0/genco/struct.Tokens.html
+///
+/// # Comparison
+///
+/// In the below example, `f1` and `f2` are equivalent. In here [quote_fn!]
+/// simply makes it easier to build.
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use genco::tokens::from_fn;
+///
+/// # fn main() -> genco::fmt::Result {
+/// let f1 = from_fn(move |t| {
+///     quote_in!{ *t =>
+///         println!("Hello World");
+///     }
+/// });
+///
+/// let f2 = quote_fn!{
+///     println!("Hello World");
+/// };
+///
+/// let tokens: rust::Tokens = quote!{
+///     #f1
+///     #f2
+/// };
+///
+/// assert_eq!{
+///     vec![
+///         "println!(\"Hello World\");",
+///         "println!(\"Hello World\");",
+///     ],
+///     tokens.to_file_vec()?,
+/// };
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Examples which borrow
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// fn greeting(name: &str) -> impl FormatInto<Rust> + '_ {
+///     quote_fn! {
+///         println!(#_(Hello #name))
+///     }
+/// }
+///
+/// fn advanced_greeting<'a>(first: &'a str, last: &'a str) -> impl FormatInto<Rust> + 'a {
+///     quote_fn! {
+///         println!(#_(Hello #first #last))
+///     }
+/// }
+///
+/// let tokens = quote! {
+///     #(greeting("Mio"));
+///     #(advanced_greeting("Jane", "Doe"));
+/// };
+///
+/// assert_eq!{
+///     vec![
+///         "println!(\"Hello Mio\");",
+///         "println!(\"Hello Jane Doe\");",
+///     ],
+///     tokens.to_file_vec()?
+/// };
+/// # Ok(())
+/// # }
+/// ```
+#[proc_macro]
+pub fn quote_fn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    let quote_fn = syn::parse_macro_input!(input as quote_fn::QuoteFn);
+    quote_fn.stream.into()
 }
