@@ -192,7 +192,8 @@ impl<'a> Quote<'a> {
         let mut arms = Vec::new();
 
         while !body.is_empty() {
-            let pattern = body.parse::<syn::Pat>()?;
+            let attr = input.call(syn::Attribute::parse_outer)?;
+            let pattern = multi_pat_with_leading_vert(&body)?;
 
             let condition = if body.peek(Token![if]) {
                 body.parse::<Token![if]>()?;
@@ -218,6 +219,7 @@ impl<'a> Quote<'a> {
             req.merge_with(r);
 
             arms.push(MatchArm {
+                attr,
                 pattern,
                 condition,
                 block,
@@ -437,4 +439,34 @@ impl<'a> Quote<'a> {
 
         Ok(())
     }
+}
+
+// NB: copied from: https://github.com/dtolnay/syn/blob/80c6889684da7e0a30ef5d0b03e9d73fa6160541/src/pat.rs#L792
+//
+// TODO: remove once made public in syn.
+fn multi_pat_with_leading_vert(input: ParseStream) -> Result<syn::Pat> {
+    let leading_vert: Option<Token![|]> = input.parse()?;
+    multi_pat_impl(input, leading_vert)
+}
+
+fn multi_pat_impl(input: ParseStream, leading_vert: Option<Token![|]>) -> Result<syn::Pat> {
+    let mut pat: syn::Pat = input.parse()?;
+    if leading_vert.is_some()
+        || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
+    {
+        let mut cases = syn::punctuated::Punctuated::new();
+        cases.push_value(pat);
+        while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
+            let punct = input.parse()?;
+            cases.push_punct(punct);
+            let pat: syn::Pat = input.parse()?;
+            cases.push_value(pat);
+        }
+        pat = syn::Pat::Or(syn::PatOr {
+            attrs: Vec::new(),
+            leading_vert,
+            cases,
+        });
+    }
+    Ok(pat)
 }
