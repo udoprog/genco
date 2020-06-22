@@ -112,7 +112,6 @@ impl_lang! {
     }
 }
 
-static SYSTEM: &'static str = "System";
 static SEP: &'static str = ".";
 
 /// State using during formatting of C# language items.
@@ -179,9 +178,7 @@ impl Csharp {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            if &*import.namespace != SYSTEM {
-                modules.insert((&*import.namespace, &*import.name));
-            }
+            modules.insert((&*import.namespace, &*import.name));
         }
 
         if modules.is_empty() {
