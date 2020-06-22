@@ -30,8 +30,6 @@ impl Parse for QuoteIn {
             #check
         }};
 
-        Ok(Self {
-            stream,
-        })
+        Ok(Self { stream })
     }
 }

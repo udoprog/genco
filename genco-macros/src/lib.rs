@@ -428,23 +428,49 @@ mod token;
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// enum Greeting {
-///     Hello,
-///     Goodbye,
-/// }
-///
-/// fn greeting(greeting: Greeting, name: &str) -> Tokens<()> {
-///     quote!(Custom Greeting: #(match greeting {
-///         Greeting::Hello => Hello #name,
-///         Greeting::Goodbye => Goodbye #name,
+/// fn greeting(name: &str) -> Tokens<()> {
+///     quote!(Hello #(match name {
+///         "John" | "Jane" => #("Random Stranger"),
+///         other => #other,
 ///     }))
 /// }
 ///
-/// let tokens = greeting(Greeting::Hello, "John");
-/// assert_eq!("Custom Greeting: Hello John", tokens.to_string()?);
+/// let tokens = greeting("John");
+/// assert_eq!("Hello Random Stranger", tokens.to_string()?);
 ///
-/// let tokens = greeting(Greeting::Goodbye, "John");
-/// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string()?);
+/// let tokens = greeting("Mio");
+/// assert_eq!("Hello Mio", tokens.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
+/// 
+/// Example with more complex matching:
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// enum Greeting {
+///     Named(&'static str),
+///     Unknown,
+/// }
+///
+/// fn greeting(name: Greeting) -> Tokens<()> {
+///     quote!(Hello #(match name {
+///         Greeting::Named("John") | Greeting::Named("Jane") => #("Random Stranger"),
+///         Greeting::Named(other) => #other,
+///         Greeting::Unknown => #("Unknown Person"),
+///     }))
+/// }
+///
+/// let tokens = greeting(Greeting::Named("John"));
+/// assert_eq!("Hello Random Stranger", tokens.to_string()?);
+///
+/// let tokens = greeting(Greeting::Unknown);
+/// assert_eq!("Hello Unknown Person", tokens.to_string()?);
+///
+/// let tokens = greeting(Greeting::Named("Mio"));
+/// assert_eq!("Hello Mio", tokens.to_string()?);
 /// # Ok(())
 /// # }
 /// ```

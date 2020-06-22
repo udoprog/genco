@@ -279,13 +279,14 @@ impl<'a> Encoder<'a> {
         let mut stream = TokenStream::new();
 
         for MatchArm {
+            attr,
             pattern,
             condition,
             block,
         } in arms
         {
             let condition = condition.map(|c| q::quote!(if #c));
-            stream.extend(q::quote!(#pattern #condition => { #block },));
+            stream.extend(q::quote!(#(#attr)* #pattern #condition => { #block },));
         }
 
         let m = q::quote! {

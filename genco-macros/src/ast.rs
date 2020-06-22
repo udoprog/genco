@@ -6,6 +6,7 @@ use crate::static_buffer::StaticBuffer;
 
 /// A single match arm in a match statement.
 pub(crate) struct MatchArm {
+    pub(crate) attr: Vec<syn::Attribute>,
     pub(crate) pattern: syn::Pat,
     pub(crate) condition: Option<syn::Expr>,
     pub(crate) block: TokenStream,
