@@ -93,7 +93,7 @@ impl<'a> Encoder<'a> {
                 stream,
                 ..
             } => {
-                self.encode_repeat(pattern, expr, join, stream);
+                self.encode_repeat(*pattern, *expr, join, stream);
             }
             Ast::DelimiterOpen { delimiter, .. } => {
                 self.encode_open_delimiter(delimiter);
@@ -346,7 +346,7 @@ impl<'a> Encoder<'a> {
 
         let receiver = self.receiver;
 
-        while let Some(_) = self.indents.pop() {
+        while self.indents.pop().is_some() {
             self.output.extend(q::quote!(#receiver.unindent();));
         }
 
@@ -384,7 +384,7 @@ impl<'a> Encoder<'a> {
 
         debug_assert!(from.line < to.line);
 
-        let line = if to.line - from.line > 1 { true } else { false };
+        let line = to.line - from.line > 1;
 
         if let Some(last_start_column) = self.last_start_column.take() {
             if last_start_column < to.column {
@@ -446,11 +446,9 @@ fn indentation_error(to_column: usize, from_column: usize, to_span: Option<Span>
         )
     };
 
-    let error = if let Some(span) = to_span {
+    if let Some(span) = to_span {
         syn::Error::new(span, error)
     } else {
         syn::Error::new(Span::call_site(), error)
-    };
-
-    error
+    }
 }

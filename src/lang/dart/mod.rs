@@ -43,9 +43,9 @@ use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
 use std::fmt::Write as _;
 
-const SEP: &'static str = ".";
+const SEP: &str = ".";
 /// dart:core package.
-const DART_CORE: &'static str = "dart:core";
+const DART_CORE: &str = "dart:core";
 
 /// Tokens container specialization for Dart.
 pub type Tokens = crate::Tokens<Dart>;

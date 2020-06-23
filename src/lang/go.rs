@@ -129,7 +129,6 @@ impl Config {
     pub fn with_package<P: Into<ItemStr>>(self, package: P) -> Self {
         Self {
             package: Some(package.into()),
-            ..self
         }
     }
 }

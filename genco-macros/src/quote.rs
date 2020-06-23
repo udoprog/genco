@@ -172,9 +172,9 @@ impl<'a> Quote<'a> {
         req.merge_with(r);
 
         let ast = Ast::Loop {
-            pattern,
+            pattern: Box::new(pattern),
             join,
-            expr,
+            expr: Box::new(expr),
             stream,
         };
 
@@ -300,8 +300,7 @@ impl<'a> Quote<'a> {
             encoder.requirements.merge_with(req);
             ast
         } else if scope.peek(Token![ref]) {
-            let ast = self.parse_scope(&scope)?;
-            ast
+            self.parse_scope(&scope)?
         } else if scope.peek(syn::LitStr) && scope.peek2(crate::token::Eof) {
             let string = scope.parse::<syn::LitStr>()?.value();
 

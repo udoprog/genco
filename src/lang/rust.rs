@@ -43,7 +43,7 @@ use crate::tokens::ItemStr;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::Write as _;
 
-const SEP: &'static str = "::";
+const SEP: &str = "::";
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Rust>;
@@ -155,10 +155,7 @@ impl Config {
     ///
     /// See [Import] for more details.
     pub fn with_default_import(self, default_import: ImportMode) -> Self {
-        Self {
-            default_import,
-            ..self
-        }
+        Self { default_import }
     }
 }
 

@@ -8,6 +8,7 @@
 //! let mut toks = java::Tokens::new();
 //! toks.append("foo");
 //! ```
+#![allow(clippy::module_inception)]
 
 use crate::fmt;
 use crate::lang::{Lang, LangSupportsEval};
@@ -108,30 +109,6 @@ where
     pub fn iter(&self) -> Iter<'_, L> {
         Iter {
             iter: self.items.iter(),
-        }
-    }
-
-    /// Construct an owned iterator over the token stream.
-    ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use genco::prelude::*;
-    /// use genco::tokens::{ItemStr, Item};
-    ///
-    /// let tokens: Tokens<()> = quote!(foo bar baz);
-    /// let mut it = tokens.into_iter();
-    ///
-    /// assert_eq!(Some(Item::Literal(ItemStr::Static("foo"))), it.next());
-    /// assert_eq!(Some(Item::Space), it.next());
-    /// assert_eq!(Some(Item::Literal(ItemStr::Static("bar"))), it.next());
-    /// assert_eq!(Some(Item::Space), it.next());
-    /// assert_eq!(Some(Item::Literal(ItemStr::Static("baz"))), it.next());
-    /// assert_eq!(None, it.next());
-    /// ```
-    pub fn into_iter(self) -> IntoIter<L> {
-        IntoIter {
-            iter: self.items.into_iter(),
         }
     }
 
@@ -1072,6 +1049,24 @@ where
     }
 }
 
+/// Construct an owned iterator over the token stream.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+/// use genco::tokens::{ItemStr, Item};
+///
+/// let tokens: Tokens<()> = quote!(foo bar baz);
+/// let mut it = tokens.into_iter();
+///
+/// assert_eq!(Some(Item::Literal(ItemStr::Static("foo"))), it.next());
+/// assert_eq!(Some(Item::Space), it.next());
+/// assert_eq!(Some(Item::Literal(ItemStr::Static("bar"))), it.next());
+/// assert_eq!(Some(Item::Space), it.next());
+/// assert_eq!(Some(Item::Literal(ItemStr::Static("baz"))), it.next());
+/// assert_eq!(None, it.next());
+/// ```
 impl<L> IntoIterator for Tokens<L>
 where
     L: Lang,
@@ -1080,7 +1075,9 @@ where
     type IntoIter = IntoIter<L>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.into_iter()
+        IntoIter {
+            iter: self.items.into_iter(),
+        }
     }
 }
 

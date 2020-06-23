@@ -97,7 +97,7 @@ pub struct Format {}
 #[derive(Debug, Default)]
 pub struct Config {}
 
-static SEP: &'static str = ".";
+static SEP: &str = ".";
 
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 enum TypeModule {

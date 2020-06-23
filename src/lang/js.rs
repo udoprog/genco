@@ -249,7 +249,6 @@ impl Config {
     {
         Self {
             module_path: Some(module_path.into()),
-            ..self
         }
     }
 }

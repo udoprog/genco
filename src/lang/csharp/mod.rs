@@ -112,7 +112,8 @@ impl_lang! {
     }
 }
 
-static SEP: &'static str = ".";
+/// Separator between types and modules in C#.
+const SEP: &str = ".";
 
 /// State using during formatting of C# language items.
 #[derive(Debug, Default)]
@@ -139,7 +140,6 @@ impl Config {
     {
         Self {
             namespace: Some(namespace.into()),
-            ..self
         }
     }
 }
