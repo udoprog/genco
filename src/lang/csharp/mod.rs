@@ -112,8 +112,8 @@ impl_lang! {
     }
 }
 
-static SYSTEM: &'static str = "System";
-static SEP: &'static str = ".";
+/// Separator between types and modules in C#.
+const SEP: &str = ".";
 
 /// State using during formatting of C# language items.
 #[derive(Debug, Default)]
@@ -140,7 +140,6 @@ impl Config {
     {
         Self {
             namespace: Some(namespace.into()),
-            ..self
         }
     }
 }
@@ -179,9 +178,7 @@ impl Csharp {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            if &*import.namespace != SYSTEM {
-                modules.insert((&*import.namespace, &*import.name));
-            }
+            modules.insert((&*import.namespace, &*import.name));
         }
 
         if modules.is_empty() {

@@ -75,7 +75,7 @@ impl<'a> Quote<'a> {
     /// Parse until end of stream.
     pub(crate) fn parse(self, input: ParseStream) -> Result<(Requirements, TokenStream)> {
         let mut encoder = Encoder::new(self.receiver, self.span_start, self.span_end);
-        self.parse_inner(&mut encoder, input)?;
+        self.parse_inner(&mut encoder, input, 0)?;
         encoder.into_output()
     }
 
@@ -172,9 +172,9 @@ impl<'a> Quote<'a> {
         req.merge_with(r);
 
         let ast = Ast::Loop {
-            pattern,
+            pattern: Box::new(pattern),
             join,
-            expr,
+            expr: Box::new(expr),
             stream,
         };
 
@@ -211,6 +211,13 @@ impl<'a> Quote<'a> {
 
                 let parser = Quote::new(self.receiver);
                 parser.parse(&block)?
+            } else if body.peek(token::Paren) {
+                let block;
+                let paren = syn::parenthesized!(block in body);
+
+                Quote::new(self.receiver)
+                    .with_span(paren.span)
+                    .parse(&block)?
             } else {
                 let parser = Quote::new_until_comma(self.receiver);
                 parser.parse(&body)?
@@ -293,8 +300,7 @@ impl<'a> Quote<'a> {
             encoder.requirements.merge_with(req);
             ast
         } else if scope.peek(Token![ref]) {
-            let ast = self.parse_scope(&scope)?;
-            ast
+            self.parse_scope(&scope)?
         } else if scope.peek(syn::LitStr) && scope.peek2(crate::token::Eof) {
             let string = scope.parse::<syn::LitStr>()?.value();
 
@@ -309,12 +315,17 @@ impl<'a> Quote<'a> {
         Ok(())
     }
 
-    fn parse_inner(&self, encoder: &mut Encoder, input: ParseStream) -> Result<()> {
+    fn parse_inner(
+        &self,
+        encoder: &mut Encoder,
+        input: ParseStream,
+        group_depth: usize,
+    ) -> Result<()> {
         syn::custom_punctuation!(Escape, ##);
         syn::custom_punctuation!(ControlStart, #<);
 
         while !input.is_empty() {
-            if self.until_comma && input.peek(Token![,]) {
+            if group_depth == 0 && self.until_comma && input.peek(Token![,]) {
                 break;
             }
 
@@ -386,21 +397,39 @@ impl<'a> Quote<'a> {
             if input.peek(token::Brace) {
                 let content;
                 let braces = syn::braced!(content in input);
-                self.parse_group(encoder, Delimiter::Brace, braces.span, &content)?;
+                self.parse_group(
+                    encoder,
+                    Delimiter::Brace,
+                    braces.span,
+                    &content,
+                    group_depth,
+                )?;
                 continue;
             }
 
             if input.peek(token::Paren) {
                 let content;
                 let braces = syn::parenthesized!(content in input);
-                self.parse_group(encoder, Delimiter::Parenthesis, braces.span, &content)?;
+                self.parse_group(
+                    encoder,
+                    Delimiter::Parenthesis,
+                    braces.span,
+                    &content,
+                    group_depth,
+                )?;
                 continue;
             }
 
             if input.peek(token::Bracket) {
                 let content;
                 let braces = syn::bracketed!(content in input);
-                self.parse_group(encoder, Delimiter::Bracket, braces.span, &content)?;
+                self.parse_group(
+                    encoder,
+                    Delimiter::Bracket,
+                    braces.span,
+                    &content,
+                    group_depth,
+                )?;
                 continue;
             }
 
@@ -420,6 +449,7 @@ impl<'a> Quote<'a> {
         delimiter: Delimiter,
         span: Span,
         input: ParseStream,
+        group_depth: usize,
     ) -> Result<()> {
         let cursor = Cursor::from(span);
 
@@ -429,7 +459,7 @@ impl<'a> Quote<'a> {
             Ast::DelimiterOpen { delimiter },
         )?;
 
-        self.parse_inner(encoder, input)?;
+        self.parse_inner(encoder, input, group_depth + 1)?;
 
         encoder.encode(
             span,

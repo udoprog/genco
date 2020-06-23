@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-* Patterns are now parsed correctly to support alternatives separated by pipes (#12).
+### Fixed
+* csharp: System must be imported ([#13]).
 
-[Unreleased]: https://github.com/udoprog/relative-path/compare/0.14.2...master
+### Changed
+* Parse match blocks better by ignoring end condition for nested groups ([#13]).
+* Match arms containing parenthesis are now whitespace sensitive ([#13]).
+
+### Added
+* Patterns are now parsed correctly to support alternatives separated by pipes ([#12]).
+* Added `quote_fn!` macro and added `FormatInto` to the prelude ([#13]).
+
+[#12]: https://github.com/udoprog/genco/issues/12
+[#13]: https://github.com/udoprog/genco/issues/13
+
+[Unreleased]: https://github.com/udoprog/genco/compare/0.14.2...master

@@ -103,8 +103,8 @@ impl_lang! {
     }
 }
 
-const JAVA_LANG: &'static str = "java.lang";
-const SEP: &'static str = ".";
+const JAVA_LANG: &str = "java.lang";
+const SEP: &str = ".";
 
 /// Formtat state for Java.
 #[derive(Debug, Default)]
@@ -158,7 +158,6 @@ impl Config {
     {
         Self {
             package: Some(package.into()),
-            ..self
         }
     }
 }

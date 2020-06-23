@@ -101,7 +101,7 @@ impl Line {
             Self::Initial => Some(0),
             Self::Push => Some(1),
             Self::Line => Some(2),
-            Self::None => return None,
+            Self::None => None,
         }
     }
 }
@@ -150,7 +150,7 @@ impl<'a> Formatter<'a> {
 
     /// Write the given string.
     pub(crate) fn write_str(&mut self, s: &str) -> fmt::Result {
-        if s.len() > 0 {
+        if !s.is_empty() {
             self.flush_whitespace()?;
             self.write.write_str(s)?;
         }
@@ -239,7 +239,7 @@ impl<'a> Formatter<'a> {
 
 impl<'a> fmt::Write for Formatter<'a> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        if s.len() > 0 {
+        if !s.is_empty() {
             Formatter::write_str(self, s)?;
         }
 

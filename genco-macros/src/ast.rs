@@ -88,7 +88,7 @@ impl Parse for Control {
             });
         }
 
-        return Err(input.error("Expected one of: `space`, `push`, or `line`."));
+        Err(input.error("Expected one of: `space`, `push`, or `line`."))
     }
 }
 
@@ -133,9 +133,9 @@ pub(crate) enum Ast {
     /// A loop repetition.
     Loop {
         /// The pattern being bound.
-        pattern: syn::Pat,
+        pattern: Box<syn::Pat>,
         /// Expression being bound to an iterator.
-        expr: syn::Expr,
+        expr: Box<syn::Expr>,
         /// If a join is specified, this is the token stream used to join.
         /// It's evaluated in the loop scope.
         join: Option<TokenStream>,
