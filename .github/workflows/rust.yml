@@ -11,5 +11,5 @@ jobs:
       with:
         toolchain: nightly
         override: true
-    - run: cargo build
     - run: cargo test
+    - run: cargo test --manifest-path=genco-macros/Cargo.toml
