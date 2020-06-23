@@ -211,6 +211,13 @@ impl<'a> Quote<'a> {
 
                 let parser = Quote::new(self.receiver);
                 parser.parse(&block)?
+            } else if body.peek(token::Paren) {
+                let block;
+                let paren = syn::parenthesized!(block in body);
+
+                Quote::new(self.receiver)
+                    .with_span(paren.span)
+                    .parse(&block)?
             } else {
                 let parser = Quote::new_until_comma(self.receiver);
                 parser.parse(&body)?

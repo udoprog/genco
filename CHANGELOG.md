@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 * Parse match blocks better by ignoring end condition for nested groups ([#13]).
+* Match arms containing parenthesis are now whitespace sensitive ([#13]).
 
 ### Added
 * Patterns are now parsed correctly to support alternatives separated by pipes ([#12]).

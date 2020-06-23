@@ -445,6 +445,29 @@ mod token;
 /// # }
 /// ```
 ///
+/// If a match arm contains parenthesis (`=> (<quoted>)`), the expansion will
+/// be whitespace sensitive. Leading a trailing whitespace will be preserved:
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// # fn main() -> genco::fmt::Result {
+/// fn greeting(name: &str) -> Tokens<()> {
+///     quote!(Hello#(match name {
+///         "John" | "Jane" => ( #("Random Stranger")),
+///         other => ( #other),
+///     }))
+/// }
+///
+/// let tokens = greeting("John");
+/// assert_eq!("Hello Random Stranger", tokens.to_string()?);
+///
+/// let tokens = greeting("Mio");
+/// assert_eq!("Hello Mio", tokens.to_string()?);
+/// # Ok(())
+/// # }
+/// ```
+///
 /// Example with more complex matching:
 ///
 /// ```rust
