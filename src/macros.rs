@@ -19,7 +19,7 @@
 /// genco::impl_lang! {
 ///     MyLang {
 ///         type Config = Config;
-///         type Import = Any;
+///         type Item = Any;
 ///         type Format = Format;
 ///
 ///         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
@@ -123,6 +123,7 @@ macro_rules! impl_lang {
         )*
     ) => {
         $(#[$($meta)*])*
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         $vis struct $lang(());
 
         impl $crate::lang::Lang for $lang {
@@ -164,29 +165,29 @@ macro_rules! impl_lang {
         $(
             impl $crate::tokens::FormatInto<$lang> for $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let import = <$lang as $crate::lang::Lang>::Import::from(self);
-                    tokens.append($crate::tokens::Item::Lang(import));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self);
+                    tokens.append($crate::tokens::Item::Lang(Box::new(item)));
                 }
             }
 
             impl<'a> $crate::tokens::FormatInto<$lang> for &'a $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let import = <$lang as $crate::lang::Lang>::Import::from(self.clone());
-                    tokens.append($crate::tokens::Item::Lang(import));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self.clone());
+                    tokens.append($crate::tokens::Item::Lang(Box::new(item)));
                 }
             }
 
             impl $crate::tokens::Register<$lang> for $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let import = <$lang as $crate::lang::Lang>::Import::from(self);
-                    tokens.append($crate::tokens::Item::Register(import));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self);
+                    tokens.append($crate::tokens::Item::Register(Box::new(item)));
                 }
             }
 
             impl<'a> $crate::tokens::Register<$lang> for &'a $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    let import = <$lang as $crate::lang::Lang>::Import::from(self.clone());
-                    tokens.append($crate::tokens::Item::Register(import));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self.clone());
+                    tokens.append($crate::tokens::Item::Register(Box::new(item)));
                 }
             }
 

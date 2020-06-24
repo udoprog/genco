@@ -57,7 +57,7 @@ impl_lang! {
     pub Dart {
         type Config = Config;
         type Format = Format;
-        type Import = Import;
+        type Item = Import;
 
         fn string_eval_literal(
             out: &mut fmt::Formatter<'_>,

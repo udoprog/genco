@@ -31,7 +31,7 @@ impl_lang! {
     pub Python {
         type Config = Config;
         type Format = Format;
-        type Import = Any;
+        type Item = Any;
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals

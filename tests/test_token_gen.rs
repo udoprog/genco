@@ -2,18 +2,19 @@
 
 use genco::fmt;
 use genco::prelude::*;
-use genco::tokens::{Item, Item::*, ItemStr::*};
+use genco::tokens::{Item::*, ItemStr::*};
 
 #[test]
 fn test_token_gen() {
+    let tokens: rust::Tokens = quote! {
+        foo
+        bar
+        baz
+            #(ref tokens => quote_in! { *tokens => hello })
+        out?
+    };
+
     assert_eq! {
-        quote! {
-            foo
-            bar
-            baz
-                #(ref tokens => quote_in! { *tokens => hello })
-            out?
-        },
         vec![
             Literal(Static("foo")),
             Push,
@@ -24,38 +25,21 @@ fn test_token_gen() {
             Literal(Static("hello")),
             Indentation(-1),
             Literal(Static("out?"))
-        ] as Vec<Item<Rust>>
+        ],
+        tokens,
     }
 }
 
 #[test]
 fn test_iterator_gen() {
-    assert_eq! {
-        quote! {
-            #(ref t => for n in 0..3 {
-                t.push();
-                t.append(n);
-            })
-        },
-        vec![
-            Push,
-            Literal(Box("0".into())),
-            Push,
-            Literal(Box("1".into())),
-            Push,
-            Literal(Box("2".into())),
-        ] as Vec<Item<Rust>>
+    let tokens: rust::Tokens = quote! {
+        #(ref t => for n in 0..3 {
+            t.push();
+            t.append(n);
+        })
     };
 
     assert_eq! {
-        quote! {
-            #(ref t {
-                for n in 0..3 {
-                    t.push();
-                    t.append(n);
-                }
-            })
-        },
         vec![
             Push,
             Literal(Box("0".into())),
@@ -63,7 +47,29 @@ fn test_iterator_gen() {
             Literal(Box("1".into())),
             Push,
             Literal(Box("2".into())),
-        ] as Vec<Item<Rust>>
+        ],
+        tokens,
+    };
+
+    let tokens: rust::Tokens = quote! {
+        #(ref t {
+            for n in 0..3 {
+                t.push();
+                t.append(n);
+            }
+        })
+    };
+
+    assert_eq! {
+        vec![
+            Push,
+            Literal(Box("0".into())),
+            Push,
+            Literal(Box("1".into())),
+            Push,
+            Literal(Box("2".into())),
+        ],
+        tokens,
     };
 }
 
@@ -94,7 +100,7 @@ fn test_tricky_continuation() {
             Literal(Static("baz")),
             Push,
             Literal(Static("biz")),
-        ] as Vec<Item<Rust>>
+        ]
     };
 }
 
@@ -120,7 +126,7 @@ fn test_indentation() {
             Literal(Static("b")),
             Indentation(-1),
             Literal(Static("c"))
-        ] as Vec<Item<Rust>>
+        ]
     };
 
     let mut b = rust::Tokens::new();
@@ -140,35 +146,17 @@ fn test_indentation() {
             Literal(Static("b")),
             Indentation(-1),
             Literal(Static("c"))
-        ] as Vec<Item<Rust>>
+        ]
     };
 }
 
 #[test]
 fn test_repeat() {
-    assert_eq! {
-        quote! {
-            foo #(for (a, b) in (0..3).zip(3..6) => #a #b)
-        },
-        vec![
-            Literal(Static("foo")),
-            Space,
-            Literal("0".into()),
-            Space,
-            Literal("3".into()),
-            Literal("1".into()),
-            Space,
-            Literal("4".into()),
-            Literal("2".into()),
-            Space,
-            Literal("5".into())
-        ] as Vec<Item<Rust>>
+    let tokens: rust::Tokens = quote! {
+        foo #(for (a, b) in (0..3).zip(3..6) => #a #b)
     };
 
     assert_eq! {
-        quote! {
-            foo #(for (a, b) in (0..3).zip(3..6) { #a #b })
-        },
         vec![
             Literal(Static("foo")),
             Space,
@@ -181,7 +169,29 @@ fn test_repeat() {
             Literal("2".into()),
             Space,
             Literal("5".into())
-        ] as Vec<Item<Rust>>
+        ],
+        tokens,
+    };
+
+    let tokens: rust::Tokens = quote! {
+        foo #(for (a, b) in (0..3).zip(3..6) { #a #b })
+    };
+
+    assert_eq! {
+        vec![
+            Literal(Static("foo")),
+            Space,
+            Literal("0".into()),
+            Space,
+            Literal("3".into()),
+            Literal("1".into()),
+            Space,
+            Literal("4".into()),
+            Literal("2".into()),
+            Space,
+            Literal("5".into())
+        ],
+        tokens,
     };
 }
 
@@ -197,7 +207,7 @@ fn test_tight_quote() {
             Literal(Static("You")),
             Space,
             Literal(Static("are:fine")),
-        ] as Vec<Item<Rust>>
+        ]
     };
 }
 
@@ -221,7 +231,7 @@ fn test_tight_repitition() {
             Literal(Static(",")),
             Space,
             Literal("2".into()),
-        ] as Vec<Item<Rust>>
+        ]
     };
 }
 
@@ -252,7 +262,7 @@ fn test_if() {
             Literal(Static("baz2")),
             Push,
             Literal(Static("biz")),
-        ] as Vec<Item<Rust>>
+        ]
     };
 }
 
@@ -283,32 +293,32 @@ fn test_match() {
 
     assert_eq! {
         test(Alt::A),
-        vec![Literal(Static("a"))] as Vec<Item<Rust>>
+        vec![Literal(Static("a"))]
     };
 
     assert_eq! {
         test(Alt::B),
-        vec![Literal(Static("b"))] as Vec<Item<Rust>>
+        vec![Literal(Static("b"))]
     };
 
     assert_eq! {
         test2(Alt::A),
-        vec![Literal(Static("a"))] as Vec<Item<Rust>>
+        vec![Literal(Static("a"))]
     };
 
     assert_eq! {
         test2(Alt::B),
-        vec![Literal(Static("b"))] as Vec<Item<Rust>>
+        vec![Literal(Static("b"))]
     };
 
     assert_eq! {
         test2_cond(Alt::A, true),
-        vec![Literal(Static("a"))] as Vec<Item<Rust>>
+        vec![Literal(Static("a"))]
     };
 
     assert_eq! {
         test2_cond(Alt::A, false),
-        vec![Literal(Static("b"))] as Vec<Item<Rust>>
+        vec![Literal(Static("b"))]
     };
 }
 
@@ -322,7 +332,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Literal(Static(",")), Literal(Static(","))] as Vec<Item<Rust>>
+        vec![Literal(Static(",")), Literal(Static(","))]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -331,7 +341,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal(Static(",")), Space, Literal(Static(","))] as Vec<Item<Rust>>
+        vec![Space, Literal(Static(",")), Space, Literal(Static(","))]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -340,7 +350,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Literal(Static(",")), Space, Literal(Static(",")), Space] as Vec<Item<Rust>>
+        vec![Literal(Static(",")), Space, Literal(Static(",")), Space]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -349,7 +359,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal(Static(",")), Space, Literal(Static(",")), Space] as Vec<Item<Rust>>
+        vec![Space, Literal(Static(",")), Space, Literal(Static(",")), Space]
     };
 }
 
@@ -366,7 +376,7 @@ fn test_indentation_empty() {
         vec![
             Literal(Static("a")),
             Literal(Static("b"))
-        ] as Vec<Item<Rust>>
+        ]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -380,7 +390,7 @@ fn test_indentation_empty() {
         vec![
             Literal(Static("a")),
             Literal(Static("b"))
-        ] as Vec<Item<Rust>>
+        ]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -394,20 +404,21 @@ fn test_indentation_empty() {
         vec![
             Literal(Static("a")),
             Literal(Static("b"))
-        ] as Vec<Item<Rust>>
+        ]
     };
 }
 
 #[test]
 fn test_indentation_management() {
+    let tokens: rust::Tokens = quote! {
+        if a:
+            if b:
+                foo
+        else:
+            c
+    };
+
     assert_eq! {
-        quote! {
-            if a:
-                if b:
-                    foo
-            else:
-                c
-        },
         vec![
             Literal(Static("if")),
             Space,
@@ -423,10 +434,11 @@ fn test_indentation_management() {
             Indentation(1),
             Literal(Static("c")),
             Indentation(-1)
-        ] as Vec<Item<Rust>>
+        ],
+        tokens,
     };
 
-    let tokens = quote! {
+    let tokens: rust::Tokens = quote! {
         if a:
             if b:
                 foo
@@ -450,14 +462,14 @@ fn test_indentation_management() {
             Indentation(-2),
             Line,
             Literal(Static("baz")),
-        ] as Vec<Item<Rust>>,
+        ],
         tokens,
     };
 }
 
 #[test]
 fn test_indentation_management2() -> fmt::Result {
-    let tokens = quote! {
+    let tokens: python::Tokens = quote! {
         def foo():
             pass
 
@@ -480,7 +492,7 @@ fn test_indentation_management2() -> fmt::Result {
             Indentation(1),
             Literal(Static("pass")),
             Indentation(-1)
-        ] as Vec<Item<Python>>,
+        ],
         tokens.clone(),
     };
 
@@ -494,7 +506,7 @@ fn test_indentation_management2() -> fmt::Result {
 
 #[test]
 fn test_lines() -> fmt::Result {
-    let mut tokens = quote! {
+    let mut tokens: rust::Tokens = quote! {
         fn foo() {
         }
     };
@@ -524,7 +536,7 @@ fn test_lines() -> fmt::Result {
             Literal(Static("{")),
             Push,
             Literal(Static("}"))
-        ] as Vec<Item<Python>>,
+        ],
         tokens.clone(),
     };
 

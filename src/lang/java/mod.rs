@@ -33,7 +33,7 @@ impl_lang! {
     pub Java {
         type Config = Config;
         type Format = Format;
-        type Import = Import;
+        type Item = Import;
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html

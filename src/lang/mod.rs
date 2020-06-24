@@ -44,14 +44,14 @@ use crate::Tokens;
 /// module.
 pub trait Lang
 where
-    Self: 'static + Sized,
+    Self: 'static + Sized + Copy + Eq + Ord + std::hash::Hash + std::fmt::Debug,
 {
     /// Configuration associated with building a formatting element.
     type Config;
     /// State being used during formatting.
     type Format: Default;
     /// The type used when resolving imports.
-    type Import: LangItem<Lang = Self>;
+    type Item: LangItem<Lang = Self>;
 
     /// Provide the default indentation.
     fn default_indentation() -> fmt::Indentation {
@@ -139,7 +139,7 @@ pub trait LangSupportsEval: Lang {}
 impl Lang for () {
     type Config = ();
     type Format = ();
-    type Import = ();
+    type Item = ();
 }
 
 impl LangItem for () {
@@ -157,7 +157,7 @@ impl LangItem for () {
 /// work.
 pub trait LangItem
 where
-    Self: 'static + std::fmt::Debug + std::cmp::Eq + Clone,
+    Self: 'static + Clone + Eq + Ord + std::hash::Hash + std::fmt::Debug,
 {
     /// The language the item is implemented for.
     type Lang: Lang;

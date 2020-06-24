@@ -37,7 +37,7 @@ impl_lang! {
     pub Csharp {
         type Config = Config;
         type Format = Format;
-        type Import = Import;
+        type Item = Import;
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://csharpindepth.com/articles/Strings

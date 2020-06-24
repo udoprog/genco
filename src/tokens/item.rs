@@ -2,9 +2,9 @@
 
 use crate::lang::Lang;
 use crate::tokens::{FormatInto, ItemStr, Tokens};
-use std::cmp;
 
 /// A single item in a stream of tokens.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Item<L>
 where
     L: Lang,
@@ -12,10 +12,10 @@ where
     /// A literal item.
     /// Is added as a raw string to the stream of tokens.
     Literal(ItemStr),
-    /// A language-specific boxed item.
-    Lang(L::Import),
-    /// A language-specific boxed item that is not rendered.
-    Register(L::Import),
+    /// A language-specific item.
+    Lang(Box<L::Item>),
+    /// A language-specific item that is not rendered.
+    Register(Box<L::Item>),
     /// Push a new line unless the current line is empty. Will be flushed on
     /// indentation changes.
     Push,
@@ -84,69 +84,3 @@ where
         tokens.item(self);
     }
 }
-
-impl<L> std::fmt::Debug for Item<L>
-where
-    L: Lang,
-{
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Literal(s) => write!(fmt, "Literal({:?})", s),
-            Self::Lang(item) => write!(fmt, "Lang({:?})", item),
-            Self::Register(item) => write!(fmt, "Register({:?})", item),
-            Self::Push => write!(fmt, "Push"),
-            Self::Line => write!(fmt, "Line"),
-            Self::Space => write!(fmt, "Space"),
-            Self::Indentation(n) => write!(fmt, "Indentation({:?})", n),
-            Self::OpenQuote(has_eval) => write!(fmt, "OpenQuote({:?})", has_eval),
-            Self::CloseQuote => write!(fmt, "CloseQuote"),
-            Self::OpenEval => write!(fmt, "OpenEval"),
-            Self::CloseEval => write!(fmt, "CloseEval"),
-        }
-    }
-}
-
-impl<L> Clone for Item<L>
-where
-    L: Lang,
-{
-    fn clone(&self) -> Self {
-        match self {
-            Self::Literal(literal) => Self::Literal(literal.clone()),
-            Self::Lang(lang) => Self::Lang(lang.clone()),
-            Self::Register(lang) => Self::Register(lang.clone()),
-            Self::Push => Self::Push,
-            Self::Line => Self::Line,
-            Self::Space => Self::Space,
-            Self::Indentation(n) => Self::Indentation(*n),
-            Self::OpenQuote(has_eval) => Self::OpenQuote(*has_eval),
-            Self::CloseQuote => Self::CloseQuote,
-            Self::OpenEval => Self::OpenEval,
-            Self::CloseEval => Self::CloseEval,
-        }
-    }
-}
-
-impl<L> cmp::PartialEq for Item<L>
-where
-    L: Lang,
-{
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Literal(a), Self::Literal(b)) => a == b,
-            (Self::Lang(a), Self::Lang(b)) => a == b,
-            (Self::Register(a), Self::Register(b)) => a == b,
-            (Self::Push, Self::Push) => true,
-            (Self::Line, Self::Line) => true,
-            (Self::Space, Self::Space) => true,
-            (Self::Indentation(a), Self::Indentation(b)) => *a == *b,
-            (Self::OpenQuote(a), Self::OpenQuote(b)) => *a == *b,
-            (Self::CloseQuote, Self::CloseQuote) => true,
-            (Self::OpenEval, Self::OpenEval) => true,
-            (Self::CloseEval, Self::CloseEval) => true,
-            _ => false,
-        }
-    }
-}
-
-impl<L> cmp::Eq for Item<L> where L: Lang {}
