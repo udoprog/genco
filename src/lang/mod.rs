@@ -89,6 +89,8 @@ where
         format: &Self::Format,
         literal: &str,
     ) -> fmt::Result {
+        use std::fmt::Write as _;
+
         Self::start_string_eval(out, config, format)?;
         out.write_str(literal)?;
         Self::end_string_eval(out, config, format)?;
@@ -115,6 +117,8 @@ where
 
     /// Performing string quoting according to language convention.
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
+        use std::fmt::Write as _;
+
         out.write_str(input)
     }
 

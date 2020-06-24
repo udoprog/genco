@@ -22,6 +22,7 @@ use crate::fmt;
 use crate::tokens::ItemStr;
 use crate::{quote, quote_in};
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 
 /// Tokens container specialization for Python.
 pub type Tokens = crate::Tokens<Python>;

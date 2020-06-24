@@ -24,6 +24,7 @@ use crate::fmt;
 use crate::tokens::ItemStr;
 use crate::{quote, quote_in};
 use std::collections::{BTreeSet, HashMap};
+use std::fmt::Write as _;
 
 /// Tokens container specialized for Java.
 pub type Tokens = crate::Tokens<Java>;
