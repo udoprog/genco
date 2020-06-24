@@ -48,16 +48,16 @@
 //! # }
 //! ```
 
-use std::fmt;
-use std::mem;
-
 mod config;
+mod cursor;
 mod fmt_writer;
+mod formatter;
 mod io_writer;
 mod vec_writer;
 
 pub use self::config::{Config, Indentation};
 pub use self::fmt_writer::FmtWriter;
+pub use self::formatter::Formatter;
 pub use self::io_writer::IoWriter;
 pub use self::vec_writer::VecWriter;
 
@@ -66,194 +66,13 @@ pub type Result<T = ()> = std::result::Result<T, std::fmt::Error>;
 /// Error for the `fmt` module.
 pub type Error = std::fmt::Error;
 
-/// Buffer used as indentation source.
-static SPACES: &str = "                                                                                                    ";
-
-static TABS: &str =
-    "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
-
 /// Trait that defines a line writer.
 pub(crate) trait Write: std::fmt::Write {
     /// Implement for writing a line.
     fn write_line(&mut self, config: &Config) -> Result;
 
     /// Implement for writing the trailing line ending of the file.
-    fn write_trailing_line(&mut self, config: &Config) -> fmt::Result {
+    fn write_trailing_line(&mut self, config: &Config) -> Result {
         self.write_line(config)
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum Line {
-    Initial,
-    None,
-    Push,
-    Line,
-}
-
-impl Line {
-    /// Convert into an indentation level.
-    ///
-    /// If we return `None`, no indentation nor lines should be written since we
-    /// are at the initial stage of the file.
-    fn into_indent(self) -> Option<usize> {
-        match self {
-            Self::Initial => Some(0),
-            Self::Push => Some(1),
-            Self::Line => Some(2),
-            Self::None => None,
-        }
-    }
-}
-
-impl Default for Line {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-/// Token stream formatter. Keeps track of everything we need to know in order
-/// to enforce genco's indentation and whitespace rules.
-pub struct Formatter<'a> {
-    write: &'a mut (dyn Write + 'a),
-    /// How many lines we want to add to the output stream.
-    ///
-    /// This will only be realized if we push non-whitespace.
-    line: Line,
-    /// How many spaces we want to add to the output stream.
-    ///
-    /// This will only be realized if we push non-whitespace, and will be reset
-    /// if a new line is pushed or indentation changes.
-    spaces: usize,
-    /// Current indentation level.
-    indent: i16,
-    /// Number of indentations per level.
-    config: Config,
-}
-
-impl<'a> Formatter<'a> {
-    /// Create a new write formatter.
-    pub(crate) fn new(write: &'a mut (dyn Write + 'a), config: Config) -> Formatter<'a> {
-        Formatter {
-            write,
-            line: Line::Initial,
-            spaces: 0usize,
-            indent: 0i16,
-            config,
-        }
-    }
-
-    /// Get an identical underlying configuration.
-    pub(crate) fn config(&self) -> Config {
-        self.config.clone()
-    }
-
-    /// Write the given string.
-    pub(crate) fn write_str(&mut self, s: &str) -> fmt::Result {
-        if !s.is_empty() {
-            self.flush_whitespace()?;
-            self.write.write_str(s)?;
-        }
-
-        Ok(())
-    }
-
-    pub(crate) fn push(&mut self) {
-        self.line = match self.line {
-            Line::Initial => return,
-            Line::Line => return,
-            _ => Line::Push,
-        };
-
-        self.spaces = 0;
-    }
-
-    /// Push a new line.
-    pub(crate) fn line(&mut self) {
-        self.line = match self.line {
-            Line::Initial => return,
-            _ => Line::Line,
-        };
-
-        self.spaces = 0;
-    }
-
-    /// Push a space.
-    pub(crate) fn space(&mut self) {
-        self.spaces += 1;
-    }
-
-    /// Increase indentation level.
-    pub(crate) fn indentation(&mut self, n: i16) {
-        self.push();
-        self.indent += n;
-    }
-
-    /// Forcibly write a line ending, at the end of a file.
-    ///
-    /// This will also reset any whitespace we have pending.
-    pub(crate) fn write_trailing_line(&mut self) -> fmt::Result {
-        self.line = Line::default();
-        self.spaces = 0;
-        self.write.write_trailing_line(&self.config)?;
-        Ok(())
-    }
-
-    // Realize any pending whitespace just prior to writing a non-whitespace
-    // item.
-    fn flush_whitespace(&mut self) -> fmt::Result {
-        let mut spaces = mem::take(&mut self.spaces);
-
-        if let Some(lines) = mem::take(&mut self.line).into_indent() {
-            for _ in 0..lines {
-                self.write.write_line(&self.config)?;
-            }
-
-            let level = i16::max(self.indent, 0) as usize;
-
-            match self.config.indentation {
-                Indentation::Space(n) => {
-                    spaces += level * n;
-                }
-                Indentation::Tab => {
-                    let mut tabs = level;
-
-                    while tabs > 0 {
-                        let len = usize::min(tabs, TABS.len());
-                        self.write.write_str(&TABS[0..len])?;
-                        tabs -= len;
-                    }
-                }
-            }
-        }
-
-        while spaces > 0 {
-            let len = usize::min(spaces, SPACES.len());
-            self.write.write_str(&SPACES[0..len])?;
-            spaces -= len;
-        }
-
-        Ok(())
-    }
-}
-
-impl<'a> fmt::Write for Formatter<'a> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        if !s.is_empty() {
-            Formatter::write_str(self, s)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<'a> fmt::Debug for Formatter<'a> {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("Formatter")
-            .field("line", &self.line)
-            .field("spaces", &self.spaces)
-            .field("indent", &self.indent)
-            .field("config", &self.config)
-            .finish()
     }
 }

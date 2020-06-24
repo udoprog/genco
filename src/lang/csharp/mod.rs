@@ -25,6 +25,7 @@ use crate::fmt;
 use crate::quote_in;
 use crate::tokens::ItemStr;
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::fmt::Write as _;
 
 pub use self::block_comment::BlockComment;
 pub use self::comment::Comment;

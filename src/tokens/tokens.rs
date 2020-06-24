@@ -528,9 +528,7 @@ where
         config: &L::Config,
         format: &L::Format,
     ) -> fmt::Result {
-        use crate::tokens::cursor;
-        let mut cursor = cursor::Cursor::new(&self.items);
-        Self::format_inner(&mut cursor, out, config, format, false)
+        out.format_items(&self.items, config, format)
     }
 
     /// Push a single item to the stream while checking for structural
@@ -558,135 +556,6 @@ where
             Item::Space => self.space(),
             Item::Indentation(n) => self.indentation(n),
             other => self.items.push(other),
-        }
-    }
-
-    /// Support for evaluating an interior quote and returning it as a string.
-    fn quoted_quote<'a>(
-        cursor: &mut crate::tokens::cursor::Cursor<'_, L>,
-        buf: &'a mut String,
-        out: &mut fmt::Formatter<'_>,
-        config: &L::Config,
-        format: &L::Format,
-    ) -> fmt::Result<&'a str> {
-        let mut w = fmt::FmtWriter::new(buf);
-        let out = &mut w.as_formatter(out.config());
-        L::open_quote(out, config, format, false)?;
-        Self::format_inner(cursor, out, config, format, true)?;
-        L::close_quote(out, config, format, false)?;
-        Ok(w.into_inner().as_str())
-    }
-
-    /// Internal function for formatting.
-    fn format_inner(
-        cursor: &mut crate::tokens::cursor::Cursor<'_, L>,
-        out: &mut fmt::Formatter<'_>,
-        config: &L::Config,
-        format: &L::Format,
-        close_on_close_quote: bool,
-    ) -> fmt::Result {
-        use crate::lang::LangItem as _;
-        use crate::tokens::cursor;
-        use std::mem;
-
-        let mut stack = smallvec::SmallVec::<[Frame; 2]>::new();
-
-        stack.push(Frame::default());
-
-        while let (Some(item), Some(head)) = (cursor.next(), stack.last_mut()) {
-            let Frame {
-                in_quote,
-                has_eval,
-                end_on_eval,
-                quote_buf,
-            } = head;
-
-            match item {
-                Item::Register(_) => {}
-                Item::Literal(literal) => {
-                    if *in_quote {
-                        L::write_quoted(out, &literal)?;
-                    } else {
-                        out.write_str(&literal)?;
-                    }
-                }
-                Item::OpenQuote(e) if !*in_quote => {
-                    *has_eval = *e;
-                    *in_quote = true;
-                    L::open_quote(out, config, format, *has_eval)?;
-                }
-                // Warning: slow path which will buffer a string internally.
-                // This is used for expressions like: `#_(Hello #(quoted(world)))`.
-                //
-                // Evaluating quotes are not supported.
-                Item::OpenQuote(false) if *in_quote => {
-                    let quote = Self::quoted_quote(cursor, quote_buf, out, config, format)?;
-                    L::write_quoted(out, &quote)?;
-                    quote_buf.clear();
-                }
-                Item::CloseQuote if close_on_close_quote => {
-                    return Ok(());
-                }
-                Item::CloseQuote if *in_quote => {
-                    *in_quote = false;
-                    L::close_quote(out, config, format, mem::take(has_eval))?;
-                }
-                Item::Lang(lang) => {
-                    lang.format(out, config, format)?;
-                }
-                // whitespace below
-                Item::Push => {
-                    out.push();
-                }
-                Item::Line => {
-                    out.line();
-                }
-                Item::Space => {
-                    out.space();
-                }
-                Item::Indentation(0) => {
-                    // NB: Should we error due to structural violation?
-                }
-                Item::Indentation(n) => {
-                    out.indentation(*n);
-                }
-                Item::OpenEval if *in_quote => {
-                    if cursor.peek::<cursor::Literal>() && cursor.peek1::<cursor::CloseEval>() {
-                        let literal = cursor.parse::<cursor::Literal>()?;
-                        L::string_eval_literal(out, config, format, literal)?;
-                        cursor.parse::<cursor::CloseEval>()?;
-                    } else {
-                        L::start_string_eval(out, config, format)?;
-
-                        stack.push(Frame {
-                            in_quote: false,
-                            has_eval: false,
-                            end_on_eval: true,
-                            quote_buf: String::new(),
-                        });
-                    }
-                }
-                // Eval are only allowed within quotes.
-                Item::CloseEval if *end_on_eval => {
-                    L::end_string_eval(out, config, format)?;
-                    stack.pop();
-                }
-                _ => {
-                    // Anything else is an illegal state for formatting.
-                    return Err(std::fmt::Error);
-                }
-            }
-        }
-
-        return Ok(());
-
-        #[derive(Default, Clone)]
-        struct Frame {
-            in_quote: bool,
-            has_eval: bool,
-            end_on_eval: bool,
-            // Buffer used to implement "quotes within quotes".
-            quote_buf: String,
         }
     }
 
