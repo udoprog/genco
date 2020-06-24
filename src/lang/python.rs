@@ -31,7 +31,7 @@ impl_lang! {
     pub Python {
         type Config = Config;
         type Format = Format;
-        type Import = dyn AsAny;
+        type Import = Any;
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://docs.python.org/3/reference/lexical_analysis.html#string-and-bytes-literals
@@ -67,10 +67,6 @@ impl_lang! {
             out.write_str(name)?;
             Ok(())
         }
-
-        fn as_import(&self) -> Option<&dyn AsAny> {
-            Some(self)
-        }
     }
 
     ImportModule {
@@ -82,10 +78,6 @@ impl_lang! {
 
             out.write_str(module)?;
             Ok(())
-        }
-
-        fn as_import(&self) -> Option<&dyn AsAny> {
-            Some(self)
         }
     }
 }
@@ -305,7 +297,7 @@ impl Python {
         let mut imports = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            match import.as_any() {
+            match import {
                 Any::Import(Import {
                     module,
                     alias,

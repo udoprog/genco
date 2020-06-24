@@ -37,7 +37,6 @@ pub use self::swift::Swift;
 
 use crate::fmt;
 use crate::Tokens;
-use std::any::Any;
 
 /// Trait to implement for language specialization.
 ///
@@ -52,7 +51,7 @@ where
     /// State being used during formatting.
     type Format: Default;
     /// The type used when resolving imports.
-    type Import: ?Sized;
+    type Import: LangItem<Self>;
 
     /// Provide the default indentation.
     fn default_indentation() -> fmt::Indentation {
@@ -143,6 +142,12 @@ impl Lang for () {
     type Import = ();
 }
 
+impl LangItem<()> for () {
+    fn format(&self, _: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
+        Ok(())
+    }
+}
+
 /// A type-erased holder for language-specific items.
 ///
 /// Carries formatting and coercion functions like
@@ -150,7 +155,7 @@ impl Lang for () {
 /// work.
 pub trait LangItem<L>
 where
-    Self: 'static + std::fmt::Debug,
+    Self: 'static + std::fmt::Debug + std::cmp::Eq + Clone,
     L: Lang,
 {
     /// Format the language item appropriately.
@@ -160,25 +165,6 @@ where
         config: &L::Config,
         format: &L::Format,
     ) -> fmt::Result;
-
-    /// Coerce into an imported type.
-    ///
-    /// This is used for import resolution for custom language items.
-    fn as_import(&self) -> Option<&L::Import> {
-        None
-    }
-
-    /// LangItem convert to Any. Automatically implemented by macro.
-    #[doc(hidden)]
-    fn __lang_item_as_any(&self) -> &dyn Any;
-
-    /// LangItem clone. Automatically implemented by macro.
-    #[doc(hidden)]
-    fn __lang_item_clone(&self) -> Box<dyn LangItem<L>>;
-
-    /// LangItem eq. Automatically implemented by macro.
-    #[doc(hidden)]
-    fn __lang_item_eq(&self, other: &dyn LangItem<L>) -> bool;
 }
 
 /// Escape the given string according to a C-family escape sequence.

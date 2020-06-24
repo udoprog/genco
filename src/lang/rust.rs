@@ -134,10 +134,6 @@ impl_lang! {
 
             Ok(())
         }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
-        }
     }
 }
 

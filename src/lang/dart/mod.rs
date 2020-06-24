@@ -151,10 +151,6 @@ impl_lang! {
             out.write_str(&*self.name)?;
             Ok(())
         }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
-        }
     }
 }
 

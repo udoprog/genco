@@ -1,6 +1,6 @@
 //! A single element
 
-use crate::lang::{Lang, LangItem};
+use crate::lang::Lang;
 use crate::tokens::{FormatInto, ItemStr, Tokens};
 use std::cmp;
 
@@ -13,9 +13,9 @@ where
     /// Is added as a raw string to the stream of tokens.
     Literal(ItemStr),
     /// A language-specific boxed item.
-    Lang(Box<dyn LangItem<L>>),
+    Lang(L::Import),
     /// A language-specific boxed item that is not rendered.
-    Register(Box<dyn LangItem<L>>),
+    Register(L::Import),
     /// Push a new line unless the current line is empty. Will be flushed on
     /// indentation changes.
     Push,
@@ -113,8 +113,8 @@ where
     fn clone(&self) -> Self {
         match self {
             Self::Literal(literal) => Self::Literal(literal.clone()),
-            Self::Lang(lang) => Self::Lang(lang.__lang_item_clone()),
-            Self::Register(lang) => Self::Register(lang.__lang_item_clone()),
+            Self::Lang(lang) => Self::Lang(lang.clone()),
+            Self::Register(lang) => Self::Register(lang.clone()),
             Self::Push => Self::Push,
             Self::Line => Self::Line,
             Self::Space => Self::Space,
@@ -134,8 +134,8 @@ where
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Literal(a), Self::Literal(b)) => a == b,
-            (Self::Lang(a), Self::Lang(b)) => a.__lang_item_eq(&**b),
-            (Self::Register(a), Self::Register(b)) => a.__lang_item_eq(&**b),
+            (Self::Lang(a), Self::Lang(b)) => a == b,
+            (Self::Register(a), Self::Register(b)) => a == b,
             (Self::Push, Self::Push) => true,
             (Self::Line, Self::Line) => true,
             (Self::Space, Self::Space) => true,

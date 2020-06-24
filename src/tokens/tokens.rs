@@ -578,6 +578,7 @@ where
         format: &L::Format,
         close_on_close_quote: bool,
     ) -> fmt::Result {
+        use crate::lang::LangItem as _;
         use crate::tokens::cursor;
         use std::mem;
 
@@ -1163,14 +1164,12 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.queue.next() {
             let import = match next {
-                Item::Lang(item) => item.as_import(),
-                Item::Register(item) => item.as_import(),
+                Item::Lang(item) => item,
+                Item::Register(item) => item,
                 _ => continue,
             };
 
-            if let Some(import) = import {
-                return Some(import);
-            }
+            return Some(import);
         }
 
         None
@@ -1198,10 +1197,6 @@ mod tests {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
                 use std::fmt::Write as _;
                 write!(out, "{}", self.0)
-            }
-
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
             }
         }
     }

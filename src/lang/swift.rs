@@ -69,10 +69,6 @@ impl_lang! {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&self.name)
         }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
-        }
     }
 }
 
