@@ -136,7 +136,7 @@ impl Config {
     ///
     /// let mut w = fmt::VecWriter::new();
     ///
-    /// toks.format_file(&mut w.as_formatter(fmt), &config)?;
+    /// toks.format_file(&mut w.as_formatter(&fmt), &config)?;
     ///
     /// assert_eq!(
     ///     vec![

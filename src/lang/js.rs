@@ -223,7 +223,7 @@ impl Config {
     /// let config = js::Config::default().with_module_path("foo/baz.js");
     /// let fmt = fmt::Config::from_lang::<JavaScript>();
     ///
-    /// toks.format_file(&mut w.as_formatter(fmt), &config)?;
+    /// toks.format_file(&mut w.as_formatter(&fmt), &config)?;
     ///
     /// assert_eq!(
     ///     vec![

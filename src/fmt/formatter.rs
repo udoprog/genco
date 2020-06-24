@@ -45,6 +45,8 @@ impl Default for Line {
 /// to enforce genco's indentation and whitespace rules.
 pub struct Formatter<'a> {
     write: &'a mut (dyn fmt::Write + 'a),
+    /// Formatter configuration.
+    config: &'a Config,
     /// How many lines we want to add to the output stream.
     ///
     /// This will only be realized if we push non-whitespace.
@@ -56,13 +58,11 @@ pub struct Formatter<'a> {
     spaces: usize,
     /// Current indentation level.
     indent: i16,
-    /// Number of indentations per level.
-    config: Config,
 }
 
 impl<'a> Formatter<'a> {
-    /// Create a new write formatter.
-    pub(crate) fn new(write: &'a mut (dyn fmt::Write + 'a), config: Config) -> Formatter<'a> {
+    /// Construct a new formatter.
+    pub(crate) fn new(write: &'a mut (dyn fmt::Write + 'a), config: &'a Config) -> Formatter<'a> {
         Formatter {
             write,
             line: Line::Initial,
@@ -92,13 +92,8 @@ impl<'a> Formatter<'a> {
     pub(crate) fn write_trailing_line(&mut self) -> fmt::Result {
         self.line = Line::default();
         self.spaces = 0;
-        self.write.write_trailing_line(&self.config)?;
+        self.write.write_trailing_line(self.config)?;
         Ok(())
-    }
-
-    /// Get an identical underlying configuration.
-    fn config(&self) -> Config {
-        self.config.clone()
     }
 
     /// Write the given string.
@@ -265,7 +260,7 @@ impl<'a> Formatter<'a> {
         use crate::fmt::FmtWriter;
 
         let mut w = FmtWriter::new(buf);
-        let out = &mut w.as_formatter(self.config());
+        let out = &mut Formatter::new(&mut w, self.config);
         L::open_quote(out, config, format, false)?;
         out.format_cursor(cursor, config, format, true)?;
         L::close_quote(out, config, format, false)?;
@@ -279,7 +274,7 @@ impl<'a> Formatter<'a> {
 
         if let Some(lines) = mem::take(&mut self.line).into_indent() {
             for _ in 0..lines {
-                self.write.write_line(&self.config)?;
+                self.write.write_line(self.config)?;
             }
 
             let level = i16::max(self.indent, 0) as usize;
@@ -326,7 +321,7 @@ impl<'a> std::fmt::Debug for Formatter<'a> {
             .field("line", &self.line)
             .field("spaces", &self.spaces)
             .field("indent", &self.indent)
-            .field("config", &self.config)
+            .field("config", self.config)
             .finish()
     }
 }

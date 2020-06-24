@@ -21,14 +21,12 @@ use std::io;
 /// // Vec<u8> implements std::io::Write
 /// let mut w = fmt::IoWriter::new(Vec::<u8>::new());
 ///
-/// let fmt_config = fmt::Config::from_lang::<Rust>();
-/// let mut formatter = w.as_formatter(fmt_config);
-///
+/// let fmt = fmt::Config::from_lang::<Rust>();
 /// let config = rust::Config::default();
 /// // Default format state for Rust.
 /// let format = rust::Format::default();
 ///
-/// tokens.format(&mut formatter, &config, &format)?;
+/// tokens.format(&mut w.as_formatter(&fmt), &config, &format)?;
 ///
 /// let vector = w.into_inner();
 /// let string = std::str::from_utf8(&vector)?;
@@ -54,7 +52,7 @@ where
     }
 
     /// Convert into a formatter.
-    pub fn as_formatter(&mut self, config: fmt::Config) -> fmt::Formatter<'_> {
+    pub fn as_formatter<'a>(&'a mut self, config: &'a fmt::Config) -> fmt::Formatter<'a> {
         fmt::Formatter::new(self, config)
     }
 

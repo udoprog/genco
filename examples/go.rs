@@ -26,6 +26,6 @@ fn main() -> anyhow::Result<()> {
     let fmt = fmt::Config::from_lang::<Go>();
     let config = go::Config::default().with_package("main");
 
-    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+    tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
     Ok(())
 }

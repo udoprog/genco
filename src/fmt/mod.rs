@@ -35,15 +35,14 @@
 //! let stdout = std::io::stdout();
 //! let mut w = fmt::IoWriter::new(stdout.lock());
 //!
-//! let fmt_config = fmt::Config::from_lang::<Rust>()
+//! let fmt = fmt::Config::from_lang::<Rust>()
 //!     .with_indentation(fmt::Indentation::Space(2));
-//! let mut formatter = w.as_formatter(fmt_config);
 //! let config = rust::Config::default();
 //!
 //! // Default format state for Rust.
 //! let format = rust::Format::default();
 //!
-//! tokens.format(&mut formatter, &config, &format)?;
+//! tokens.format(&mut w.as_formatter(&fmt), &config, &format)?;
 //! # Ok(())
 //! # }
 //! ```
