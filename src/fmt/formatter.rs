@@ -168,7 +168,7 @@ impl<'a> Formatter<'a> {
             } = head;
 
             match item {
-                Item::Register(_) => (),
+                Item::Register(..) => (),
                 Item::Indentation(0) => (),
                 Item::Literal(literal) => {
                     if *in_quote {
@@ -198,7 +198,7 @@ impl<'a> Formatter<'a> {
                     *in_quote = false;
                     L::close_quote(self, config, format, mem::take(has_eval))?;
                 }
-                Item::Lang(lang) => {
+                Item::Lang(_, lang) => {
                     lang.format(self, config, format)?;
                 }
                 // whitespace below
