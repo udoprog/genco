@@ -20,6 +20,6 @@ fn main() -> anyhow::Result<()> {
     let fmt = fmt::Config::from_lang::<Dart>();
     let config = dart::Config::default();
 
-    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+    tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
     Ok(())
 }

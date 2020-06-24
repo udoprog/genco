@@ -19,7 +19,7 @@ use crate::lang::Lang;
 ///     .with_indentation(fmt::Indentation::Tab);
 /// let config = rust::Config::default();
 ///
-/// tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+/// tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
 ///
 /// assert_eq! {
 ///     vec![

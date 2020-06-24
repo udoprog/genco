@@ -27,6 +27,6 @@ fn main() -> anyhow::Result<()> {
     let fmt = fmt::Config::from_lang::<Java>().with_newline("\n\r");
     let config = java::Config::default().with_package("se.tedro");
 
-    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+    tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
     Ok(())
 }

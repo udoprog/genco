@@ -20,14 +20,13 @@ use crate::fmt;
 /// // Note: String implements std::fmt::Write
 /// let mut w = fmt::FmtWriter::new(String::new());
 ///
-/// let fmt_config = fmt::Config::from_lang::<Rust>();
-/// let mut formatter = w.as_formatter(fmt_config);
+/// let fmt = fmt::Config::from_lang::<Rust>();
 ///
 /// let config = rust::Config::default();
 /// // Default format state for Rust.
 /// let format = rust::Format::default();
 ///
-/// tokens.format(&mut formatter, &config, &format)?;
+/// tokens.format(&mut w.as_formatter(&fmt), &config, &format)?;
 ///
 /// let string = w.into_inner();
 ///
@@ -52,7 +51,7 @@ where
     }
 
     /// Convert into a formatter.
-    pub fn as_formatter(&mut self, config: fmt::Config) -> fmt::Formatter<'_> {
+    pub fn as_formatter<'a>(&'a mut self, config: &'a fmt::Config) -> fmt::Formatter<'a> {
         fmt::Formatter::new(self, config)
     }
 

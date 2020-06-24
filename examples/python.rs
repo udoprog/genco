@@ -21,6 +21,6 @@ fn main() -> anyhow::Result<()> {
     let fmt = fmt::Config::from_lang::<Python>();
     let config = python::Config::default();
 
-    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+    tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
     Ok(())
 }

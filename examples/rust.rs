@@ -33,6 +33,6 @@ fn main() -> anyhow::Result<()> {
         // Prettier imports and use.
         .with_default_import(rust::ImportMode::Qualified);
 
-    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+    tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
     Ok(())
 }

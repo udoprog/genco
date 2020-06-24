@@ -523,9 +523,9 @@ where
     /// let stdout = std::io::stdout();
     /// let mut w = fmt::IoWriter::new(stdout.lock());
     ///
-    /// let fmt_config = fmt::Config::from_lang::<Rust>()
+    /// let fmt = fmt::Config::from_lang::<Rust>()
     ///     .with_indentation(fmt::Indentation::Space(2));
-    /// let mut formatter = w.as_formatter(fmt_config);
+    /// let mut formatter = w.as_formatter(&fmt);
     /// let config = rust::Config::default();
     ///
     /// // Default format state for Rust.
@@ -623,9 +623,9 @@ where
     /// let stdout = std::io::stdout();
     /// let mut w = fmt::IoWriter::new(stdout.lock());
     ///
-    /// let fmt_config = fmt::Config::from_lang::<Rust>()
+    /// let fmt = fmt::Config::from_lang::<Rust>()
     ///     .with_indentation(fmt::Indentation::Space(2));
-    /// let mut formatter = w.as_formatter(fmt_config);
+    /// let mut formatter = w.as_formatter(&fmt);
     /// let config = rust::Config::default();
     ///
     /// tokens.format_file(&mut formatter, &config)?;
@@ -714,7 +714,8 @@ where
     /// ```
     pub fn to_file_string(&self) -> fmt::Result<String> {
         let mut w = fmt::FmtWriter::new(String::new());
-        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let fmt = fmt::Config::from_lang::<L>();
+        let mut formatter = w.as_formatter(&fmt);
         let config = L::Config::default();
         self.format_file(&mut formatter, &config)?;
         Ok(w.into_inner())
@@ -750,7 +751,8 @@ where
     /// ```
     pub fn to_string(&self) -> fmt::Result<String> {
         let mut w = fmt::FmtWriter::new(String::new());
-        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let fmt = fmt::Config::from_lang::<L>();
+        let mut formatter = w.as_formatter(&fmt);
         let config = L::Config::default();
         let format = L::Format::default();
         self.format(&mut formatter, &config, &format)?;
@@ -820,7 +822,8 @@ where
     /// ```
     pub fn to_file_vec(&self) -> fmt::Result<Vec<String>> {
         let mut w = fmt::VecWriter::new();
-        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let fmt = fmt::Config::from_lang::<L>();
+        let mut formatter = w.as_formatter(&fmt);
         let config = L::Config::default();
         self.format_file(&mut formatter, &config)?;
         Ok(w.into_vec())
@@ -859,7 +862,8 @@ where
     /// ```
     pub fn to_vec(&self) -> fmt::Result<Vec<String>> {
         let mut w = fmt::VecWriter::new();
-        let mut formatter = fmt::Formatter::new(&mut w, fmt::Config::from_lang::<L>());
+        let fmt = fmt::Config::from_lang::<L>();
+        let mut formatter = w.as_formatter(&fmt);
         let config = L::Config::default();
         let format = L::Format::default();
         self.format(&mut formatter, &config, &format)?;

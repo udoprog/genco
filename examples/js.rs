@@ -36,6 +36,6 @@ fn main() -> anyhow::Result<()> {
     let fmt = fmt::Config::from_lang::<JavaScript>();
     let config = js::Config::default();
 
-    tokens.format_file(&mut w.as_formatter(fmt), &config)?;
+    tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
     Ok(())
 }
