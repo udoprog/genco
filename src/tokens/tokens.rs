@@ -15,6 +15,7 @@ use crate::lang::{Lang, LangSupportsEval};
 use crate::tokens::{FormatInto, Item, Register};
 use std::cmp;
 use std::iter::FromIterator;
+use std::marker::PhantomData;
 use std::slice;
 use std::vec;
 
@@ -45,11 +46,13 @@ use std::vec;
 /// [space]: Self::space()
 /// [push]: Self::push()
 /// [line]: Self::line()
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Tokens<L = ()>
 where
     L: Lang,
 {
     items: Vec<Item<L>>,
+    _marker: PhantomData<L>,
 }
 
 impl<L> Tokens<L>
@@ -68,7 +71,10 @@ where
     /// assert!(tokens.is_empty());
     /// ```
     pub fn new() -> Self {
-        Tokens { items: Vec::new() }
+        Tokens {
+            items: Vec::new(),
+            _marker: PhantomData,
+        }
     }
 
     /// Create a new empty stream of tokens with the specified capacity.
@@ -85,6 +91,7 @@ where
     pub fn with_capacity(cap: usize) -> Self {
         Tokens {
             items: Vec::with_capacity(cap),
+            _marker: PhantomData,
         }
     }
 
@@ -157,7 +164,7 @@ where
     /// use genco::tokens::{Item, ItemStr};
     ///
     /// let mut tokens: Tokens<()> = quote!(foo bar);
-    /// tokens.extend(quote!(#<space>baz));
+    /// tokens.extend::<Tokens<()>>(quote!(#<space>baz));
     ///
     /// assert_eq!(tokens, quote!(foo bar baz));
     /// ```
@@ -578,6 +585,7 @@ where
         format: &L::Format,
         close_on_close_quote: bool,
     ) -> fmt::Result {
+        use crate::lang::LangItem as _;
         use crate::tokens::cursor;
         use std::mem;
 
@@ -957,35 +965,6 @@ where
     }
 }
 
-impl<L> std::fmt::Debug for Tokens<L>
-where
-    L: Lang,
-{
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt.debug_list().entries(self.items.iter()).finish()
-    }
-}
-
-impl<L> Clone for Tokens<L>
-where
-    L: Lang,
-{
-    fn clone(&self) -> Self {
-        Self {
-            items: self.items.clone(),
-        }
-    }
-}
-
-impl<L> cmp::PartialEq for Tokens<L>
-where
-    L: Lang,
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.items == other.items
-    }
-}
-
 impl<'a, L> cmp::PartialEq<Vec<Item<L>>> for Tokens<L>
 where
     L: Lang,
@@ -1021,8 +1000,6 @@ where
         self == &*other.items
     }
 }
-
-impl<L> cmp::Eq for Tokens<L> where L: Lang {}
 
 /// Iterator over [Tokens].
 ///
@@ -1158,19 +1135,17 @@ impl<'a, L> Iterator for WalkImports<'a, L>
 where
     L: Lang,
 {
-    type Item = &'a L::Import;
+    type Item = &'a L::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(next) = self.queue.next() {
             let import = match next {
-                Item::Lang(item) => item.as_import(),
-                Item::Register(item) => item.as_import(),
+                Item::Lang(item) => item,
+                Item::Register(item) => item,
                 _ => continue,
             };
 
-            if let Some(import) = import {
-                return Some(import);
-            }
+            return Some(import);
         }
 
         None
@@ -1191,17 +1166,13 @@ mod tests {
         Lang {
             type Config = ();
             type Format = ();
-            type Import = Import;
+            type Item = Import;
         }
 
         Import {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
                 use std::fmt::Write as _;
                 write!(out, "{}", self.0)
-            }
-
-            fn as_import(&self) -> Option<&Self> {
-                Some(self)
             }
         }
     }

@@ -27,7 +27,7 @@ impl_lang! {
     pub Swift {
         type Config = Config;
         type Format = Format;
-        type Import = Import;
+        type Item = Import;
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
@@ -68,10 +68,6 @@ impl_lang! {
     Import {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&self.name)
-        }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
         }
     }
 }

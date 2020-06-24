@@ -19,7 +19,7 @@
 /// genco::impl_lang! {
 ///     MyLang {
 ///         type Config = Config;
-///         type Import = dyn AsAny;
+///         type Item = Any;
 ///         type Format = Format;
 ///
 ///         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
@@ -39,7 +39,7 @@
 ///             for import in tokens.walk_imports() {
 ///                 any_imports = true;
 ///
-///                 match import.as_any() {
+///                 match import {
 ///                     Any::Import(import) => {
 ///                         header.push();
 ///                         quote_in!(header => import #(import.0));
@@ -68,20 +68,12 @@
 ///             out.write_str(self.0)?;
 ///             Ok(())
 ///         }
-///
-///         fn as_import(&self) -> Option<&dyn AsAny> {
-///             Some(self)
-///         }
 ///     }
 ///
 ///     ImportDefault {
 ///         fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
 ///             write!(out, "default:{}", self.0)?;
 ///             Ok(())
-///         }
-///
-///         fn as_import(&self) -> Option<&dyn AsAny> {
-///             Some(self)
 ///         }
 ///     }
 /// }
@@ -131,132 +123,78 @@ macro_rules! impl_lang {
         )*
     ) => {
         $(#[$($meta)*])*
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
         $vis struct $lang(());
 
         impl $crate::lang::Lang for $lang {
             $($lang_item)*
         }
 
-        /// Language-specific conversion trait implemented by all language
-        /// items.
-        $vis trait AsAny where Self: 'static {
-            /// Coerce trait into an enum that can be used for type-specific
-            /// operations.
-            ///
-            /// # Examples
-            ///
-            /// ```rust
-            /// use genco::fmt;
-            ///
-            /// genco::impl_lang! {
-            ///     MyLang {
-            ///         type Config = ();
-            ///         type Import = dyn AsAny;
-            ///         type Format = ();
-            ///     }
-            ///
-            ///     Import {
-            ///         fn format(&self, fmt: &mut fmt::Formatter<'_>, config: &(), format: &()) -> fmt::Result {
-            ///             use std::fmt::Write as _;
-            ///
-            ///             write!(fmt, "{}", self.0)
-            ///         }
-            ///
-            ///         fn as_import(&self) -> Option<&dyn AsAny> {
-            ///             Some(self)
-            ///         }
-            ///     }
-            /// }
-            ///
-            /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-            /// struct Import(usize);
-            ///
-            /// # fn main() -> genco::fmt::Result {
-            /// use genco::{quote, Tokens};
-            ///
-            /// let tokens: Tokens<MyLang> = quote! {
-            ///     #(Import(0))
-            ///     #(Import(1))
-            /// };
-            ///
-            /// /// Find and compare all imports.
-            /// assert_eq!(2, tokens.walk_imports().count());
-            ///
-            /// for (i, import) in tokens.walk_imports().enumerate() {
-            ///     assert_eq!(Any::Import(&Import(i)), import.as_any());
-            /// }
-            ///
-            /// assert_eq!{
-            ///     vec![
-            ///         "0",
-            ///         "1",
-            ///     ],
-            ///     tokens.to_file_vec()?
-            /// };
-            /// # Ok(())
-            /// # }
-            /// ```
-            fn as_any(&self) -> Any<'_>;
-        }
-
-        /// Enum produced by [AsAny::as_any()] which can be used to identify and
-        /// operate over a discrete language item type.
-        #[derive(Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-        $vis enum Any<'a> {
+        /// A type-erased language item capable of holding any kind.
+        #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+        $vis enum Any {
             $(
                 #[doc = "Type variant."]
-                $ty(&'a $ty),
+                $ty($ty),
             )*
         }
 
         $(
-            impl AsAny for $ty {
-                fn as_any(&self) -> Any<'_> {
-                    Any::$ty(self)
+            impl From<$ty> for Any {
+                fn from(lang: $ty) -> Self {
+                    Self::$ty(lang)
                 }
             }
+        )*
 
+        impl $crate::lang::LangItem for Any {
+            type Lang = $lang;
+
+            fn format(
+                &self,
+                out: &mut $crate::fmt::Formatter<'_>,
+                config: &<$lang as $crate::lang::Lang>::Config,
+                format: &<$lang as $crate::lang::Lang>::Format,
+            ) -> $crate::fmt::Result {
+                match self {
+                    $(Self::$ty(lang) => lang.format(out, config, format),)*
+                }
+            }
+        }
+
+        $(
             impl $crate::tokens::FormatInto<$lang> for $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::Item::Lang(Box::new(self)));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self);
+                    tokens.append($crate::tokens::Item::Lang(Box::new(item)));
                 }
             }
 
             impl<'a> $crate::tokens::FormatInto<$lang> for &'a $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::Item::Lang(Box::new(self.clone())));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self.clone());
+                    tokens.append($crate::tokens::Item::Lang(Box::new(item)));
                 }
             }
 
             impl $crate::tokens::Register<$lang> for $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::Item::Register(Box::new(self)));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self);
+                    tokens.append($crate::tokens::Item::Register(Box::new(item)));
                 }
             }
 
             impl<'a> $crate::tokens::Register<$lang> for &'a $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::Item::Register(Box::new(self.clone())));
+                    let item = <$lang as $crate::lang::Lang>::Item::from(self.clone());
+                    tokens.append($crate::tokens::Item::Register(Box::new(item)));
                 }
             }
 
-            impl $crate::lang::LangItem<$lang> for $ty {
+            impl $crate::lang::LangItem for $ty {
+                type Lang = $lang;
+
                 $($ty_lang_item_item)*
-
-                fn __lang_item_as_any(&self) -> &dyn std::any::Any {
-                    self
-                }
-
-                fn __lang_item_clone(&self) -> Box<dyn $crate::lang::LangItem<$lang>> {
-                    Box::new(self.clone())
-                }
-
-                fn __lang_item_eq(&self, other: &dyn $crate::lang::LangItem<$lang>) -> bool {
-                    other
-                        .__lang_item_as_any()
-                        .downcast_ref::<Self>()
-                        .map_or(false, |x| x == self)
-                }
             }
         )*
     }

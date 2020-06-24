@@ -57,7 +57,7 @@ impl_lang! {
     pub Dart {
         type Config = Config;
         type Format = Format;
-        type Import = Import;
+        type Item = Import;
 
         fn string_eval_literal(
             out: &mut fmt::Formatter<'_>,
@@ -150,10 +150,6 @@ impl_lang! {
 
             out.write_str(&*self.name)?;
             Ok(())
-        }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
         }
     }
 }

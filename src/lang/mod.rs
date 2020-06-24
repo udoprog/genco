@@ -37,7 +37,6 @@ pub use self::swift::Swift;
 
 use crate::fmt;
 use crate::Tokens;
-use std::any::Any;
 
 /// Trait to implement for language specialization.
 ///
@@ -45,14 +44,14 @@ use std::any::Any;
 /// module.
 pub trait Lang
 where
-    Self: 'static + Sized,
+    Self: 'static + Sized + Copy + Eq + Ord + std::hash::Hash + std::fmt::Debug,
 {
     /// Configuration associated with building a formatting element.
     type Config;
     /// State being used during formatting.
     type Format: Default;
     /// The type used when resolving imports.
-    type Import: ?Sized;
+    type Item: LangItem<Lang = Self>;
 
     /// Provide the default indentation.
     fn default_indentation() -> fmt::Indentation {
@@ -140,7 +139,15 @@ pub trait LangSupportsEval: Lang {}
 impl Lang for () {
     type Config = ();
     type Format = ();
-    type Import = ();
+    type Item = ();
+}
+
+impl LangItem for () {
+    type Lang = ();
+
+    fn format(&self, _: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
+        Ok(())
+    }
 }
 
 /// A type-erased holder for language-specific items.
@@ -148,37 +155,20 @@ impl Lang for () {
 /// Carries formatting and coercion functions like
 /// [as_import][LangItem::as_import] to allow language specific processing to
 /// work.
-pub trait LangItem<L>
+pub trait LangItem
 where
-    Self: 'static + std::fmt::Debug,
-    L: Lang,
+    Self: 'static + Clone + Eq + Ord + std::hash::Hash + std::fmt::Debug,
 {
+    /// The language the item is implemented for.
+    type Lang: Lang;
+
     /// Format the language item appropriately.
     fn format(
         &self,
         fmt: &mut fmt::Formatter<'_>,
-        config: &L::Config,
-        format: &L::Format,
+        config: &<Self::Lang as Lang>::Config,
+        format: &<Self::Lang as Lang>::Format,
     ) -> fmt::Result;
-
-    /// Coerce into an imported type.
-    ///
-    /// This is used for import resolution for custom language items.
-    fn as_import(&self) -> Option<&L::Import> {
-        None
-    }
-
-    /// LangItem convert to Any. Automatically implemented by macro.
-    #[doc(hidden)]
-    fn __lang_item_as_any(&self) -> &dyn Any;
-
-    /// LangItem clone. Automatically implemented by macro.
-    #[doc(hidden)]
-    fn __lang_item_clone(&self) -> Box<dyn LangItem<L>>;
-
-    /// LangItem eq. Automatically implemented by macro.
-    #[doc(hidden)]
-    fn __lang_item_eq(&self, other: &dyn LangItem<L>) -> bool;
 }
 
 /// Escape the given string according to a C-family escape sequence.

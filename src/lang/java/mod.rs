@@ -33,7 +33,7 @@ impl_lang! {
     pub Java {
         type Config = Config;
         type Format = Format;
-        type Import = Import;
+        type Item = Import;
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html
@@ -95,10 +95,6 @@ impl_lang! {
 
             out.write_str(&self.name)?;
             Ok(())
-        }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
         }
     }
 }

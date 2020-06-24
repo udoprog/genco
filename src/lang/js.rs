@@ -65,7 +65,7 @@ impl_lang! {
     pub JavaScript {
         type Config = Config;
         type Format = Format;
-        type Import = Import;
+        type Item = Import;
 
         /// Start a string quote.
         fn open_quote(
@@ -179,10 +179,6 @@ impl_lang! {
             };
 
             out.write_str(name)
-        }
-
-        fn as_import(&self) -> Option<&Self> {
-            Some(self)
         }
     }
 }
