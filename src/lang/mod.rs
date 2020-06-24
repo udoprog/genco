@@ -51,7 +51,7 @@ where
     /// State being used during formatting.
     type Format: Default;
     /// The type used when resolving imports.
-    type Item: LangItem<Lang = Self>;
+    type Item: LangItem<Self>;
 
     /// Provide the default indentation.
     fn default_indentation() -> fmt::Indentation {
@@ -146,10 +146,11 @@ impl Lang for () {
     type Item = ();
 }
 
-impl LangItem for () {
-    type Lang = ();
-
-    fn format(&self, _: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
+impl<L> LangItem<L> for ()
+where
+    L: Lang,
+{
+    fn format(&self, _: &mut fmt::Formatter<'_>, _: &L::Config, _: &L::Format) -> fmt::Result {
         Ok(())
     }
 }
@@ -159,19 +160,17 @@ impl LangItem for () {
 /// Carries formatting and coercion functions like
 /// [as_import][LangItem::as_import] to allow language specific processing to
 /// work.
-pub trait LangItem
+pub trait LangItem<L>
 where
+    L: Lang,
     Self: 'static + Clone + Eq + Ord + std::hash::Hash + std::fmt::Debug,
 {
-    /// The language the item is implemented for.
-    type Lang: Lang;
-
     /// Format the language item appropriately.
     fn format(
         &self,
         fmt: &mut fmt::Formatter<'_>,
-        config: &<Self::Lang as Lang>::Config,
-        format: &<Self::Lang as Lang>::Format,
+        config: &L::Config,
+        format: &L::Format,
     ) -> fmt::Result;
 }
 

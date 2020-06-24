@@ -147,9 +147,7 @@ macro_rules! impl_lang {
             }
         )*
 
-        impl $crate::lang::LangItem for Any {
-            type Lang = $lang;
-
+        impl $crate::lang::LangItem<$lang> for Any {
             fn format(
                 &self,
                 out: &mut $crate::fmt::Formatter<'_>,
@@ -187,9 +185,7 @@ macro_rules! impl_lang {
                 }
             }
 
-            impl $crate::lang::LangItem for $ty {
-                type Lang = $lang;
-
+            impl $crate::lang::LangItem<$lang> for $ty {
                 $($ty_lang_item_item)*
             }
         )*
