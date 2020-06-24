@@ -59,6 +59,7 @@
 mod display;
 mod format_into;
 mod from_fn;
+mod internal;
 mod item;
 mod item_str;
 mod quoted;
@@ -75,3 +76,8 @@ pub use self::quoted::{quoted, QuotedFn};
 pub use self::register::{register, Register, RegisterFn};
 pub use self::static_literal::static_literal;
 pub use self::tokens::Tokens;
+
+#[doc(hidden)]
+pub use self::internal::__lang_item;
+#[doc(hidden)]
+pub use self::internal::__lang_item_register;

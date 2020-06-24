@@ -13,9 +13,9 @@ where
     /// Is added as a raw string to the stream of tokens.
     Literal(ItemStr),
     /// A language-specific item.
-    Lang(Box<L::Item>),
+    Lang(usize, Box<L::Item>),
     /// A language-specific item that is not rendered.
-    Register(Box<L::Item>),
+    Register(usize, Box<L::Item>),
     /// Push a new line unless the current line is empty. Will be flushed on
     /// indentation changes.
     Push,

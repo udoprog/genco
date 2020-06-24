@@ -16,6 +16,7 @@ use crate::tokens::{FormatInto, Item, Register};
 use std::cmp;
 use std::iter::FromIterator;
 use std::marker::PhantomData;
+use std::mem;
 use std::slice;
 use std::vec;
 
@@ -52,6 +53,14 @@ where
     L: Lang,
 {
     items: Vec<Item<L>>,
+    /// The last position at which we observed a language item.
+    ///
+    /// This references the `position + 1` in the items vector. A position of
+    /// 0 means that there are no more items.
+    ///
+    /// This makes up a singly-linked list over all language items that you can
+    /// follow.
+    last_lang_item: usize,
     _marker: PhantomData<L>,
 }
 
@@ -73,6 +82,7 @@ where
     pub fn new() -> Self {
         Tokens {
             items: Vec::new(),
+            last_lang_item: 0,
             _marker: PhantomData,
         }
     }
@@ -91,6 +101,7 @@ where
     pub fn with_capacity(cap: usize) -> Self {
         Tokens {
             items: Vec::with_capacity(cap),
+            last_lang_item: 0,
             _marker: PhantomData,
         }
     }
@@ -183,6 +194,9 @@ where
 
     /// Walk over all imports.
     ///
+    /// The order in which the imports are returned is *not* defined. So if you
+    /// need them in some particular order you need to sort them.
+    ///
     /// # Examples
     ///
     /// ```rust
@@ -199,7 +213,8 @@ where
     /// ```
     pub fn walk_imports(&self) -> WalkImports<'_, L> {
         WalkImports {
-            queue: self.items.iter(),
+            items: &self.items,
+            pos: self.last_lang_item,
         }
     }
 
@@ -555,8 +570,26 @@ where
             Item::Line => self.line(),
             Item::Space => self.space(),
             Item::Indentation(n) => self.indentation(n),
+            Item::Lang(_, item) => self.lang_item(item),
+            Item::Register(_, item) => self.lang_item_register(item),
             other => self.items.push(other),
         }
+    }
+
+    /// Add a language item directly.
+    pub(crate) fn lang_item(&mut self, item: Box<L::Item>) {
+        // NB: recorded position needs to be adjusted.
+        self.items
+            .push(crate::tokens::Item::Lang(self.last_lang_item, item));
+        self.last_lang_item = self.items.len();
+    }
+
+    /// Register a language item directly.
+    pub(crate) fn lang_item_register(&mut self, item: Box<L::Item>) {
+        // NB: recorded position needs to be adjusted.
+        self.items
+            .push(crate::tokens::Item::Register(self.last_lang_item, item));
+        self.last_lang_item = self.items.len();
     }
 
     /// File formatting function for token streams that gives full control over the
@@ -997,7 +1030,8 @@ pub struct WalkImports<'a, L>
 where
     L: Lang,
 {
-    queue: std::slice::Iter<'a, Item<L>>,
+    items: &'a [Item<L>],
+    pos: usize,
 }
 
 impl<'a, L> Iterator for WalkImports<'a, L>
@@ -1007,17 +1041,23 @@ where
     type Item = &'a L::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(next) = self.queue.next() {
-            let import = match next {
-                Item::Lang(item) => item,
-                Item::Register(item) => item,
-                _ => continue,
-            };
+        let pos = mem::take(&mut self.pos);
 
-            return Some(import);
+        if pos == 0 {
+            return None;
         }
 
-        None
+        // NB: recorded position needs to be adjusted.
+        let item = self.items.get(pos - 1)?;
+
+        let (prev, item) = match item {
+            Item::Lang(prev, item) => (prev, item),
+            Item::Register(prev, item) => (prev, item),
+            _ => return None,
+        };
+
+        self.pos = *prev;
+        Some(item)
     }
 }
 
@@ -1055,7 +1095,8 @@ mod tests {
             #(String::from("nope"))
         };
 
-        let output: Vec<_> = toks.walk_imports().cloned().collect();
+        let mut output: Vec<_> = toks.walk_imports().cloned().collect();
+        output.sort();
 
         let expected = vec![Import(1), Import(2)];
 
