@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0]
+
 ### Fixed
 * csharp: System must be imported ([#13]).
 
@@ -27,4 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#13]: https://github.com/udoprog/genco/issues/13
 [#12]: https://github.com/udoprog/genco/issues/12
 
-[Unreleased]: https://github.com/udoprog/genco/compare/0.14.2...master
+[0.15.0]: https://github.com/udoprog/genco/compare/0.14.2...0.15.0
+[Unreleased]: https://github.com/udoprog/genco/compare/0.15.0...master
