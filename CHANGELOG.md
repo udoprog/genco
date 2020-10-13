@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1]
+
+### Fixed
+* Fixed typos in documentation.
+* Fixed new Clippy lints.
+
 ## [0.15.0]
 
 ### Fixed
@@ -29,5 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#13]: https://github.com/udoprog/genco/issues/13
 [#12]: https://github.com/udoprog/genco/issues/12
 
+[0.15.1]: https://github.com/udoprog/genco/compare/0.15.0...0.15.1
 [0.15.0]: https://github.com/udoprog/genco/compare/0.14.2...0.15.0
-[Unreleased]: https://github.com/udoprog/genco/compare/0.15.0...master
+[Unreleased]: https://github.com/udoprog/genco/compare/0.15.1...master
