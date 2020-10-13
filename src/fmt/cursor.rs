@@ -27,10 +27,7 @@ where
 
     #[inline]
     fn peek(item: &Item<L>) -> bool {
-        match item {
-            Item::Literal(..) => true,
-            _ => false,
-        }
+        matches!(item, Item::Literal(..))
     }
 
     #[inline]
@@ -53,10 +50,7 @@ where
 
     #[inline]
     fn peek(item: &Item<L>) -> bool {
-        match item {
-            Item::CloseEval => true,
-            _ => false,
-        }
+        matches!(item, Item::CloseEval)
     }
 
     #[inline]
@@ -120,7 +114,7 @@ where
     where
         P: Parse<L>,
     {
-        let item = self.next().ok_or_else(|| std::fmt::Error)?;
+        let item = self.next().ok_or(std::fmt::Error)?;
         P::parse(item)
     }
 }
