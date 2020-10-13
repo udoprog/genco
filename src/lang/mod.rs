@@ -157,9 +157,8 @@ where
 
 /// A type-erased holder for language-specific items.
 ///
-/// Carries formatting and coercion functions like
-/// [as_import][LangItem::as_import] to allow language specific processing to
-/// work.
+/// Carries formatting and coercion functions like [LangItem][LangItem::format]
+/// to allow language specific processing to work.
 pub trait LangItem<L>
 where
     L: Lang,

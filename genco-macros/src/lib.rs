@@ -17,7 +17,13 @@ mod static_buffer;
 mod string_parser;
 mod token;
 
-/// Language neutral whitespace sensitive quasi-quoting.
+/// Whitespace sensitive quasi-quoting.
+///
+/// This and the [quote_in!] macro is the thing that this library revolves
+/// around.
+///
+/// It provides a flexible and intuitive mechanism for efficiently generating
+/// beautiful code directly inside of Rust.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -42,13 +48,12 @@ mod token;
 ///
 /// # Interpolation
 ///
-/// Variables are interpolated using `#`, so to include the variable `test`,
-/// you could write `#test`. Interpolated variables implements [FormatInto].
-///
+/// Variables are interpolated using `#`, so to include the variable `test`, you
+/// would write `#test`. Interpolated variables must implement [FormatInto].
 /// Expressions can be interpolated with `#(<expr>)`.
 ///
-/// **Note:** `#` can be escaped by repeating it twice. So `##` would produce a
-/// single `#` token.
+/// > *Note:* The `#` punctuation itself can be escaped by repeating it twice.
+/// > So `##` would produce a single `#` token.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -78,7 +83,7 @@ mod token;
 ///
 /// <br>
 ///
-/// Expressions interpolated with `#(<expr>)`.
+/// The following is an expression interpolated with `#(<expr>)`.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -97,7 +102,8 @@ mod token;
 /// <br>
 ///
 /// Interpolations are evaluated in the same scope as the macro, so you can
-/// freely make use of the try keyword (`?`) when appropriate.
+/// freely make use of Rust operations like the try keyword (`?`) if
+/// appropriate:
 ///
 /// ```rust
 /// use std::error::Error;
@@ -119,12 +125,13 @@ mod token;
 ///
 /// # Escape Sequences
 ///
-/// Because this macro is _whitespace sensitive_, it might sometimes be
-/// necessary to provide hints of where they should be inserted.
+/// Because this macro is *whitespace sensitive*, it might sometimes be
+/// necessary to provide hints of where whitespace should be inserted.
 ///
 /// `quote!` trims any trailing and leading whitespace that it sees. So
 /// `quote!(Hello )` is the same as `quote!(Hello)`. To include a space at the
-/// end, we can use the special `#<space>` escape sequence: `quote!(Hello#<space>)`.
+/// end, we can use the special `#<space>` escape sequence:
+/// `quote!(Hello#<space>)`.
 ///
 /// The available escape sequences are:
 ///
@@ -135,9 +142,9 @@ mod token;
 ///   any following tokens are on their own dedicated line. This corresponds to
 ///   the [Tokens::push] function.
 ///
-/// * `#<line>` — Inserts a forced line. Line operations makes sure that
-///   any following tokens have an empty line separating them. This corresponds
-///   to the [Tokens::line] function.
+/// * `#<line>` — Inserts a forced line. Line operations makes sure that any
+///   following tokens have an empty line separating them. This corresponds to
+///   the [Tokens::line] function.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -247,25 +254,26 @@ mod token;
 ///
 /// Some languages support interpolating values into strings.
 ///
-/// Examples of this are:
+/// Examples of these are:
 ///
-/// * JavaScript - With [template literals] `` `Hello ${a}` `` (note the backticks).
-/// * Dart - With [interpolated strings] like `"Hello $a"` or `"Hello ${a + b}"`.
+/// * JavaScript - With [template literals] `` `Hello ${a}` `` (note the
+///   backticks).
+/// * Dart - With [interpolated strings] like `"Hello $a"` or `"Hello ${a +
+///   b}"`.
 ///
 /// The [quote!] macro supports this through `#_(<content>)`. This will produce
 /// literal strings with the appropriate language-specific quoting and string
 /// interpolation formats used.
 ///
 /// Interpolated values are specified with `$(<quoted>)`. And `$` itself is
-/// escaped by repeating it twice through `$$`.
-/// The `<quoted>` section is interpreted the same as in the [quote!] macro,
-/// but is whitespace sensitive.
+/// escaped by repeating it twice through `$$`. The `<quoted>` section is
+/// interpreted the same as in the [quote!] macro, but is whitespace sensitive.
 /// This means that `$(foo)` is not the same as `$(foo )` since the latter will
 /// have a space preserved at the end.
 ///
 /// Raw items can be interpolated with `#(<expr>)` or `#<ident>`. Escaping `#`
-/// is done similarly with `##`. Note that [control flow][#control-flow]
-/// is *not* supported inside of quoted strings.
+/// is done similarly with `##`. Note that [control flow](#control-flow) is
+/// *not* supported inside of quoted strings.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -293,8 +301,7 @@ mod token;
 /// # Control Flow
 ///
 /// [quote!] provides some limited mechanisms for control flow inside of the
-/// macro for convenience.
-/// The supported mechanisms are:
+/// macro for convenience. The supported mechanisms are:
 ///
 /// * [Loops](#loops) - `#(for <bindings> in <expr> [join (<quoted>)] => <quoted>)`.
 /// * [Conditionals](#conditionals) - `#(if <pattern> => <quoted>)`.
@@ -305,10 +312,10 @@ mod token;
 /// # Loops
 ///
 /// To repeat a pattern you can use `#(for <bindings> in <expr> { <quoted> })`,
-/// where <expr> is an iterator.
+/// where `<expr>` is an iterator.
 ///
-/// It is also possible to use the more compact
-/// `#(for <bindings> in <expr> => <quoted>)` (note the arrow).
+/// It is also possible to use the more compact `#(for <bindings> in <expr> =>
+/// <quoted>)` (note the arrow).
 ///
 /// `<quoted>` will be treated as a quoted expression, so anything which works
 /// during regular quoting will work here as well, with the addition that
@@ -333,14 +340,14 @@ mod token;
 ///
 /// # Joining Loops
 ///
-/// You can add `join (<quoted>)` to the end of a repitition specification.
+/// You can add `join (<quoted>)` to the end of a repetition.
 ///
 /// The expression specified in `join (<quoted>)` is added _between_ each
 /// element produced by the loop.
 ///
-/// **Note:** The argument to `join` us *whitespace sensitive*, so leading and
-/// trailing is preserved. `join (,)` and `join (, )` would therefore produce
-/// different results.
+/// > *Note:* The argument to `join` is *whitespace sensitive*, so leading and
+/// > trailing is preserved. `join (,)` and `join (, )` would therefore produce
+/// > different results.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -394,8 +401,8 @@ mod token;
 ///
 /// <br>
 ///
-/// The `<else>` branch is optional, so the following is a valid expression that
-/// if `false`, won't result in any tokens:
+/// The `<else>` branch is optional, conditionals which do not have an else
+/// branch and evaluated to `false` won't produce any tokens:
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -420,11 +427,11 @@ mod token;
 ///
 /// # Match Statements
 ///
-/// You can specify a match statement with
-/// `#(match <expr> { [<pattern> => <quoted>,]* }`, where <expr> is an
-/// evaluated expression that is match against each subsequent <pattern>. If a
-/// pattern matches, the arm with the matching `<quoted>` block is evaluated.
-///
+/// You can specify a match expression using `#(match <expr> { [<pattern> =>
+/// <quoted>,]* }`, where `<expr>` is an evaluated expression that is match
+/// against each subsequent `<pattern>`. If a pattern matches, the arm with the
+/// matching `<quoted>` block is evaluated.
+/// 
 /// ```rust
 /// use genco::prelude::*;
 ///
@@ -445,8 +452,9 @@ mod token;
 /// # }
 /// ```
 ///
-/// If a match arm contains parenthesis (`=> (<quoted>)`), the expansion will
-/// be whitespace sensitive. Leading a trailing whitespace will be preserved:
+/// If a match arm contains parenthesis (`=> (<quoted>)`), the expansion will be
+/// *whitespace sensitive*. Allowing leading and trailing whitespace to be
+/// preserved:
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -468,7 +476,7 @@ mod token;
 /// # }
 /// ```
 ///
-/// Example with more complex matching:
+/// The following is an example with more complex matching:
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -503,12 +511,13 @@ mod token;
 ///
 /// # Scopes
 ///
-/// You can use `#(ref <binding> { <expr> })` to gain mutable access to the
-/// active token stream. This is an alternative to existing control flow
-/// operators if you want to run something custom during evaluation.
+/// You can use `#(ref <binding> { <expr> })` to gain access to the current
+/// token stream. This is an alternative to existing control flow operators if
+/// you want to run some custom code during evaluation which is otherwise not
+/// supported. This is called a *scope*.
 ///
-/// For a more compact variant you can omit the braces with
-/// `#(ref <binding> => <expr>)`.
+/// For a more compact variant you can omit the braces with `#(ref <binding> =>
+/// <expr>)`.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -538,9 +547,9 @@ mod token;
 /// The [quote!] macro has the following rules for dealing with indentation and
 /// spacing.
 ///
-/// **Spaces** — Two tokens that are separated, are spaced. Regardless of how
-/// many spaces there are between them. This can also be controlled manually by
-/// inserting the [`#<space>`] escape in the token stream.
+/// **Spaces** — Two tokens that are separated are spaced. Regardless of how
+/// many spaces there are between them. This can be controlled manually by
+/// inserting the [`#<space>`] escape sequence in the token stream.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -571,7 +580,7 @@ mod token;
 /// <br>
 ///
 /// **Line breaking** — Line breaks are detected by leaving two empty lines
-/// between two tokens. This can also be controlled manually by inserting the
+/// between two tokens. This can be controlled manually by inserting the
 /// [`#<line>`] escape in the token stream.
 ///
 /// ```rust
@@ -605,11 +614,12 @@ mod token;
 /// <br>
 ///
 /// **Indentation** — Indentation is determined on a row-by-row basis. If a
-/// column is further in than the one on the preceeding row, it is indented
-/// *one level* deeper.
+/// column is further in than the one on the preceeding row, it is indented *one
+/// level* deeper.
 ///
-/// If a column starts shallower than a previous row, it will be matched against
-/// previously known indentation levels.
+/// If a column starts shallower than a preceeding, non-whitespace only row, it
+/// will be matched against previously known indentation levels. Failure to
+/// match a previously known level is an error.
 ///
 /// All indentations inserted during the macro will be unrolled at the end of
 /// it. So any trailing indentations will be matched by unindentations.
@@ -640,7 +650,7 @@ mod token;
 /// # }
 /// ```
 ///
-/// A mismatched indentation would result in an error:
+/// Example showcasing an indentation mismatch:
 ///
 /// ```rust,compile_fail
 /// use genco::prelude::*;

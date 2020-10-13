@@ -138,7 +138,7 @@
 
 #![doc(html_root_url = "https://docs.rs/genco/0.15.0")]
 #![deny(missing_docs)]
-#![deny(intra_doc_link_resolution_failure)]
+#![deny(broken_intra_doc_links)]
 
 pub use genco_macros::{quote, quote_fn, quote_in};
 
