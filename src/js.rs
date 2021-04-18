@@ -136,7 +136,7 @@ impl<'el> Custom for JavaScript<'el> {
     ) -> fmt::Result {
         let mut toks = Tokens::new();
 
-        if let Some(imports) = Self::imports(&tokens) {
+        if let Some(imports) = JavaScript::imports(&tokens) {
             toks.push(imports);
         }
 

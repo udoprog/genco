@@ -166,7 +166,7 @@ impl<'el> Rust<'el> {
         let mut modules = BTreeSet::new();
 
         for custom in tokens.walk_custom() {
-            Self::walk_custom(&custom, &mut modules);
+            Rust::walk_custom(&custom, &mut modules);
         }
 
         if modules.is_empty() {
