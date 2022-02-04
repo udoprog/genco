@@ -18,6 +18,7 @@ impl Cursor {
     /// Check that the cursor is not a mock cursor.
     ///
     /// See: https://github.com/alexcrichton/proc-macro2/issues/237
+    #[cfg(genco_nightly)]
     pub(crate) fn check_compat(&self) -> syn::Result<()> {
         if self.start.line == 0
             && self.start.column == 0

@@ -2,11 +2,13 @@ use crate::ast::{Ast, Control, ControlKind, Delimiter, MatchArm};
 use crate::cursor::Cursor;
 use crate::requirements::Requirements;
 use crate::static_buffer::StaticBuffer;
-use proc_macro2::{LineColumn, Span, TokenStream};
+use proc_macro2::{LineColumn, Span, TokenStream, TokenTree, Spacing};
 use syn::Result;
+use std::mem;
 
 /// Struct to deal with emitting the necessary spacing.
 pub(crate) struct Encoder<'a> {
+    /// The identifier that received the input.
     receiver: &'a syn::Ident,
     /// Use to modify the initial line/column in case something was processed
     /// before the input was handed off to the quote parser.
@@ -31,6 +33,8 @@ pub(crate) struct Encoder<'a> {
     /// Indicates if the encoder has encountered a string which requires eval
     /// support in the target language.
     pub(crate) requirements: Requirements,
+    /// If the next encoded value is joint or not. This is ignored if whitespace detection is enabled.
+    joint: bool,
 }
 
 impl<'a> Encoder<'a> {
@@ -49,17 +53,30 @@ impl<'a> Encoder<'a> {
             last_start_column: None,
             indents: Vec::new(),
             requirements: Requirements::default(),
+            joint: true,
         }
     }
 
     /// Encode a single item into the encoder.
     pub(crate) fn encode(&mut self, span: Span, cursor: Cursor, ast: Ast) -> Result<()> {
+        #[cfg(genco_nightly)]
         cursor.check_compat()?;
+
+        // NB: only join tokens.
+        self.joint = match &ast {
+            Ast::Tree { tt: TokenTree::Punct(..), .. } => self.joint,
+            _ => false,
+        };
 
         self.step(cursor, span)?;
 
         match ast {
             Ast::Tree { tt, .. } => {
+                self.joint = match &tt {
+                    TokenTree::Punct(p) => matches!(p.spacing(), Spacing::Joint),
+                    __ => false,
+                };
+
                 self.encode_literal(&tt.to_string());
             }
             Ast::String { has_eval, stream } => {
@@ -353,7 +370,27 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
-    /// Insert indentation and spacing if appropriate in the output token stream.
+    /// If we are not in a nightly genco, simply tokenize the output separated
+    /// by spaces.
+    #[cfg(not(genco_nightly))]
+    fn tokenize_whitespace(
+        &mut self,
+        _: LineColumn,
+        _: LineColumn,
+        _: Option<Span>,
+    ) -> Result<()> {
+        if !mem::take(&mut self.joint) {
+            let r = self.receiver;
+            self.item_buffer.flush(&mut self.output);
+            self.output.extend(q::quote!(#r.space();));
+        }
+
+        Ok(())
+    }
+
+    /// If we are in a nightly genco, insert indentation and spacing if
+    /// appropriate in the output token stream.
+    #[cfg(genco_nightly)]
     fn tokenize_whitespace(
         &mut self,
         from: LineColumn,
@@ -423,32 +460,32 @@ impl<'a> Encoder<'a> {
             }
         }
 
-        Ok(())
-    }
-}
+        return Ok(());
+ 
+        fn indentation_error(to_column: usize, from_column: usize, to_span: Option<Span>) -> syn::Error {
+            let error = if to_column > from_column {
+                let len = to_column.saturating_sub(from_column);
 
-fn indentation_error(to_column: usize, from_column: usize, to_span: Option<Span>) -> syn::Error {
-    let error = if to_column > from_column {
-        let len = to_column.saturating_sub(from_column);
+                format!(
+                    "expected {} less {} of indentation",
+                    len,
+                    if len == 1 { "space" } else { "spaces" }
+                )
+            } else {
+                let len = from_column.saturating_sub(to_column);
 
-        format!(
-            "expected {} less {} of indentation",
-            len,
-            if len == 1 { "space" } else { "spaces" }
-        )
-    } else {
-        let len = from_column.saturating_sub(to_column);
+                format!(
+                    "expected {} more {} of indentation",
+                    len,
+                    if len == 1 { "space" } else { "spaces" }
+                )
+            };
 
-        format!(
-            "expected {} more {} of indentation",
-            len,
-            if len == 1 { "space" } else { "spaces" }
-        )
-    };
-
-    if let Some(span) = to_span {
-        syn::Error::new(span, error)
-    } else {
-        syn::Error::new(Span::call_site(), error)
+            if let Some(span) = to_span {
+                syn::Error::new(span, error)
+            } else {
+                syn::Error::new(Span::call_site(), error)
+            }
+        }
     }
 }
