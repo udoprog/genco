@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0]
+
+### Changed
+* Add basic support for using genco to tokenize on stable ([#20]).
+
 ## [0.15.1]
 
 ### Fixed
@@ -34,7 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#14]: https://github.com/udoprog/genco/issues/14
 [#13]: https://github.com/udoprog/genco/issues/13
 [#12]: https://github.com/udoprog/genco/issues/12
+[#20]: https://github.com/udoprog/genco/issues/20
 
-[0.15.1]: https://github.com/udoprog/genco/compare/0.15.0...0.15.1
+[0.16.0]: https://github.com/udoprog/genco/compare/0.15.0...0.16.0
 [0.15.0]: https://github.com/udoprog/genco/compare/0.14.2...0.15.0
-[Unreleased]: https://github.com/udoprog/genco/compare/0.15.1...master
+[0.15.1]: https://github.com/udoprog/genco/compare/0.15.0...0.15.1
+[0.16.0]: https://github.com/udoprog/genco/compare/0.15.1...0.16.0
+[Unreleased]: https://github.com/udoprog/genco/compare/0.16.0...master
