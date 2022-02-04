@@ -633,7 +633,7 @@ where
     /// # }
     /// ```
     pub fn format_file(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result {
-        L::format_file(self, out, &config)?;
+        L::format_file(self, out, config)?;
         out.write_trailing_line()?;
         Ok(())
     }

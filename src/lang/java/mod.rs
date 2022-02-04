@@ -198,7 +198,7 @@ impl Java {
                 continue;
             }
 
-            if Some(&*package) == file_package.as_deref() {
+            if Some(&*package) == file_package {
                 continue;
             }
 

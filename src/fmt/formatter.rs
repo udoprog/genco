@@ -167,9 +167,9 @@ impl<'a> Formatter<'a> {
                 Item::Indentation(0) => (),
                 Item::Literal(literal) => {
                     if *in_quote {
-                        L::write_quoted(self, &literal)?;
+                        L::write_quoted(self, literal)?;
                     } else {
-                        self.write_str(&literal)?;
+                        self.write_str(literal)?;
                     }
                 }
                 Item::OpenQuote(e) if !*in_quote => {
