@@ -1,4 +1,4 @@
-name: Rust
+name: CI
 
 on: [push, pull_request]
 
@@ -12,4 +12,8 @@ jobs:
         toolchain: nightly
         override: true
     - run: cargo test
+      env:
+        RUSTFLAGS: --cfg genco_nightly
     - run: cargo test --manifest-path=genco-macros/Cargo.toml
+      env:
+        RUSTFLAGS: --cfg genco_nightly

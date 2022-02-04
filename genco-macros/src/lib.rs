@@ -24,6 +24,10 @@ mod token;
 ///
 /// It provides a flexible and intuitive mechanism for efficiently generating
 /// beautiful code directly inside of Rust.
+/// 
+/// > Note that this macro **is only whitespace sensitive** if the
+/// > `genco_nightly` configuration flag is enabled, and you are building on a
+/// > nightly compiler. See the [main genco documentation] for more information.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -120,6 +124,7 @@ mod token;
 /// ```
 ///
 /// [FormatInto]: https://docs.rs/genco/0/genco/tokens/trait.FormatInto.html
+/// [main genco documentation]: https://docs.rs/genco
 ///
 /// <br>
 ///
