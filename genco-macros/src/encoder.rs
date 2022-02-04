@@ -4,7 +4,6 @@ use crate::requirements::Requirements;
 use crate::static_buffer::StaticBuffer;
 use proc_macro2::{LineColumn, Span, TokenStream, TokenTree, Spacing};
 use syn::Result;
-use std::mem;
 
 /// Struct to deal with emitting the necessary spacing.
 pub(crate) struct Encoder<'a> {
@@ -379,6 +378,8 @@ impl<'a> Encoder<'a> {
         _: LineColumn,
         _: Option<Span>,
     ) -> Result<()> {
+        use std::mem;
+
         if !mem::take(&mut self.joint) {
             let r = self.receiver;
             self.item_buffer.flush(&mut self.output);
