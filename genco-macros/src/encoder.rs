@@ -61,21 +61,11 @@ impl<'a> Encoder<'a> {
         #[cfg(genco_nightly)]
         cursor.check_compat()?;
 
-        // NB: only join tokens.
-        self.joint = match &ast {
-            Ast::Tree { tt: TokenTree::Punct(..), .. } => self.joint,
-            _ => false,
-        };
-
         self.step(cursor, span)?;
 
         match ast {
             Ast::Tree { tt, .. } => {
-                self.joint = match &tt {
-                    TokenTree::Punct(p) => matches!(p.spacing(), Spacing::Joint),
-                    __ => false,
-                };
-
+                self.joint = matches!(&tt, TokenTree::Punct(p) if matches!(p.spacing(), Spacing::Joint));
                 self.encode_literal(&tt.to_string());
             }
             Ast::String { has_eval, stream } => {

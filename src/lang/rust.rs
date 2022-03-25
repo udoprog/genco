@@ -140,6 +140,7 @@ impl_lang! {
 /// Format state for Rust.
 #[derive(Debug, Default)]
 pub struct Format {}
+
 /// Language configuration for Rust.
 #[derive(Debug)]
 pub struct Config {
