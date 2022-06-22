@@ -15,7 +15,6 @@ use crate::lang::{Lang, LangSupportsEval};
 use crate::tokens::{FormatInto, Item, Register};
 use std::cmp;
 use std::iter::FromIterator;
-use std::marker::PhantomData;
 use std::mem;
 use std::slice;
 use std::vec;
@@ -61,7 +60,6 @@ where
     /// This makes up a singly-linked list over all language items that you can
     /// follow.
     last_lang_item: usize,
-    _marker: PhantomData<L>,
 }
 
 impl<L> Tokens<L>
@@ -83,7 +81,6 @@ where
         Tokens {
             items: Vec::new(),
             last_lang_item: 0,
-            _marker: PhantomData,
         }
     }
 
@@ -102,7 +99,6 @@ where
         Tokens {
             items: Vec::with_capacity(cap),
             last_lang_item: 0,
-            _marker: PhantomData,
         }
     }
 
