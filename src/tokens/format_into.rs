@@ -1,5 +1,6 @@
 use crate::lang::Lang;
 use crate::tokens::{Item, ItemStr, Tokens};
+use std::fmt::Arguments;
 use std::rc::Rc;
 
 /// Trait for types that can be formatted in-place into a token stream.
@@ -276,6 +277,29 @@ where
 {
     fn format_into(self, tokens: &mut Tokens<L>) {
         tokens.item(Item::Literal(ItemStr::from(self.clone())));
+    }
+}
+
+/// Implementation for [Arguments] which allows for arbitrary and efficient
+/// literal formatting.
+///
+/// # Examples
+///
+/// ```rust
+/// use genco::prelude::*;
+///
+/// let name = "John";
+/// let result: Tokens = quote!(#(format_args!("Hello {name}")));
+///
+/// assert_eq!("Hello John", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+impl<'a, L> FormatInto<L> for Arguments<'a>
+where
+    L: Lang,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        tokens.item(Item::Literal(ItemStr::from(self.to_string())));
     }
 }
 
