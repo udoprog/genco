@@ -6,11 +6,11 @@ fn main() -> anyhow::Result<()> {
 
     let tokens = quote! {
         print_greeting(String name) {
-            print(#_(Hello $(name)));
+            print($[str](Hello $(name)));
         }
 
-        #hash_map<int, String> map() {
-            return new #hash_map<int, String>();
+        $hash_map<int, String> map() {
+            return new $hash_map<int, String>();
         }
     };
 

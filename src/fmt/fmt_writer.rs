@@ -13,7 +13,7 @@ use crate::fmt;
 /// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens: rust::Tokens = quote! {
-///     let mut m = #map::new();
+///     let mut m = $map::new();
 ///     m.insert(1u32, 2u32);
 /// };
 ///

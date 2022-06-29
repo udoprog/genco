@@ -59,7 +59,7 @@ where
 /// let foo = Item::Literal(ItemStr::Static("foo"));
 /// let bar = Item::Literal(ItemStr::Box("bar".into()));
 ///
-/// let result: Tokens = quote!(#foo #bar baz);
+/// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 ///

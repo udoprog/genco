@@ -1,5 +1,7 @@
 //! Helper to parse quoted strings.
 
+use crate::ast::LiteralName;
+use crate::quote::parse_internal_function;
 use crate::requirements::Requirements;
 use proc_macro2::{LineColumn, Span, TokenStream, TokenTree};
 use syn::parse::ParseStream;
@@ -134,21 +136,6 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
-    /// Extend the content of the string with the given raw identifier.
-    pub(crate) fn raw_ident(
-        &mut self,
-        ident: &syn::Ident,
-        from: LineColumn,
-        to: Option<LineColumn>,
-    ) -> Result<()> {
-        self.flush(Some(from), to)?;
-        let receiver = self.receiver;
-        self.stream.extend(q::quote! {
-            #receiver.append(#ident);
-        });
-        Ok(())
-    }
-
     pub(crate) fn extend_tt(
         &mut self,
         tt: &TokenTree,
@@ -237,51 +224,48 @@ impl<'a> StringParser<'a> {
                 continue;
             }
 
-            if input.peek(syn::Token![#]) && input.peek2(syn::Token![#]) {
-                let start = input.parse::<syn::Token![#]>()?;
-                let escape = input.parse::<syn::Token![#]>()?;
-                encoder.encode_char('#', start.span().start(), escape.span().end())?;
-                continue;
-            }
-
             if input.peek(syn::Token![$]) {
-                let hash = input.parse::<syn::Token![$]>()?;
+                if let Some((name, content, [start, end])) = parse_internal_function(input)? {
+                    match (name.as_literal_name(), content) {
+                        (LiteralName::Ident("const"), Some(content)) => {
+                            // Compile-time string optimization. A single,
+                            // enclosed literal string can be added to the
+                            // existing static buffer.
+                            if content.peek(syn::LitStr) && content.peek2(crate::token::Eof) {
+                                let s = content.parse::<syn::LitStr>()?;
+                                encoder.encode_str(&s.value(), start.start(), Some(end.end()))?;
+                            } else {
+                                let expr = content.parse::<syn::Expr>()?;
+                                encoder.raw_expr(&expr, start.start(), Some(end.end()))?;
+                            }
+                        }
+                        (literal_name, _) => {
+                            return Err(syn::Error::new(
+                                name.span(),
+                                format!(
+                                    "Unsupported [str] function {literal_name}, expected one of: const"
+                                ),
+                            ));
+                        }
+                    }
+                } else {
+                    let dollar = input.parse::<syn::Token![$]>()?;
+                    let [start] = dollar.spans;
 
-                if input.peek(token::Paren) {
+                    if !input.peek(token::Paren) {
+                        let ident = input.parse::<syn::Ident>()?;
+                        encoder.eval_ident(&ident, start.start(), Some(ident.span().end()))?;
+                        continue;
+                    }
+
                     let content;
-                    let paren = syn::parenthesized!(content in input);
+                    let end = syn::parenthesized!(content in input).span;
+
                     let (req, stream) = crate::quote::Quote::new(self.receiver)
-                        .with_span(paren.span)
+                        .with_span(content.span())
                         .parse(&content)?;
                     requirements.merge_with(req);
-                    encoder.eval_stream(stream, hash.span().start(), Some(paren.span.end()))?;
-                } else {
-                    let ident = input.parse::<syn::Ident>()?;
-                    encoder.eval_ident(&ident, hash.span().start(), Some(ident.span().end()))?;
-                };
-
-                continue;
-            }
-
-            if input.peek(syn::Token![#]) {
-                let hash = input.parse::<syn::Token![#]>()?;
-
-                if !input.peek(token::Paren) {
-                    let ident = input.parse::<syn::Ident>()?;
-                    encoder.raw_ident(&ident, hash.span().start(), Some(ident.span().end()))?;
-                    continue;
-                }
-
-                let content;
-                let paren = syn::parenthesized!(content in input);
-
-                // Literal string optimization. A single, enclosed literal string can be added to the existing static buffer.
-                if content.peek(syn::LitStr) && content.peek2(crate::token::Eof) {
-                    let s = content.parse::<syn::LitStr>()?;
-                    encoder.encode_str(&s.value(), hash.span().start(), Some(paren.span.end()))?;
-                } else {
-                    let expr = content.parse::<syn::Expr>()?;
-                    encoder.raw_expr(&expr, hash.span().start(), Some(paren.span.end()))?;
+                    encoder.eval_stream(stream, start.start(), Some(end.end()))?;
                 }
 
                 continue;

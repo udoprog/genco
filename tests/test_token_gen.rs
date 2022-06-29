@@ -10,7 +10,7 @@ fn test_token_gen() {
         foo
         bar
         baz
-            #(ref tokens => quote_in! { *tokens => hello })
+            $(ref tokens => quote_in! { *tokens => hello })
         out?
     };
 
@@ -33,7 +33,7 @@ fn test_token_gen() {
 #[test]
 fn test_iterator_gen() {
     let tokens: rust::Tokens = quote! {
-        #(ref t => for n in 0..3 {
+        $(ref t => for n in 0..3 {
             t.push();
             t.append(n);
         })
@@ -52,7 +52,7 @@ fn test_iterator_gen() {
     };
 
     let tokens: rust::Tokens = quote! {
-        #(ref t {
+        $(ref t {
             for n in 0..3 {
                 t.push();
                 t.append(n);
@@ -81,7 +81,7 @@ fn test_tricky_continuation() {
 
     quote_in! {
         &mut output =>
-        foo, #(ref output {
+        foo, $(ref output {
             output.append(&bar);
             output.append(Static(","));
             output.space();
@@ -153,7 +153,7 @@ fn test_indentation() {
 #[test]
 fn test_repeat() {
     let tokens: rust::Tokens = quote! {
-        foo #(for (a, b) in (0..3).zip(3..6) => #a #b)
+        foo $(for (a, b) in (0..3).zip(3..6) => $a $b)
     };
 
     assert_eq! {
@@ -174,7 +174,7 @@ fn test_repeat() {
     };
 
     let tokens: rust::Tokens = quote! {
-        foo #(for (a, b) in (0..3).zip(3..6) { #a #b })
+        foo $(for (a, b) in (0..3).zip(3..6) { $a $b })
     };
 
     assert_eq! {
@@ -198,7 +198,7 @@ fn test_repeat() {
 #[test]
 fn test_tight_quote() {
     let output: rust::Tokens = quote! {
-        You are:#("fine")
+        You are:$("fine")
     };
 
     assert_eq! {
@@ -214,7 +214,7 @@ fn test_tight_quote() {
 #[test]
 fn test_tight_repitition() {
     let output: rust::Tokens = quote! {
-        You are: #(for v in 0..3 join (, ) => #v)
+        You are: $(for v in 0..3 join (, ) => $v)
     };
 
     assert_eq! {
@@ -241,13 +241,13 @@ fn test_if() {
     let b = false;
 
     let output: rust::Tokens = quote! {
-        #(if a => foo)
-        #(if a { foo2 })
-        #(if b { bar })
-        #(if b => bar2)
-        #(if a => baz)
-        #(if a { baz2 })
-        #(if b { not_biz } else { biz })
+        $(if a => foo)
+        $(if a { foo2 })
+        $(if b { bar })
+        $(if b => bar2)
+        $(if a => baz)
+        $(if a { baz2 })
+        $(if b { not_biz } else { biz })
     };
 
     assert_eq! {
@@ -275,19 +275,19 @@ fn test_match() {
 
     fn test(alt: Alt) -> rust::Tokens {
         quote! {
-            #(match alt { Alt::A => a, Alt::B => b })
+            $(match alt { Alt::A => a, Alt::B => b })
         }
     }
 
     fn test2(alt: Alt) -> rust::Tokens {
         quote! {
-            #(match alt { Alt::A => { a }, Alt::B => { b } })
+            $(match alt { Alt::A => { a }, Alt::B => { b } })
         }
     }
 
     fn test2_cond(alt: Alt, cond: bool) -> rust::Tokens {
         quote! {
-            #(match alt { Alt::A if cond => { a }, _ => { b } })
+            $(match alt { Alt::A if cond => { a }, _ => { b } })
         }
     }
 
@@ -327,7 +327,7 @@ fn test_empty_loop_whitespace() {
     // Bug: This should generate two commas. But did generate a space following
     // it!
     let tokens: rust::Tokens = quote! {
-        #(for _ in 0..3 join(,) =>)
+        $(for _ in 0..3 join(,) =>)
     };
 
     assert_eq! {
@@ -336,7 +336,7 @@ fn test_empty_loop_whitespace() {
     };
 
     let tokens: rust::Tokens = quote! {
-        #(for _ in 0..3 join( ,) =>)
+        $(for _ in 0..3 join( ,) =>)
     };
 
     assert_eq! {
@@ -345,7 +345,7 @@ fn test_empty_loop_whitespace() {
     };
 
     let tokens: rust::Tokens = quote! {
-          #(for _ in 0..3 join(, ) =>)
+          $(for _ in 0..3 join(, ) =>)
     };
 
     assert_eq! {
@@ -354,7 +354,7 @@ fn test_empty_loop_whitespace() {
     };
 
     let tokens: rust::Tokens = quote! {
-          #(for _ in 0..3 join( , ) =>)
+          $(for _ in 0..3 join( , ) =>)
     };
 
     assert_eq! {
@@ -367,7 +367,7 @@ fn test_empty_loop_whitespace() {
 fn test_indentation_empty() {
     let tokens: rust::Tokens = quote! {
         a
-            #(for _ in 0..3 =>)
+            $(for _ in 0..3 =>)
         b
     };
 
@@ -381,7 +381,7 @@ fn test_indentation_empty() {
 
     let tokens: rust::Tokens = quote! {
         a
-            #(if false {})
+            $(if false {})
         b
     };
 
@@ -395,7 +395,7 @@ fn test_indentation_empty() {
 
     let tokens: rust::Tokens = quote! {
         a
-            #(ref _tokens =>)
+            $(ref _tokens =>)
         b
     };
 
@@ -443,9 +443,9 @@ fn test_indentation_management() {
             if b:
                 foo
 
-        #(if false => bar)
+        $(if false => bar)
 
-        #(if true => baz)
+        $(if true => baz)
     };
 
     assert_eq! {
@@ -514,7 +514,7 @@ fn test_lines() -> fmt::Result {
     tokens.line();
 
     quote_in! { tokens =>
-        #(if false =>)
+        $(if false =>)
         fn bar() {
         }
     };

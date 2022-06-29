@@ -37,8 +37,8 @@ use std::fmt;
 /// let foo = Foo(());
 ///
 /// let tokens = quote! {
-///     let mut m = #map::<u32, &str>::new();
-///     m.insert(0, #(display(&foo)));
+///     let mut m = $map::<u32, &str>::new();
+///     m.insert(0, $(display(&foo)));
 /// };
 ///
 /// assert_eq!(

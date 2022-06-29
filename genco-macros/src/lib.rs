@@ -24,7 +24,7 @@ mod token;
 ///
 /// It provides a flexible and intuitive mechanism for efficiently generating
 /// beautiful code directly inside of Rust.
-/// 
+///
 /// > Note that this macro **is only whitespace sensitive** if the
 /// > `genco_nightly` configuration flag is enabled, and you are building on a
 /// > nightly compiler. See the [main genco documentation] for more information.
@@ -37,11 +37,11 @@ mod token;
 ///
 /// let tokens: dart::Tokens = quote! {
 ///     print_greeting(String name) {
-///         print(#_(Hello $(name)));
+///         print($[str](Hello $(name)));
 ///     }
 ///
-///     #hash_map<int, String> map() {
-///         return new #hash_map<int, String>();
+///     $hash_map<int, String> map() {
+///         return new $hash_map<int, String>();
 ///     }
 /// };
 ///
@@ -54,7 +54,7 @@ mod token;
 ///
 /// Variables are interpolated using `#`, so to include the variable `test`, you
 /// would write `#test`. Interpolated variables must implement [FormatInto].
-/// Expressions can be interpolated with `#(<expr>)`.
+/// Expressions can be interpolated with `$(<expr>)`.
 ///
 /// > *Note:* The `#` punctuation itself can be escaped by repeating it twice.
 /// > So `##` would produce a single `#` token.
@@ -67,7 +67,7 @@ mod token;
 ///
 /// let tokens: rust::Tokens = quote! {
 ///     struct Quoted {
-///         field: #hash_map<u32, u32>,
+///         field: $hash_map<u32, u32>,
 ///     }
 /// };
 ///
@@ -87,7 +87,7 @@ mod token;
 ///
 /// <br>
 ///
-/// The following is an expression interpolated with `#(<expr>)`.
+/// The following is an expression interpolated with `$(<expr>)`.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -95,7 +95,7 @@ mod token;
 /// # fn main() -> genco::fmt::Result {
 ///
 /// let tokens: genco::Tokens = quote! {
-///     hello #("world".to_uppercase())
+///     hello $("world".to_uppercase())
 /// };
 ///
 /// assert_eq!("hello WORLD", tokens.to_string()?);
@@ -117,7 +117,7 @@ mod token;
 /// fn age_fn(age: &str) -> Result<rust::Tokens, Box<dyn Error>> {
 ///     Ok(quote! {
 ///         fn age() {
-///             println!("You are {} years old!", #(str::parse::<u32>(age)?));
+///             println!("You are {} years old!", $(str::parse::<u32>(age)?));
 ///         }
 ///     })
 /// }
@@ -135,19 +135,19 @@ mod token;
 ///
 /// `quote!` trims any trailing and leading whitespace that it sees. So
 /// `quote!(Hello )` is the same as `quote!(Hello)`. To include a space at the
-/// end, we can use the special `#<space>` escape sequence:
-/// `quote!(Hello#<space>)`.
+/// end, we can use the special `$[' ']` escape sequence:
+/// `quote!(Hello$[' '])`.
 ///
 /// The available escape sequences are:
 ///
-/// * `#<space>` — Inserts a space between tokens. This corresponds to the
+/// * `$[' ']` — Inserts spacing between tokens. This corresponds to the
 ///   [Tokens::space] function.
 ///
-/// * `#<push>` — Inserts a push operation. Push operations makes sure that
+/// * `$['\r']` — Inserts a push operation. Push operations makes sure that
 ///   any following tokens are on their own dedicated line. This corresponds to
 ///   the [Tokens::push] function.
 ///
-/// * `#<line>` — Inserts a forced line. Line operations makes sure that any
+/// * `$['\n']` — Inserts a forced line. Line operations makes sure that any
 ///   following tokens have an empty line separating them. This corresponds to
 ///   the [Tokens::line] function.
 ///
@@ -157,7 +157,7 @@ mod token;
 /// # fn main() -> genco::fmt::Result {
 /// let numbers = 3..=5;
 ///
-/// let tokens: Tokens<()> = quote!(foo#<push>bar#<line>baz#<space>biz);
+/// let tokens: Tokens<()> = quote!(foo$['\r']bar$['\n']baz$[' ']biz);
 ///
 /// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string()?);
 /// # Ok(())
@@ -183,9 +183,9 @@ mod token;
 /// # fn main() -> genco::fmt::Result {
 /// let tokens: java::Tokens = quote! {
 ///     "hello world 😊"
-///     #(quoted("hello world 😊"))
-///     #("\"hello world 😊\"")
-///     #_(hello world #("😊"))
+///     $(quoted("hello world 😊"))
+///     $("\"hello world 😊\"")
+///     $[str](hello world $[const]("😊"))
 /// };
 ///
 /// assert_eq!(
@@ -213,7 +213,7 @@ mod token;
 ///   entirely.
 /// * Finally the fourth one is an interpolated string. They are really neat,
 ///   and will be covered more in the next section. It's worth noting that
-///   `#("😊")` is used, because 😊 is not a valid identifier in Rust. So this
+///   `$("😊")` is used, because 😊 is not a valid identifier in Rust. So this
 ///   example showcases how strings can be directly embedded in an
 ///   interpolation.
 ///
@@ -224,9 +224,9 @@ mod token;
 /// # fn main() -> genco::fmt::Result {
 /// # let tokens: rust::Tokens = quote! {
 /// #     "hello world 😊"
-/// #     #(quoted("hello world 😊"))
-/// #     #("\"hello world 😊\"")
-/// #     #_(hello world #("😊"))
+/// #     $(quoted("hello world 😊"))
+/// #     $("\"hello world 😊\"")
+/// #     $[str](hello world $[const]("😊"))
 /// # };
 /// #
 /// use genco::tokens::{Item, ItemStr};
@@ -266,9 +266,23 @@ mod token;
 /// * Dart - With [interpolated strings] like `"Hello $a"` or `"Hello ${a +
 ///   b}"`.
 ///
-/// The [quote!] macro supports this through `#_(<content>)`. This will produce
-/// literal strings with the appropriate language-specific quoting and string
-/// interpolation formats used.
+/// The [quote!] macro supports this through `$[str](<content>)`. This will
+/// produce literal strings with the appropriate language-specific quoting and
+/// string interpolation formats used.
+///
+/// Components of the string are runtime evaluated with the typical variable
+/// escape sequences `$ident`, `$(<expr>)`. In order to interpolate the string
+/// at compile time we can instead make use of `$[const](<content>)` like you can see with the smile below:
+///
+/// ```
+/// use genco::prelude::*;
+///
+/// let smile = "😊";
+///
+/// let t: js::Tokens = quote!($[str](Hello $[const](smile) $world));
+/// assert_eq!("`Hello 😊 ${world}`", t.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
 ///
 /// Interpolated values are specified with `$(<quoted>)`. And `$` itself is
 /// escaped by repeating it twice through `$$`. The `<quoted>` section is
@@ -276,23 +290,19 @@ mod token;
 /// This means that `$(foo)` is not the same as `$(foo )` since the latter will
 /// have a space preserved at the end.
 ///
-/// Raw items can be interpolated with `#(<expr>)` or `#<ident>`. Escaping `#`
-/// is done similarly with `##`. Note that [control flow](#control-flow) is
-/// *not* supported inside of quoted strings.
-///
 /// ```rust
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let smile = "😊";
 ///
-/// let t: dart::Tokens = quote!(#_(Hello #smile $(world)));
+/// let t: dart::Tokens = quote!($[str](Hello $[const](smile) $(world)));
 /// assert_eq!("\"Hello 😊 $world\"", t.to_string()?);
 ///
-/// let t: dart::Tokens = quote!(#_(Hello #smile $(a + b)));
+/// let t: dart::Tokens = quote!($[str](Hello $[const](smile) $(a + b)));
 /// assert_eq!("\"Hello 😊 ${a + b}\"", t.to_string()?);
 ///
-/// let t: js::Tokens = quote!(#_(Hello #smile $(world)));
+/// let t: js::Tokens = quote!($[str](Hello $[const](smile) $(world)));
 /// assert_eq!("`Hello 😊 ${world}`", t.to_string()?);
 /// # Ok(())
 /// # }
@@ -308,18 +318,18 @@ mod token;
 /// [quote!] provides some limited mechanisms for control flow inside of the
 /// macro for convenience. The supported mechanisms are:
 ///
-/// * [Loops](#loops) - `#(for <bindings> in <expr> [join (<quoted>)] => <quoted>)`.
-/// * [Conditionals](#conditionals) - `#(if <pattern> => <quoted>)`.
-/// * [Match Statements](#match-statements) - `#(match <expr> { [<pattern> => <quoted>,]* })`.
+/// * [Loops](#loops) - `$(for <bindings> in <expr> [join (<quoted>)] => <quoted>)`.
+/// * [Conditionals](#conditionals) - `$(if <pattern> => <quoted>)`.
+/// * [Match Statements](#match-statements) - `$(match <expr> { [<pattern> => <quoted>,]* })`.
 ///
 /// <br>
 ///
 /// # Loops
 ///
-/// To repeat a pattern you can use `#(for <bindings> in <expr> { <quoted> })`,
+/// To repeat a pattern you can use `$(for <bindings> in <expr> { <quoted> })`,
 /// where `<expr>` is an iterator.
 ///
-/// It is also possible to use the more compact `#(for <bindings> in <expr> =>
+/// It is also possible to use the more compact `$(for <bindings> in <expr> =>
 /// <quoted>)` (note the arrow).
 ///
 /// `<quoted>` will be treated as a quoted expression, so anything which works
@@ -333,7 +343,7 @@ mod token;
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
-///     Your numbers are: #(for n in numbers => #n#<space>)
+///     Your numbers are: $(for n in numbers => $n$[' '])
 /// };
 ///
 /// assert_eq!("Your numbers are: 3 4 5", tokens.to_string()?);
@@ -361,7 +371,7 @@ mod token;
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
-///     Your numbers are: #(for n in numbers join (, ) => #n).
+///     Your numbers are: $(for n in numbers join (, ) => $n).
 /// };
 ///
 /// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string()?);
@@ -375,12 +385,12 @@ mod token;
 ///
 /// # Conditionals
 ///
-/// You can specify a conditional with `#(if <pattern> => <then>)` where
+/// You can specify a conditional with `$(if <pattern> => <then>)` where
 /// <pattern> is an pattern or expression evaluating to a `bool`, and `<then>`
 /// is a quoted expressions.
 ///
 /// It's also possible to specify a condition with an else branch, by using
-/// `#(if <pattern> { <then> } else { <else> })`. `<else>` is also a quoted
+/// `$(if <pattern> { <then> } else { <else> })`. `<else>` is also a quoted
 /// expression.
 ///
 /// ```rust
@@ -388,10 +398,10 @@ mod token;
 ///
 /// # fn main() -> genco::fmt::Result {
 /// fn greeting(hello: bool, name: &str) -> Tokens<()> {
-///     quote!(Custom Greeting: #(if hello {
-///         Hello #name
+///     quote!(Custom Greeting: $(if hello {
+///         Hello $name
 ///     } else {
-///         Goodbye #name
+///         Goodbye $name
 ///     }))
 /// }
 ///
@@ -414,8 +424,8 @@ mod token;
 ///
 /// # fn main() -> genco::fmt::Result {
 /// fn greeting(hello: bool, name: &str) -> Tokens<()> {
-///     quote!(Custom Greeting:#(if hello {
-///         #<space>Hello #name
+///     quote!(Custom Greeting:$(if hello {
+///         $[' ']Hello $name
 ///     }))
 /// }
 ///
@@ -432,19 +442,19 @@ mod token;
 ///
 /// # Match Statements
 ///
-/// You can specify a match expression using `#(match <expr> { [<pattern> =>
+/// You can specify a match expression using `$(match <expr> { [<pattern> =>
 /// <quoted>,]* }`, where `<expr>` is an evaluated expression that is match
 /// against each subsequent `<pattern>`. If a pattern matches, the arm with the
 /// matching `<quoted>` block is evaluated.
-/// 
+///
 /// ```rust
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
 /// fn greeting(name: &str) -> Tokens<()> {
-///     quote!(Hello #(match name {
-///         "John" | "Jane" => #("Random Stranger"),
-///         other => #other,
+///     quote!(Hello $(match name {
+///         "John" | "Jane" => $("Random Stranger"),
+///         other => $other,
 ///     }))
 /// }
 ///
@@ -466,9 +476,9 @@ mod token;
 ///
 /// # fn main() -> genco::fmt::Result {
 /// fn greeting(name: &str) -> Tokens<()> {
-///     quote!(Hello#(match name {
-///         "John" | "Jane" => ( #("Random Stranger")),
-///         other => ( #other),
+///     quote!(Hello$(match name {
+///         "John" | "Jane" => ( $("Random Stranger")),
+///         other => ( $other),
 ///     }))
 /// }
 ///
@@ -493,10 +503,10 @@ mod token;
 /// }
 ///
 /// fn greeting(name: Greeting) -> Tokens<()> {
-///     quote!(Hello #(match name {
-///         Greeting::Named("John") | Greeting::Named("Jane") => #("Random Stranger"),
-///         Greeting::Named(other) => #other,
-///         Greeting::Unknown => #("Unknown Person"),
+///     quote!(Hello $(match name {
+///         Greeting::Named("John") | Greeting::Named("Jane") => $("Random Stranger"),
+///         Greeting::Named(other) => $other,
+///         Greeting::Unknown => $("Unknown Person"),
 ///     }))
 /// }
 ///
@@ -516,12 +526,12 @@ mod token;
 ///
 /// # Scopes
 ///
-/// You can use `#(ref <binding> { <expr> })` to gain access to the current
+/// You can use `$(ref <binding> { <expr> })` to gain access to the current
 /// token stream. This is an alternative to existing control flow operators if
 /// you want to run some custom code during evaluation which is otherwise not
 /// supported. This is called a *scope*.
 ///
-/// For a more compact variant you can omit the braces with `#(ref <binding> =>
+/// For a more compact variant you can omit the braces with `$(ref <binding> =>
 /// <expr>)`.
 ///
 /// ```rust
@@ -530,7 +540,7 @@ mod token;
 /// # fn main() -> genco::fmt::Result {
 /// fn quote_greeting(surname: &str, lastname: Option<&str>) -> rust::Tokens {
 ///     quote! {
-///         Hello #surname#(ref toks {
+///         Hello $surname$(ref toks {
 ///             if let Some(lastname) = lastname {
 ///                 toks.space();
 ///                 toks.append(lastname);
@@ -554,7 +564,7 @@ mod token;
 ///
 /// **Spaces** — Two tokens that are separated are spaced. Regardless of how
 /// many spaces there are between them. This can be controlled manually by
-/// inserting the [`#<space>`] escape sequence in the token stream.
+/// inserting the [`$[' ']`] escape sequence in the token stream.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -586,7 +596,7 @@ mod token;
 ///
 /// **Line breaking** — Line breaks are detected by leaving two empty lines
 /// between two tokens. This can be controlled manually by inserting the
-/// [`#<line>`] escape in the token stream.
+/// [`$['\n']`] escape in the token stream.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -678,8 +688,8 @@ mod token;
 ///    |         ^^^^^^^
 /// ```
 ///
-/// [`#<space>`]: #escape-sequences
-/// [`#<line>`]: #escape-sequences
+/// [`$[' ']`]: #escape-sequences
+/// [`$['\n']`]: #escape-sequences
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let receiver = &syn::Ident::new("__genco_macros_toks", Span::call_site());
@@ -762,7 +772,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// let tokens: rust::Tokens = quote! {
 ///     fn foo(v: bool) -> u32 {
-///         #(ref out {
+///         $(ref out {
 ///             quote_in! { *out =>
 ///                 if v {
 ///                     1
@@ -813,8 +823,8 @@ pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// };
 ///
 /// let tokens: rust::Tokens = quote!{
-///     #f1
-///     #f2
+///     $f1
+///     $f2
 /// };
 ///
 /// assert_eq!{
@@ -836,19 +846,19 @@ pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// # fn main() -> genco::fmt::Result {
 /// fn greeting(name: &str) -> impl FormatInto<Rust> + '_ {
 ///     quote_fn! {
-///         println!(#_(Hello #name))
+///         println!($[str](Hello $[const](name)))
 ///     }
 /// }
 ///
 /// fn advanced_greeting<'a>(first: &'a str, last: &'a str) -> impl FormatInto<Rust> + 'a {
 ///     quote_fn! {
-///         println!(#_(Hello #first #last))
+///         println!($[str](Hello $[const](first) $[const](last)))
 ///     }
 /// }
 ///
 /// let tokens = quote! {
-///     #(greeting("Mio"));
-///     #(advanced_greeting("Jane", "Doe"));
+///     $(greeting("Mio"));
+///     $(advanced_greeting("Jane", "Doe"));
 /// };
 ///
 /// assert_eq!{

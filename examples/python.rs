@@ -5,7 +5,7 @@ fn main() -> anyhow::Result<()> {
     let flask = &python::import("flask", "Flask");
 
     let tokens = quote! {
-        app = #flask(__name__)
+        app = $flask(__name__)
 
         @app.route('/')
         def hello():

@@ -71,7 +71,7 @@ impl_lang! {
             let mut header = Tokens::new();
 
             if let Some(ref package) = config.package {
-                quote_in!(header => package #package;);
+                quote_in!(header => package $package;);
                 header.line();
             }
 
@@ -129,7 +129,7 @@ impl Config {
     /// # fn main() -> genco::fmt::Result {
     /// let optional = java::import("java.util", "Optional");
     ///
-    /// let toks = quote!(#optional);
+    /// let toks = quote!($optional);
     ///
     /// let config = java::Config::default().with_package("java.util");
     /// let fmt = fmt::Config::from_lang::<Java>();
@@ -202,7 +202,7 @@ impl Java {
                 continue;
             }
 
-            out.append(quote!(import #(package.clone())#(SEP)#(name.clone());));
+            out.append(quote!(import $(package.clone())$(SEP)$(name.clone());));
             out.push();
 
             imported.insert(name.to_string(), package.to_string());
@@ -224,8 +224,8 @@ impl Java {
 /// let a = java::import("java.io", "A");
 ///
 /// let toks = quote! {
-///     #integer
-///     #a
+///     $integer
+///     $a
 /// };
 ///
 /// assert_eq!(
@@ -261,9 +261,9 @@ where
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(java::block_comment(vec!["first line", "second line"]))
-///     #(java::block_comment(iter::empty::<&str>()))
-///     #(java::block_comment(vec!["third line"]))
+///     $(java::block_comment(vec!["first line", "second line"]))
+///     $(java::block_comment(iter::empty::<&str>()))
+///     $(java::block_comment(vec!["third line"]))
 /// };
 ///
 /// assert_eq!(

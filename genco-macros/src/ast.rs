@@ -1,6 +1,7 @@
+use core::fmt;
+
 use proc_macro2::{Span, TokenStream, TokenTree};
-use syn::parse::{Parse, ParseStream};
-use syn::Result;
+use syn::{spanned::Spanned, Token};
 
 use crate::static_buffer::StaticBuffer;
 
@@ -42,6 +43,52 @@ impl Delimiter {
     }
 }
 
+pub(crate) enum LiteralName<'a> {
+    /// The literal name as a string.
+    Ident(&'a str),
+    /// The literal name as a character.
+    Char(char),
+}
+
+impl fmt::Display for LiteralName<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match *self {
+            LiteralName::Ident(ident) => ident.fmt(f),
+            LiteralName::Char(c) => write!(f, "{c:?}"),
+        }
+    }
+}
+
+/// The name of an internal fn.
+pub(crate) enum Name {
+    /// The name is the `const` token.
+    Const(Token![const]),
+    /// Custom name.
+    Ident(Span, String),
+    /// Character name.
+    Char(Span, char),
+}
+
+impl Name {
+    /// Get the name as a string.
+    pub(crate) fn as_literal_name(&self) -> LiteralName<'_> {
+        match self {
+            Name::Const(..) => LiteralName::Ident("const"),
+            Name::Ident(_, name) => LiteralName::Ident(name.as_str()),
+            Name::Char(_, c) => LiteralName::Char(*c),
+        }
+    }
+}
+
+impl Spanned for Name {
+    fn span(&self) -> Span {
+        match self {
+            Name::Const(t) => t.span,
+            Name::Ident(span, _) | Name::Char(span, _) => *span,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub(crate) enum ControlKind {
     Space,
@@ -55,40 +102,24 @@ pub(crate) struct Control {
     pub(crate) span: Span,
 }
 
-impl Parse for Control {
-    fn parse(input: ParseStream) -> Result<Self> {
-        syn::custom_keyword!(space);
-        syn::custom_keyword!(push);
-        syn::custom_keyword!(line);
-
-        if input.peek(space) {
-            let space = input.parse::<space>()?;
-
-            return Ok(Self {
+impl Control {
+    /// Construct a control from a string identifier.
+    pub(crate) fn from_char(span: Span, c: char) -> Option<Self> {
+        match c {
+            ' ' => Some(Self {
                 kind: ControlKind::Space,
-                span: space.span,
-            });
-        }
-
-        if input.peek(push) {
-            let push = input.parse::<push>()?;
-
-            return Ok(Self {
-                kind: ControlKind::Push,
-                span: push.span,
-            });
-        }
-
-        if input.peek(line) {
-            let line = input.parse::<line>()?;
-
-            return Ok(Self {
+                span,
+            }),
+            '\n' => Some(Self {
                 kind: ControlKind::Line,
-                span: line.span,
-            });
+                span,
+            }),
+            '\r' => Some(Self {
+                kind: ControlKind::Push,
+                span,
+            }),
+            _ => None,
         }
-
-        Err(input.error("Expected one of: `space`, `push`, or `line`."))
     }
 }
 

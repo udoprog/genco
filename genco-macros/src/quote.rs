@@ -1,10 +1,9 @@
 use proc_macro2::{LineColumn, Punct, Spacing, Span, TokenStream, TokenTree};
-use syn::parse::ParseStream;
+use syn::parse::{ParseBuffer, ParseStream};
 use syn::spanned::Spanned;
-use syn::token;
-use syn::{Result, Token};
+use syn::{token, Result, Token};
 
-use crate::ast::{Ast, Control, Delimiter, MatchArm};
+use crate::ast::{Ast, Control, Delimiter, LiteralName, MatchArm, Name};
 use crate::cursor::Cursor;
 use crate::encoder::Encoder;
 use crate::requirements::Requirements;
@@ -269,8 +268,7 @@ impl<'a> Quote<'a> {
 
     fn parse_expression(&self, encoder: &mut Encoder, input: ParseStream) -> Result<()> {
         let span = input.span();
-        let hash = input.parse::<Token![#]>()?;
-        let start = hash.span;
+        let start = input.parse::<Token![$]>()?.span();
 
         // Single identifier without quoting.
         if !input.peek(token::Paren) {
@@ -321,66 +319,80 @@ impl<'a> Quote<'a> {
         input: ParseStream,
         group_depth: usize,
     ) -> Result<()> {
-        syn::custom_punctuation!(Escape, ##);
-        syn::custom_punctuation!(ControlStart, #<);
-
         while !input.is_empty() {
             if group_depth == 0 && self.until_comma && input.peek(Token![,]) {
                 break;
             }
 
             // Escape sequence.
-            if input.peek(Escape) {
-                let escape = input.parse::<Escape>()?;
-                let cursor = Cursor::join(escape.spans[0], escape.spans[1]);
-                let mut punct = Punct::new('#', Spacing::Joint);
-                punct.set_span(escape.spans[1]);
-                encoder.encode(escape.span(), cursor, Ast::Tree { tt: punct.into() })?;
+            if input.peek(Token![$]) && input.peek2(Token![$]) {
+                let [a] = input.parse::<Token![$]>()?.spans;
+                let [b] = input.parse::<Token![$]>()?.spans;
+
+                let cursor = Cursor::join(a, b);
+                let mut punct = Punct::new('$', Spacing::Joint);
+                punct.set_span(b);
+                encoder.encode(b, cursor, Ast::Tree { tt: punct.into() })?;
                 continue;
             }
 
-            if input.peek(syn::Token![#])
-                && input.peek2(syn::Token![_])
-                && input.peek3(token::Paren)
-            {
-                let start = input.parse::<syn::Token![#]>()?;
-                input.parse::<syn::Token![_]>()?;
+            if let Some((name, content, [start, end])) = parse_internal_function(input)? {
+                match (name.as_literal_name(), content) {
+                    (literal_name @ LiteralName::Ident("str"), None) => {
+                        return Err(syn::Error::new(
+                            name.span(),
+                            format!("Function `{literal_name}` expects content, like: $[{literal_name}](<content>)"),
+                        ));
+                    }
+                    (LiteralName::Ident("str"), Some(content)) => {
+                        let parser = StringParser::new(self.receiver, end);
 
-                let content;
-                let paren = syn::parenthesized!(content in input);
+                        let (options, r, stream) = parser.parse(&content)?;
+                        encoder.requirements.merge_with(r);
 
-                let parser = StringParser::new(self.receiver, paren.span);
+                        let cursor = Cursor::join(start, end);
 
-                let (options, r, stream) = parser.parse(&content)?;
-                encoder.requirements.merge_with(r);
+                        encoder.encode(
+                            content.span(),
+                            cursor,
+                            Ast::String {
+                                has_eval: options.has_eval,
+                                stream,
+                            },
+                        )?;
+                    }
+                    (LiteralName::Char(c), content) => {
+                        let control = match Control::from_char(name.span(), c) {
+                            Some(control) => control,
+                            None => {
+                                return Err(syn::Error::new(name.span(), format!("Unsupported control {c:?}, expected one of: '\\n', '\r', ' '")));
+                            }
+                        };
 
-                let cursor = Cursor::join(start.span(), paren.span);
+                        if let Some(content) = content {
+                            return Err(syn::Error::new(
+                                content.span(),
+                                format!("Control {c:?} does not expect an argument"),
+                            ));
+                        }
 
-                encoder.encode(
-                    content.span(),
-                    cursor,
-                    Ast::String {
-                        has_eval: options.has_eval,
-                        stream,
-                    },
-                )?;
-                continue;
-            }
+                        let cursor = Cursor::join(start.span(), end.span());
+                        encoder.encode(name.span(), cursor, Ast::Control { control })?;
+                    }
+                    (LiteralName::Ident(string), _) => {
+                        return Err(syn::Error::new(
+                            name.span(),
+                            format!("Unsupported function `{string}`, expected one of: str"),
+                        ));
+                    }
+                }
 
-            // Control sequence.
-            if input.peek(ControlStart) {
-                let escape = input.parse::<ControlStart>()?;
-                let control = input.parse::<Control>()?;
-                let gt = input.parse::<token::Gt>()?;
-
-                let cursor = Cursor::join(escape.span(), gt.span());
-                encoder.encode(escape.span(), cursor, Ast::Control { control })?;
                 continue;
             }
 
             let start_expression = input.peek2(token::Paren) || input.peek2(syn::Ident);
 
-            if input.peek(Token![#]) && start_expression {
+            if input.peek(Token![$]) && start_expression {
                 self.parse_expression(encoder, input)?;
                 continue;
             }
@@ -469,6 +481,52 @@ impl<'a> Quote<'a> {
 
         Ok(())
     }
+}
+
+/// Parse an internal function of the form:
+///
+/// ```text
+/// $[<name>](<content>)
+/// ```
+///
+/// The `(<content>)` part is optional, and if absent the internal function is
+/// known as a "control function", like `$[' ']`.
+pub(crate) fn parse_internal_function<'a>(
+    input: &'a ParseBuffer,
+) -> Result<Option<(Name, Option<ParseBuffer<'a>>, [Span; 2])>> {
+    // Custom function call.
+    if !(input.peek(Token![$]) && input.peek2(token::Bracket)) {
+        return Ok(None);
+    }
+
+    let start = input.parse::<Token![$]>()?;
+
+    let function;
+    let brackets = syn::bracketed!(function in input);
+
+    let name = if function.peek(Token![const]) {
+        Name::Const(function.parse()?)
+    } else if function.peek(syn::LitChar) {
+        let c = function.parse::<syn::LitChar>()?;
+        Name::Char(c.span(), c.value())
+    } else {
+        let ident = function.parse::<syn::Ident>()?;
+        Name::Ident(ident.span(), ident.to_string())
+    };
+
+    if !function.is_empty() {
+        return Err(function.error("expected nothing after function identifier"));
+    }
+
+    let (content, end) = if input.peek(token::Paren) {
+        let content;
+        let paren = syn::parenthesized!(content in input);
+        (Some(content), paren.span)
+    } else {
+        (None, brackets.span)
+    };
+
+    Ok(Some((name, content, [start.span(), end])))
 }
 
 // NB: copied from: https://github.com/dtolnay/syn/blob/80c6889684da7e0a30ef5d0b03e9d73fa6160541/src/pat.rs#L792

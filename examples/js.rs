@@ -8,7 +8,7 @@ fn main() -> anyhow::Result<()> {
     let calculate = &js::import("../logic/calculate", "calculate").into_default();
 
     let tokens = quote! {
-        export default class App extends #react.Component {
+        export default class App extends $react.Component {
             state = {
                 total: null,
                 next: null,
@@ -16,14 +16,14 @@ fn main() -> anyhow::Result<()> {
             };
 
             handleClick = buttonName => {
-                this.setState(#calculate(this.state, buttonName));
+                this.setState($calculate(this.state, buttonName));
             };
 
             render() {
                 return (
                     <div className="component-app">
-                        <#display value={this.state.next || this.state.total || "0"} />
-                        <#button_panel clickHandler={this.handleClick} />
+                        <$display value={this.state.next || this.state.total || "0"} />
+                        <$button_panel clickHandler={this.handleClick} />
                     </div>
                 );
             }

@@ -2,7 +2,7 @@ use crate::ast::{Ast, Control, ControlKind, Delimiter, MatchArm};
 use crate::cursor::Cursor;
 use crate::requirements::Requirements;
 use crate::static_buffer::StaticBuffer;
-use proc_macro2::{LineColumn, Span, TokenStream, TokenTree, Spacing};
+use proc_macro2::{LineColumn, Spacing, Span, TokenStream, TokenTree};
 use syn::Result;
 
 /// Struct to deal with emitting the necessary spacing.
@@ -65,7 +65,8 @@ impl<'a> Encoder<'a> {
 
         match ast {
             Ast::Tree { tt, .. } => {
-                self.joint = matches!(&tt, TokenTree::Punct(p) if matches!(p.spacing(), Spacing::Joint));
+                self.joint =
+                    matches!(&tt, TokenTree::Punct(p) if matches!(p.spacing(), Spacing::Joint));
                 self.encode_literal(&tt.to_string());
             }
             Ast::String { has_eval, stream } => {
@@ -362,12 +363,7 @@ impl<'a> Encoder<'a> {
     /// If we are not in a nightly genco, simply tokenize the output separated
     /// by spaces.
     #[cfg(not(genco_nightly))]
-    fn tokenize_whitespace(
-        &mut self,
-        _: LineColumn,
-        _: LineColumn,
-        _: Option<Span>,
-    ) -> Result<()> {
+    fn tokenize_whitespace(&mut self, _: LineColumn, _: LineColumn, _: Option<Span>) -> Result<()> {
         use std::mem;
 
         if !mem::take(&mut self.joint) {
@@ -452,8 +448,12 @@ impl<'a> Encoder<'a> {
         }
 
         return Ok(());
- 
-        fn indentation_error(to_column: usize, from_column: usize, to_span: Option<Span>) -> syn::Error {
+
+        fn indentation_error(
+            to_column: usize,
+            from_column: usize,
+            to_span: Option<Span>,
+        ) -> syn::Error {
             let error = if to_column > from_column {
                 let len = to_column.saturating_sub(from_column);
 

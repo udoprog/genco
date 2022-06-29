@@ -18,7 +18,7 @@ use crate::Tokens;
 /// {
 ///     from_fn(move |tokens| {
 ///         let s = s.into();
-///         quote_in!(*tokens => #(static_literal("//")) #s);
+///         quote_in!(*tokens => $(static_literal("//")) #s);
 ///     })
 /// }
 /// # Ok(())

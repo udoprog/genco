@@ -25,11 +25,11 @@ use std::vec;
 ///
 /// This stream of tokens provides the following structural guarantees.
 ///
-/// * Only one [space] may occur in sequence.
-/// * Only one [push] may occur in sequence.
-/// * A [push] may never be preceeded by a [line], since it would have no
+/// * Only one [' '] may occur in sequence.
+/// * Only one ['\r'] may occur in sequence.
+/// * A ['\r'] may never be preceeded by a ['\n'], since it would have no
 ///   effect.
-/// * Every [line] must be preceeded by a [push].
+/// * Every ['\n'] must be preceeded by a ['\r'].
 ///
 /// ```rust
 /// use genco::Tokens;
@@ -43,9 +43,9 @@ use std::vec;
 /// assert_eq!(vec![Item::Push::<()>], tokens);
 /// ```
 ///
-/// [space]: Self::space()
-/// [push]: Self::push()
-/// [line]: Self::line()
+/// [' ']: Self::space()
+/// ['\r']: Self::push()
+/// ['\n']: Self::line()
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Tokens<L = ()>
 where
@@ -146,7 +146,7 @@ where
     /// let mut tokens = Tokens::<()>::new();
     /// tokens.append(4u32);
     ///
-    /// assert_eq!(quote!(#(4u32)), tokens);
+    /// assert_eq!(quote!($(4u32)), tokens);
     /// ```
     pub fn append<T>(&mut self, tokens: T)
     where
@@ -158,11 +158,11 @@ where
     /// Extend with another stream of tokens.
     ///
     /// This respects the structural requirements of adding one element at a
-    /// time, like you would get by calling [space], [push], or [line].
+    /// time, like you would get by calling [' '], ['\r'], or ['\n'].
     ///
-    /// [space]: Self::space()
-    /// [push]: Self::push()
-    /// [line]: Self::line()
+    /// [' ']: Self::space()
+    /// ['\r']: Self::push()
+    /// ['\n']: Self::line()
     ///
     /// # Examples
     ///
@@ -171,7 +171,7 @@ where
     /// use genco::tokens::{Item, ItemStr};
     ///
     /// let mut tokens: Tokens<()> = quote!(foo bar);
-    /// tokens.extend::<Tokens<()>>(quote!(#<space>baz));
+    /// tokens.extend::<Tokens<()>>(quote!($[' ']baz));
     ///
     /// assert_eq!(tokens, quote!(foo bar baz));
     /// ```
@@ -201,7 +201,7 @@ where
     /// let debug = rust::import("std::fmt", "Debug");
     /// let ty = rust::import("std::collections", "HashMap");
     ///
-    /// let tokens = quote!(foo #ty<u32, dyn #debug> baz);
+    /// let tokens = quote!(foo $ty<u32, dyn $debug> baz);
     ///
     /// for import in tokens.walk_imports() {
     ///     println!("{:?}", import);
@@ -227,7 +227,7 @@ where
     /// # fn main() -> genco::fmt::Result {
     /// let write_bytes_ext = rust::import("byteorder", "WriteBytesExt").with_alias("_");
     ///
-    /// let tokens = quote!(#(register(write_bytes_ext)));
+    /// let tokens = quote!($(register(write_bytes_ext)));
     ///
     /// assert_eq!("use byteorder::WriteBytesExt as _;\n", tokens.to_file_string()?);
     /// # Ok(())
@@ -395,10 +395,10 @@ where
     /// the beginning of a line preceeding any non-whitespace tokens.
     ///
     /// An indentation has no effect unless it's *followed* by non-whitespace
-    /// tokens. It also acts like a [push], in that it will shift any tokens to
+    /// tokens. It also acts like a ['\r'], in that it will shift any tokens to
     /// a new line.
     ///
-    /// [push]: Self::push
+    /// ['\r']: Self::push
     ///
     /// # Examples
     ///
@@ -436,7 +436,7 @@ where
     /// the beginning of a line preceeding any non-whitespace tokens.
     ///
     /// An indentation has no effect unless it's *followed* by non-whitespace
-    /// tokens. It also acts like a [push], in that it will shift any tokens to
+    /// tokens. It also acts like a ['\r'], in that it will shift any tokens to
     /// a new line.
     ///
     /// Indentation can never go below zero, and will just be ignored if that
@@ -444,7 +444,7 @@ where
     /// stream, so any negative indentation in place will have to be countered
     /// before indentation starts again.
     ///
-    /// [push]: Self::push
+    /// ['\r']: Self::push
     ///
     /// # Examples
     ///
@@ -512,7 +512,7 @@ where
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
-    ///     let mut m = #map::new();
+    ///     let mut m = $map::new();
     ///     m.insert(1u32, 2u32);
     /// };
     ///
@@ -612,7 +612,7 @@ where
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
-    ///     let mut m = #map::new();
+    ///     let mut m = $map::new();
     ///     m.insert(1u32, 2u32);
     /// };
     ///
@@ -697,7 +697,7 @@ where
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
-    ///     let mut m = #map::new();
+    ///     let mut m = $map::new();
     ///     m.insert(1u32, 2u32);
     /// };
     ///
@@ -734,7 +734,7 @@ where
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
-    ///     let mut m = #map::new();
+    ///     let mut m = $map::new();
     ///     m.insert(1u32, 2u32);
     /// };
     ///
@@ -772,7 +772,7 @@ where
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
-    ///     let mut m = #map::new();
+    ///     let mut m = $map::new();
     ///     m.insert(1u32, 2u32);
     /// };
     ///
@@ -842,7 +842,7 @@ where
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
-    ///     let mut m = #map::new();
+    ///     let mut m = $map::new();
     ///     m.insert(1u32, 2u32);
     /// };
     ///
@@ -1089,10 +1089,10 @@ mod tests {
     #[test]
     fn test_walk_custom() {
         let toks: Tokens<Lang> = quote! {
-            1:1 #(Import(1)) 1:2
+            1:1 $(Import(1)) 1:2
             bar
-            2:1 2:2 #(quote!(3:1 3:2)) #(Import(2))
-            #(String::from("nope"))
+            2:1 2:2 $(quote!(3:1 3:2)) $(Import(2))
+            $(String::from("nope"))
         };
 
         let mut output: Vec<_> = toks.walk_imports().cloned().collect();

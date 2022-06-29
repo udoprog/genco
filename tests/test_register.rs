@@ -5,7 +5,7 @@ fn test_register() -> genco::fmt::Result {
     let import = rust::import("std::iter", "FromIterator").with_alias("_");
 
     let tokens: Tokens<Rust> = quote! {
-        #(register(import))
+        $(register(import))
         // additional lines are ignored!
 
         fn test() -> u32 {

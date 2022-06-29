@@ -14,12 +14,12 @@ fn main() -> anyhow::Result<()> {
     let result = rust::import("anyhow", "Result");
 
     let tokens = quote! {
-        #(register(write_bytes_ext))
+        $(register(write_bytes_ext))
 
-        fn test() -> #result {
+        fn test() -> $result {
             let mut data = vec![];
-            data.write_u16::<#little_endian>(517)?;
-            data.write_u16::<#big_endian>(768)?;
+            data.write_u16::<$little_endian>(517)?;
+            data.write_u16::<$big_endian>(768)?;
             println!("{:?}", data);
         }
     };

@@ -22,11 +22,11 @@
 //!
 //!         if it.peek().is_some() {
 //!             quote_in! { *t =>
-//!                 #(static_literal("/**"))
-//!                 #(for line in it join (#<push>) {
-//!                     #<space>* #(line.into())
+//!                 $(static_literal("/**"))
+//!                 $(for line in it join ($['\r']) {
+//!                     $[' ']* $(line.into())
 //!                 })
-//!                 #<space>#(static_literal("*/"))
+//!                 $[' ']$(static_literal("*/"))
 //!             }
 //!         }
 //!     })
@@ -36,7 +36,7 @@
 //! use genco::prelude::*;
 //!
 //! let tokens: java::Tokens = quote! {
-//!     #(block_comment(&["This class is used for awesome stuff", "ok?"]))
+//!     $(block_comment(&["This class is used for awesome stuff", "ok?"]))
 //!     public static class Foo {
 //!     }
 //! };

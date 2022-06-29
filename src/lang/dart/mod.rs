@@ -24,10 +24,10 @@
 //! use genco::prelude::*;
 //!
 //! # fn main() -> genco::fmt::Result {
-//! let toks: dart::Tokens = quote!(#_(  Hello: $var  ));
+//! let toks: dart::Tokens = quote!($[str](  Hello: $var  ));
 //! assert_eq!("\"  Hello: $var  \"", toks.to_string()?);
 //!
-//! let toks: dart::Tokens = quote!(#_(  Hello: $(a + b)  ));
+//! let toks: dart::Tokens = quote!($[str](  Hello: $(a + b)  ));
 //! assert_eq!("\"  Hello: ${a + b}  \"", toks.to_string()?);
 //! # Ok(())
 //! # }
@@ -206,9 +206,9 @@ impl Dart {
 
         for (name, alias) in modules {
             if let Some(alias) = alias {
-                quote_in!(*out => import #(quoted(name)) as #alias;);
+                quote_in!(*out => import $(quoted(name)) as $alias;);
             } else {
-                quote_in!(*out => import #(quoted(name)););
+                quote_in!(*out => import $(quoted(name)););
             }
 
             out.push();
@@ -232,10 +232,10 @@ impl Dart {
 /// let d = dart::import("../http.dart", "D");
 ///
 /// let toks = quote! {
-///     #a
-///     #b
-///     #c
-///     #d
+///     $a
+///     $b
+///     $c
+///     $d
 /// };
 ///
 /// let expected = vec![
@@ -275,9 +275,9 @@ where
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(dart::doc_comment(vec!["Foo"]))
-///     #(dart::doc_comment(iter::empty::<&str>()))
-///     #(dart::doc_comment(vec!["Bar"]))
+///     $(dart::doc_comment(vec!["Foo"]))
+///     $(dart::doc_comment(iter::empty::<&str>()))
+///     $(dart::doc_comment(vec!["Bar"]))
 /// };
 ///
 /// assert_eq!(

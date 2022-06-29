@@ -11,7 +11,7 @@
 //! let toks: python::Tokens = quote!("hello \n world");
 //! assert_eq!("\"hello \\n world\"", toks.to_string()?);
 //!
-//! let toks: python::Tokens = quote!(#(quoted("hello \n world")));
+//! let toks: python::Tokens = quote!($(quoted("hello \n world")));
 //! assert_eq!("\"hello \\n world\"", toks.to_string()?);
 //! # Ok(())
 //! # }
@@ -155,7 +155,7 @@ impl Import {
     ///
     /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
-    ///     #(python::import("collections", "namedtuple").with_alias("nt"))
+    ///     $(python::import("collections", "namedtuple").with_alias("nt"))
     /// };
     ///
     /// assert_eq!(
@@ -188,7 +188,7 @@ impl Import {
     ///
     /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
-    ///     #(python::import("collections", "namedtuple").qualified())
+    ///     $(python::import("collections", "namedtuple").qualified())
     /// };
     ///
     /// assert_eq!(
@@ -220,7 +220,7 @@ impl Import {
     ///
     /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
-    ///     #(python::import("collections", "namedtuple").with_module_alias("c"))
+    ///     $(python::import("collections", "namedtuple").with_module_alias("c"))
     /// };
     ///
     /// assert_eq!(
@@ -267,7 +267,7 @@ impl ImportModule {
     ///
     /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
-    ///     #(python::import_module("collections").with_alias("c"))
+    ///     $(python::import_module("collections").with_alias("c"))
     /// };
     ///
     /// assert_eq!(
@@ -329,16 +329,16 @@ impl Python {
 
             let imports = imports
                 .into_iter()
-                .map(|(name, alias)| quote!(#name#(if let Some(a) = alias => #<space>as #a)))
+                .map(|(name, alias)| quote!($name$(if let Some(a) = alias => $[' ']as $a)))
                 .collect::<Vec<_>>();
 
             if imports.len() == 1 {
                 quote_in! {*out =>
-                    from #module import #(imports.into_iter().next())
+                    from $module import $(imports.into_iter().next())
                 }
             } else {
                 quote_in! {*out =>
-                    from #module import #(for i in imports join (, ) => #i)
+                    from $module import $(for i in imports join (, ) => $i)
                 }
             }
         }
@@ -347,7 +347,7 @@ impl Python {
             out.push();
 
             quote_in! {*out =>
-                import #module#(if let Some(a) = alias => #<space>as #a)
+                import $module$(if let Some(a) = alias => $[' ']as $a)
             }
         }
 
@@ -364,10 +364,10 @@ impl Python {
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(python::import("collections", "namedtuple").with_alias("nt"))
-///     #(python::import("collections", "namedtuple"))
-///     #(python::import("collections", "namedtuple").qualified())
-///     #(python::import("collections", "namedtuple").with_module_alias("c"))
+///     $(python::import("collections", "namedtuple").with_alias("nt"))
+///     $(python::import("collections", "namedtuple"))
+///     $(python::import("collections", "namedtuple").qualified())
+///     $(python::import("collections", "namedtuple").with_module_alias("c"))
 /// };
 ///
 /// assert_eq!(
@@ -409,8 +409,8 @@ where
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(python::import_module("collections"))
-///     #(python::import_module("collections").with_alias("c"))
+///     $(python::import_module("collections"))
+///     $(python::import_module("collections").with_alias("c"))
 /// };
 ///
 /// assert_eq!(

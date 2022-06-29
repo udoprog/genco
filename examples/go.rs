@@ -10,13 +10,13 @@ fn main() -> anyhow::Result<()> {
     let tokens = quote! {
         func main() {
             var currentDay string
-            currentDay = #(quoted(day))
-            #println(currentDay)
-            #println(greetUser())
+            currentDay = $(quoted(day))
+            $println(currentDay)
+            $println(greetUser())
         }
 
         func greetUser() string {
-            return #(quoted(format!("Hello {}!", name)))
+            return $(quoted(format!("Hello {}!", name)))
         }
     };
 

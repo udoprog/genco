@@ -269,7 +269,7 @@ impl Import {
     /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
     ///
-    /// let toks = quote!(#ty);
+    /// let toks = quote!($ty);
     ///
     /// assert_eq!(
     ///     vec![
@@ -302,7 +302,7 @@ impl Import {
     /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").with_module_alias("other");
     ///
-    /// let toks = quote!(#ty);
+    /// let toks = quote!($ty);
     ///
     /// assert_eq!(
     ///     vec![
@@ -341,7 +341,7 @@ impl Import {
     /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").qualified();
     ///
-    /// let toks = quote!(#ty);
+    /// let toks = quote!($ty);
     ///
     /// assert_eq!(
     ///     vec![
@@ -373,7 +373,7 @@ impl Import {
     /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").direct();
     ///
-    /// let toks = quote!(#ty);
+    /// let toks = quote!($ty);
     ///
     /// assert_eq!(
     ///     vec![
@@ -477,31 +477,31 @@ impl Rust {
                 // imported.
                 if let Some(second) = render.next() {
                     quote_in! { *out =>
-                        use #m::{#(ref o =>
+                        use $m::{$(ref o =>
                             first.render(o);
-                            quote_in!(*o => , #(ref o => second.render(o)));
+                            quote_in!(*o => , $(ref o => second.render(o)));
 
                             for item in render {
-                                quote_in!(*o => , #(ref o => item.render(o)));
+                                quote_in!(*o => , $(ref o => item.render(o)));
                             }
                         )};
                     };
                 } else {
                     match first {
                         RenderItem::SelfImport => {
-                            quote_in!(*out => use #m;);
+                            quote_in!(*out => use $m;);
                         }
                         RenderItem::SelfAlias { alias } => {
-                            quote_in!(*out => use #m as #alias;);
+                            quote_in!(*out => use $m as $alias;);
                         }
                         RenderItem::Name {
                             name,
                             alias: Some(alias),
                         } => {
-                            quote_in!(*out => use #m::#name as #alias;);
+                            quote_in!(*out => use $m::$name as $alias;);
                         }
                         RenderItem::Name { name, alias: None } => {
-                            quote_in!(*out => use #m::#name;);
+                            quote_in!(*out => use $m::$name;);
                         }
                     }
                 }
@@ -585,16 +585,16 @@ impl Rust {
                         quote_in!(*out => self);
                     }
                     Self::SelfAlias { alias } => {
-                        quote_in!(*out => self as #alias);
+                        quote_in!(*out => self as $alias);
                     }
                     Self::Name {
                         name,
                         alias: Some(alias),
                     } => {
-                        quote_in!(*out => #name as #alias);
+                        quote_in!(*out => $name as $alias);
                     }
                     Self::Name { name, alias: None } => {
-                        quote_in!(*out => #name);
+                        quote_in!(*out => $name);
                     }
                 }
             }
@@ -616,10 +616,10 @@ impl Rust {
 /// let d = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
 ///
 /// let toks = quote!{
-///     #a
-///     #b
-///     #c
-///     #d
+///     $a
+///     $b
+///     $c
+///     $d
 /// };
 ///
 /// assert_eq!(
@@ -646,7 +646,7 @@ impl Rust {
 /// let ty = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
 ///
 /// let toks = quote!{
-///     #ty
+///     $ty
 /// };
 ///
 /// assert_eq!(
@@ -670,7 +670,7 @@ impl Rust {
 /// let ty = rust::import("std::fmt", "Debug").with_module_alias("fmt2");
 ///
 /// let toks = quote!{
-///     #ty
+///     $ty
 /// };
 ///
 /// assert_eq!(
@@ -695,8 +695,8 @@ impl Rust {
 /// let b = rust::import("std::fmt", "Debug").with_alias("FmtDebug2");
 ///
 /// let toks = quote!{
-///     #a
-///     #b
+///     $a
+///     $b
 /// };
 ///
 /// assert_eq!(

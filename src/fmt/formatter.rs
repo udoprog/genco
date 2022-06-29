@@ -178,7 +178,7 @@ impl<'a> Formatter<'a> {
                     L::open_quote(self, config, format, *has_eval)?;
                 }
                 // Warning: slow path which will buffer a string internally.
-                // This is used for expressions like: `#_(Hello #(quoted(world)))`.
+                // This is used for expressions like: `$[str](Hello $(quoted(world)))`.
                 //
                 // Evaluating quotes are not supported.
                 Item::OpenQuote(false) if *in_quote => {

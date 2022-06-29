@@ -19,8 +19,8 @@ use crate::tokens::{FormatInto, Item, Tokens};
 /// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens = quote! {
-///     let mut m = #map::<u32, &str>::new();
-///     m.insert(0, #(quoted("hello\" world")));
+///     let mut m = $map::<u32, &str>::new();
+///     m.insert(0, $(quoted("hello\" world")));
 /// };
 ///
 /// assert_eq!(
@@ -44,7 +44,7 @@ use crate::tokens::{FormatInto, Item, Tokens};
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let tokens: python::Tokens = quote!(#_(Hello #(quoted("World 😊"))));
+/// let tokens: python::Tokens = quote!($[str](Hello $[const](quoted("World 😊"))));
 ///
 /// assert_eq!(
 ///     "\"Hello \\\"World \\U0001f60a\\\"\"",

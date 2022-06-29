@@ -9,12 +9,12 @@ fn main() -> anyhow::Result<()> {
     let tokens = quote! {
         public class HelloWorld {
             public static void main(String[] args) {
-                #list<#car> cars = new #array_list<#car>();
+                $list<$car> cars = new $array_list<$car>();
 
-                cars.add(new #car("Volvo"));
-                cars.add(new #car("Audi"));
+                cars.add(new $car("Volvo"));
+                cars.add(new $car("Audi"));
 
-                for (#car car : cars) {
+                for ($car car : cars) {
                     System.out.println(car);
                 }
             }

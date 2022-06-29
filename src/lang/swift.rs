@@ -104,7 +104,7 @@ impl Swift {
 
         if !modules.is_empty() {
             for module in modules {
-                quote_in! { *out => #<push>import #module}
+                quote_in! { *out => $['\r']import $module}
             }
         }
 
@@ -120,7 +120,7 @@ impl Swift {
 /// use genco::prelude::*;
 ///
 /// # fn main() -> genco::fmt::Result {
-/// let toks = quote!(#(swift::import("Foo", "Debug")));
+/// let toks = quote!($(swift::import("Foo", "Debug")));
 ///
 /// assert_eq!(
 ///     vec![

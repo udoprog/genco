@@ -42,11 +42,11 @@
 ///                 match import {
 ///                     Any::Import(import) => {
 ///                         header.push();
-///                         quote_in!(header => import #(import.0));
+///                         quote_in!(header => import $(import.0));
 ///                     }
 ///                     Any::ImportDefault(import) => {
 ///                         header.push();
-///                         quote_in!(header => import default #(import.0));
+///                         quote_in!(header => import default $(import.0));
 ///                     }
 ///                 }
 ///             }
@@ -91,8 +91,8 @@
 /// let b = ImportDefault("second");
 ///
 /// let t: Tokens<MyLang> = quote! {
-///     #a
-///     #b
+///     $a
+///     $b
 /// };
 ///
 /// assert_eq! {

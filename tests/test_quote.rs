@@ -6,7 +6,7 @@ fn test_quote() -> genco::fmt::Result {
 
     let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
-            println!("{}", #(test));
+            println!("{}", $(test));
 
             42
         }
@@ -19,7 +19,7 @@ fn test_quote() -> genco::fmt::Result {
 
     let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
-            println!("{}", #(quoted("two")));
+            println!("{}", $(quoted("two")));
 
             42
         }
@@ -32,14 +32,14 @@ fn test_quote() -> genco::fmt::Result {
 
     let tokens: rust::Tokens = quote! {
         fn test() -> u32 {
-            println!("{}", ##(quoted("two")));
+            println!("{}", $$(quoted("two")));
 
             42
         }
     };
 
     assert_eq!(
-        "fn test() -> u32 {\n    println!(\"{}\", #(quoted(\"two\")));\n\n    42\n}",
+        "fn test() -> u32 {\n    println!(\"{}\", $(quoted(\"two\")));\n\n    42\n}",
         tokens.to_string()?
     );
 
@@ -51,7 +51,7 @@ fn test_tight_quote() -> genco::fmt::Result {
     let foo = "foo";
     let bar = "bar";
     let baz = "baz";
-    let tokens: rust::Tokens = quote!(#(foo)#(bar)#(baz));
+    let tokens: rust::Tokens = quote!($(foo)$(bar)$(baz));
 
     assert_eq!("foobarbaz", tokens.to_string()?);
 
@@ -60,8 +60,8 @@ fn test_tight_quote() -> genco::fmt::Result {
 
 #[test]
 fn test_escape() -> genco::fmt::Result {
-    let tokens: rust::Tokens = quote!(#### ## #### #### ## ## ##[test]);
-    assert_eq!("## # ## ## # # #[test]", tokens.to_string()?);
+    let tokens: rust::Tokens = quote!($$$$ $$ $$$$ $$$$ $$ $$ $$[test]);
+    assert_eq!("$$ $ $$ $$ $ $ $[test]", tokens.to_string()?);
 
     Ok(())
 }
@@ -70,7 +70,7 @@ fn test_escape() -> genco::fmt::Result {
 fn test_scope() -> genco::fmt::Result {
     let tokens: rust::Tokens = quote! {
         // Nested factory.
-        #(ref tokens {
+        $(ref tokens {
             quote_in!(*tokens => fn test() -> u32 { 42 });
         })
     };

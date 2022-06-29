@@ -16,16 +16,16 @@ use crate::Tokens;
 /// let big_endian = &rust::import("byteorder", "BigEndian");
 ///
 /// let tokens = quote! {
-///     #(register((write_bytes_ext, read_bytes_ext)))
+///     $(register((write_bytes_ext, read_bytes_ext)))
 ///
 ///     let mut wtr = vec![];
-///     wtr.write_u16::<#big_endian>(517).unwrap();
-///     wtr.write_u16::<#big_endian>(768).unwrap();
+///     wtr.write_u16::<$big_endian>(517).unwrap();
+///     wtr.write_u16::<$big_endian>(768).unwrap();
 ///     assert_eq!(wtr, vec![2, 5, 3, 0]);
 ///
-///     let mut rdr = #cursor::new(vec![2, 5, 3, 0]);
-///     assert_eq!(517, rdr.read_u16::<#big_endian>().unwrap());
-///     assert_eq!(768, rdr.read_u16::<#big_endian>().unwrap());
+///     let mut rdr = $cursor::new(vec![2, 5, 3, 0]);
+///     assert_eq!(517, rdr.read_u16::<$big_endian>().unwrap());
+///     assert_eq!(768, rdr.read_u16::<$big_endian>().unwrap());
 /// };
 ///
 /// assert_eq!(

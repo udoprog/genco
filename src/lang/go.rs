@@ -75,7 +75,7 @@ impl_lang! {
             let mut header = Tokens::new();
 
             if let Some(package) = &config.package {
-                quote_in!(header => package #package);
+                quote_in!(header => package $package);
                 header.line();
             }
 
@@ -143,7 +143,7 @@ impl Go {
         }
 
         for module in modules {
-            quote_in!(*out => import #(quoted(module)));
+            quote_in!(*out => import $(quoted(module)));
             out.push();
         }
 
@@ -162,7 +162,7 @@ impl Go {
 /// let ty = go::import("foo/bar", "Debug");
 ///
 /// let toks = quote! {
-///     #ty
+///     $ty
 /// };
 ///
 /// assert_eq!(

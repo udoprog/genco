@@ -29,7 +29,7 @@ use std::rc::Rc;
 /// {
 ///     from_fn(move |tokens| {
 ///         let s = s.into();
-///         quote_in!(*tokens => #(static_literal("//")) #s);
+///         quote_in!(*tokens => $(static_literal("//")) $s);
 ///     })
 /// }
 /// # Ok(())
@@ -68,7 +68,7 @@ where
 /// # fn main() -> genco::fmt::Result {
 /// let a: &Tokens = &quote!(foo bar);
 ///
-/// let result = quote!(#a baz);
+/// let result = quote!($a baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -94,9 +94,9 @@ where
 /// # fn main() -> genco::fmt::Result {
 /// let mut vec = Vec::<Tokens>::new();
 /// vec.push(quote!(foo));
-/// vec.push(quote!(#<space>bar));
+/// vec.push(quote!($[' ']bar));
 ///
-/// let result = quote!(#vec baz);
+/// let result = quote!($vec baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -128,7 +128,7 @@ where
 /// let vec = vec!["foo", " ", "bar"];
 /// let slice = &vec[..];
 ///
-/// let result: Tokens = quote!(#slice baz);
+/// let result: Tokens = quote!($slice baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -157,7 +157,7 @@ where
 /// let foo = "foo";
 /// let bar = "bar";
 ///
-/// let result: Tokens = quote!(#foo #bar baz);
+/// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -183,7 +183,7 @@ where
 /// let foo = String::from("foo");
 /// let bar = String::from("bar");
 ///
-/// let result: Tokens = quote!(#(&foo) #(&bar) baz);
+/// let result: Tokens = quote!($(&foo) $(&bar) baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -210,7 +210,7 @@ where
 /// let foo = String::from("foo");
 /// let bar = String::from("bar");
 ///
-/// let result: Tokens = quote!(#foo #bar baz);
+/// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -237,7 +237,7 @@ where
 /// let foo = Rc::new(String::from("foo"));
 /// let bar = Rc::new(String::from("bar"));
 ///
-/// let result: Tokens = quote!(#foo #bar baz);
+/// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -265,7 +265,7 @@ where
 /// let foo = Rc::new(String::from("foo"));
 /// let bar = Rc::new(String::from("bar"));
 ///
-/// let result: Tokens = quote!(#(&foo) #(&bar) baz);
+/// let result: Tokens = quote!($(&foo) $(&bar) baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())
@@ -289,7 +289,7 @@ where
 /// use genco::prelude::*;
 ///
 /// let name = "John";
-/// let result: Tokens = quote!(#(format_args!("Hello {name}")));
+/// let result: Tokens = quote!($(format_args!("Hello {name}")));
 ///
 /// assert_eq!("Hello John", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
@@ -316,7 +316,7 @@ where
 /// let bar = Some("bar");
 /// let biz = None::<&str>;
 ///
-/// let result: Tokens = quote!(#foo #bar baz #biz);
+/// let result: Tokens = quote!($foo $bar baz $biz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok(())

@@ -17,35 +17,35 @@ fn main() -> anyhow::Result<()> {
     let tokens = quote! {
         public class Test {
             public static void Main()  {
-                #(comment(&["Creates a new TestSimpleObject object."]))
-                #simple_object obj = new #simple_object();
+                $(comment(&["Creates a new TestSimpleObject object."]))
+                $simple_object obj = new $simple_object();
 
-                #console.WriteLine("Before serialization the object contains: ");
+                $console.WriteLine("Before serialization the object contains: ");
                 obj.Print();
 
-                #(comment(&["Opens a file and serializes the object into it in binary format."]))
-                #stream stream = #file.Open("data.xml", FileMode.Create);
-                #soap_formatter formatter = new #soap_formatter();
+                $(comment(&["Opens a file and serializes the object into it in binary format."]))
+                $stream stream = $file.Open("data.xml", FileMode.Create);
+                $soap_formatter formatter = new $soap_formatter();
 
-                #(comment(&["BinaryFormatter formatter = new BinaryFormatter();"]))
+                $(comment(&["BinaryFormatter formatter = new BinaryFormatter();"]))
 
                 formatter.Serialize(stream, obj);
                 stream.Close();
 
-                #(comment(&["Empties obj."]))
+                $(comment(&["Empties obj."]))
                 obj = null;
 
-                #(comment(&["Opens file \"data.xml\" and deserializes the object from it."]))
-                stream = #file.Open("data.xml", FileMode.Open);
-                formatter = new #soap_formatter();
+                $(comment(&["Opens file \"data.xml\" and deserializes the object from it."]))
+                stream = $file.Open("data.xml", FileMode.Open);
+                formatter = new $soap_formatter();
 
-                #(comment(&["formatter = new BinaryFormatter();"]))
+                $(comment(&["formatter = new BinaryFormatter();"]))
 
-                obj = (#simple_object)formatter.Deserialize(stream);
+                obj = ($simple_object)formatter.Deserialize(stream);
                 stream.Close();
 
-                #console.WriteLine("");
-                #console.WriteLine("After deserialization the object contains: ");
+                $console.WriteLine("");
+                $console.WriteLine("After deserialization the object contains: ");
                 obj.Print();
             }
         }

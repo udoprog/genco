@@ -43,7 +43,7 @@
 //! let toks: js::Tokens = quote!("start π 😊 \n \x7f ÿ $ \\ end");
 //! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ \\\\ end\"", toks.to_string()?);
 //!
-//! let toks: js::Tokens = quote!(#(quoted("start π 😊 \n \x7f ÿ $ \\ end")));
+//! let toks: js::Tokens = quote!($(quoted("start π 😊 \n \x7f ÿ $ \\ end")));
 //! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ \\\\ end\"", toks.to_string()?);
 //! # Ok(())
 //! # }
@@ -213,9 +213,9 @@ impl Config {
     /// let react = js::import("react", "React").into_default();
     ///
     /// let toks: js::Tokens = quote! {
-    ///     #foo1
-    ///     #foo2
-    ///     #react
+    ///     $foo1
+    ///     $foo2
+    ///     $react
     /// };
     ///
     /// let mut w = fmt::VecWriter::new();
@@ -299,8 +299,8 @@ impl Import {
     /// let b = js::import("collections", "vec").with_alias("list");
     ///
     /// let toks = quote! {
-    ///     #a
-    ///     #b
+    ///     $a
+    ///     $b
     /// };
     ///
     /// assert_eq!(
@@ -336,7 +336,7 @@ impl Import {
     /// # fn main() -> genco::fmt::Result {
     /// let default_vec = js::import("collections", "defaultVec").into_default();
     ///
-    /// let toks = quote!(#default_vec);
+    /// let toks = quote!($default_vec);
     ///
     /// assert_eq!(
     ///     vec![
@@ -367,7 +367,7 @@ impl Import {
     /// # fn main() -> genco::fmt::Result {
     /// let all = js::import("collections", "all").into_wildcard();
     ///
-    /// let toks = quote!(#all);
+    /// let toks = quote!($all);
     ///
     /// assert_eq!(
     ///     vec![
@@ -455,14 +455,14 @@ impl JavaScript {
         for (module, name) in wildcards {
             out.push();
             quote_in! { *out =>
-                import * as #name from #(ref t => render_from(t, config.module_path.as_deref(), module));
+                import * as $name from $(ref t => render_from(t, config.module_path.as_deref(), module));
             }
         }
 
         for (name, module) in modules {
             out.push();
             quote_in! { *out =>
-                import #(ref tokens => {
+                import $(ref tokens => {
                     if let Some(default) = module.default_import {
                         tokens.append(ItemStr::from(default));
 
@@ -483,7 +483,7 @@ impl JavaScript {
                                     tokens.append(name);
                                 },
                                 ImportedElement::Aliased(name, alias) => {
-                                    quote_in!(*tokens => #name as #alias);
+                                    quote_in!(*tokens => $name as $alias);
                                 }
                             }
 
@@ -495,7 +495,7 @@ impl JavaScript {
 
                         tokens.append("}");
                     }
-                }) from #(ref t => render_from(t, config.module_path.as_deref(), name));
+                }) from $(ref t => render_from(t, config.module_path.as_deref(), name));
             };
         }
 
@@ -515,10 +515,10 @@ impl JavaScript {
 
         fn render_from(t: &mut js::Tokens, module_path: Option<&RelativePath>, module: &Module) {
             quote_in! { *t =>
-                #(match (module_path, module) {
-                    (_, Module::Global(from)) => #(quoted(from)),
-                    (None, Module::Path(path)) => #(quoted(path.as_str())),
-                    (Some(module_path), Module::Path(path)) => #(quoted(module_path.relative(path).as_str())),
+                $(match (module_path, module) {
+                    (_, Module::Global(from)) => $(quoted(from)),
+                    (None, Module::Path(path)) => $(quoted(path.as_str())),
+                    (Some(module_path), Module::Path(path)) => $(quoted(module_path.relative(path).as_str())),
                 })
             }
         }
@@ -539,10 +539,10 @@ impl JavaScript {
 /// let vec_as_list = js::import("collections", "vec").with_alias("list");
 ///
 /// let toks = quote! {
-///     #default_vec
-///     #all
-///     #vec
-///     #vec_as_list
+///     $default_vec
+///     $all
+///     $vec
+///     $vec_as_list
 /// };
 ///
 /// assert_eq!(

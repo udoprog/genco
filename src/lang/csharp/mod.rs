@@ -58,8 +58,8 @@ impl_lang! {
 
             if let Some(namespace) = &config.namespace {
                 quote_in! { file =>
-                    namespace #namespace {
-                        #tokens
+                    namespace $namespace {
+                        $tokens
                     }
                 }
 
@@ -198,7 +198,7 @@ impl Csharp {
             }
 
             if !imported.contains(namespace) {
-                quote_in!(*out => using #namespace;);
+                quote_in!(*out => using $namespace;);
                 out.push();
                 imported.insert(namespace);
             }
@@ -223,9 +223,9 @@ impl Csharp {
 /// let ob = csharp::import("Foo.Baz", "B");
 ///
 /// let toks: Tokens<Csharp> = quote! {
-///     #a
-///     #b
-///     #ob
+///     $a
+///     $b
+///     $ob
 /// };
 ///
 /// assert_eq!(
@@ -263,9 +263,9 @@ where
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(csharp::block_comment(vec!["Foo"]))
-///     #(csharp::block_comment(iter::empty::<&str>()))
-///     #(csharp::block_comment(vec!["Bar"]))
+///     $(csharp::block_comment(vec!["Foo"]))
+///     $(csharp::block_comment(iter::empty::<&str>()))
+///     $(csharp::block_comment(vec!["Bar"]))
 /// };
 ///
 /// assert_eq!(
@@ -295,8 +295,8 @@ where
 ///
 /// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
-///     #(csharp::comment(&["Foo"]))
-///     #(csharp::comment(&["Bar"]))
+///     $(csharp::comment(&["Foo"]))
+///     $(csharp::comment(&["Bar"]))
 /// };
 ///
 /// assert_eq!(

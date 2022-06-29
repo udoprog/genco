@@ -11,9 +11,6 @@ jobs:
       with:
         toolchain: nightly
         override: true
-    - run: cargo test
-      env:
-        RUSTFLAGS: --cfg genco_nightly
-    - run: cargo test --manifest-path=genco-macros/Cargo.toml
+    - run: cargo +nightly test --all --workspace
       env:
         RUSTFLAGS: --cfg genco_nightly
