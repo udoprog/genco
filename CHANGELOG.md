@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0]
+
+### Added
+* Added `FormatInto` implementation for `Arguments<'_>` ([#26]).
+
+### Changed
+* All syntax has been changed from using `#` to `$` ([#27]).
+
+[#26]: https://github.com/udoprog/genco/issues/26
+[#27]: https://github.com/udoprog/genco/issues/27
+[0.17.0]: https://github.com/udoprog/genco/compare/0.16.0...0.17.0
+
 ## [0.16.0]
 
 ### Changed
@@ -45,4 +57,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.15.0]: https://github.com/udoprog/genco/compare/0.14.2...0.15.0
 [0.15.1]: https://github.com/udoprog/genco/compare/0.15.0...0.15.1
 [0.16.0]: https://github.com/udoprog/genco/compare/0.15.1...0.16.0
-[Unreleased]: https://github.com/udoprog/genco/compare/0.16.0...master
+[Unreleased]: https://github.com/udoprog/genco/compare/0.17.0...master
