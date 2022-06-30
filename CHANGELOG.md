@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 * All syntax has been changed from using `#` to `$` ([#27]).
+* `--cfg genco_nightly` has been deprecated in favor of using byte-span hacks to
+  detect whitespace between tokens on the same column.
 
 [#26]: https://github.com/udoprog/genco/issues/26
 [#27]: https://github.com/udoprog/genco/issues/27
