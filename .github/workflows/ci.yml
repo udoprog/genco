@@ -12,5 +12,3 @@ jobs:
         toolchain: nightly
         override: true
     - run: cargo +nightly test --all --workspace
-      env:
-        RUSTFLAGS: --cfg genco_nightly

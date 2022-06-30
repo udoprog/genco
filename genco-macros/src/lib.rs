@@ -9,6 +9,7 @@ use syn::parse::{ParseStream, Parser as _};
 mod ast;
 mod cursor;
 mod encoder;
+mod fake;
 mod quote;
 mod quote_fn;
 mod quote_in;
@@ -25,9 +26,9 @@ mod token;
 /// It provides a flexible and intuitive mechanism for efficiently generating
 /// beautiful code directly inside of Rust.
 ///
-/// > Note that this macro **is only whitespace sensitive** if the
-/// > `genco_nightly` configuration flag is enabled, and you are building on a
-/// > nightly compiler. See the [main genco documentation] for more information.
+/// > Note that this macro **can only detect line changes** if it's built under
+/// > a `nightly` compiler. See the [main genco documentation] for more
+/// > information.
 ///
 /// ```rust
 /// use genco::prelude::*;

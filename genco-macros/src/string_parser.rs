@@ -262,7 +262,7 @@ impl<'a> StringParser<'a> {
                     let end = syn::parenthesized!(content in input).span;
 
                     let (req, stream) = crate::quote::Quote::new(self.receiver)
-                        .with_span(content.span())
+                        .with_span(content.span())?
                         .parse(&content)?;
                     requirements.merge_with(req);
                     encoder.eval_stream(stream, start.start(), Some(end.end()))?;

@@ -1,8 +1,10 @@
 use crate::ast::{Ast, Control, ControlKind, Delimiter, MatchArm};
 use crate::cursor::Cursor;
+use crate::fake::LineColumn;
 use crate::requirements::Requirements;
 use crate::static_buffer::StaticBuffer;
-use proc_macro2::{LineColumn, Spacing, Span, TokenStream, TokenTree};
+
+use proc_macro2::{Span, TokenStream};
 use syn::Result;
 
 /// Struct to deal with emitting the necessary spacing.
@@ -32,8 +34,6 @@ pub(crate) struct Encoder<'a> {
     /// Indicates if the encoder has encountered a string which requires eval
     /// support in the target language.
     pub(crate) requirements: Requirements,
-    /// If the next encoded value is joint or not. This is ignored if whitespace detection is enabled.
-    joint: bool,
 }
 
 impl<'a> Encoder<'a> {
@@ -52,21 +52,15 @@ impl<'a> Encoder<'a> {
             last_start_column: None,
             indents: Vec::new(),
             requirements: Requirements::default(),
-            joint: true,
         }
     }
 
     /// Encode a single item into the encoder.
     pub(crate) fn encode(&mut self, span: Span, cursor: Cursor, ast: Ast) -> Result<()> {
-        #[cfg(genco_nightly)]
-        cursor.check_compat()?;
-
         self.step(cursor, span)?;
 
         match ast {
             Ast::Tree { tt, .. } => {
-                self.joint =
-                    matches!(&tt, TokenTree::Punct(p) if matches!(p.spacing(), Spacing::Joint));
                 self.encode_literal(&tt.to_string());
             }
             Ast::String { has_eval, stream } => {
@@ -360,24 +354,8 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
-    /// If we are not in a nightly genco, simply tokenize the output separated
-    /// by spaces.
-    #[cfg(not(genco_nightly))]
-    fn tokenize_whitespace(&mut self, _: LineColumn, _: LineColumn, _: Option<Span>) -> Result<()> {
-        use std::mem;
-
-        if !mem::take(&mut self.joint) {
-            let r = self.receiver;
-            self.item_buffer.flush(&mut self.output);
-            self.output.extend(q::quote!(#r.space();));
-        }
-
-        Ok(())
-    }
-
     /// If we are in a nightly genco, insert indentation and spacing if
     /// appropriate in the output token stream.
-    #[cfg(genco_nightly)]
     fn tokenize_whitespace(
         &mut self,
         from: LineColumn,

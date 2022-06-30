@@ -31,15 +31,24 @@ This project solves the following language-specific concerns:
 
 <br>
 
-To do [whitespace detection], we depend on the nightly [`proc_macro_span`
-feature] and that the `genco_nightly` configuration flag is set. Otherwise
-genco falls back to simply inserting spaces between each detected token.
+To support line changes during [whitespace detection], we depend on the
+nightly [`proc_macro_span` feature]. On stable we can only detect column
+changes.
 
-*Until this is stabilized* and you want whitespace detection you must build
-and run projects using genco with a `nightly` compiler.
+*Until this is stabilized* and you want fully functional whitespace
+detection you must build and run projects using genco with a `nightly`
+compiler. This is important for whitespace-sensitive languages like python.
+
+You can try the difference between:
 
 ```bash
-RUSTFLAGS="--cfg genco_nightly" cargo +nightly run --example rust
+cargo run --example rust
+```
+
+And:
+
+```bash
+cargo +nightly run --example rust
 ```
 
 [`proc_macro_span` feature]: https://github.com/rust-lang/rust/issues/54725
@@ -70,7 +79,7 @@ The following are languages which have built-in support in genco.
 
 * [🐍 <b>Python</b>][python]<br>
   <small>[Example][python-example]</small><br>
-  **Requires `--cfg genco_nightly`**
+  **Requires a `nightly` compiler**
 
 <small>Is your favorite language missing? <b>[Open an issue!]</b></small>
 

@@ -1,4 +1,6 @@
-use proc_macro2::{LineColumn, Span};
+use proc_macro2::Span;
+
+use crate::fake::LineColumn;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Cursor {
@@ -8,30 +10,17 @@ pub(crate) struct Cursor {
 
 impl Cursor {
     /// Join two spans.
-    pub(crate) fn join(a: Span, b: Span) -> Self {
-        Cursor {
-            start: a.start(),
-            end: b.end(),
-        }
+    pub(crate) fn join(a: Span, b: Span) -> syn::Result<Self> {
+        Ok(Cursor {
+            start: LineColumn::start(a)?,
+            end: LineColumn::end(b)?,
+        })
     }
 
-    /// Check that the cursor is not a mock cursor.
-    ///
-    /// See: https://github.com/alexcrichton/proc-macro2/issues/237
-    #[cfg(genco_nightly)]
-    pub(crate) fn check_compat(&self) -> syn::Result<()> {
-        if self.start.line == 0
-            && self.start.column == 0
-            && self.end.line == 0
-            && self.end.column == 0
-        {
-            return Err(syn::Error::new(
-                Span::call_site(),
-                "Your compiler does not support spans which is required by genco, see: https://github.com/rust-lang/rust/issues/54725"
-            ));
-        }
-
-        Ok(())
+    /// Construct a cursor from a span.
+    pub(crate) fn from_span(span: Span) -> syn::Result<Self> {
+        let (start, end) = LineColumn::pair(span)?;
+        Ok(Self { start, end })
     }
 
     /// Calculate the start character for the span.
@@ -53,24 +42,6 @@ impl Cursor {
                 column: self.end.column.saturating_sub(1),
             },
             end: self.end,
-        }
-    }
-}
-
-impl From<Span> for Cursor {
-    fn from(span: Span) -> Self {
-        Self {
-            start: span.start(),
-            end: span.end(),
-        }
-    }
-}
-
-impl<'a> From<&'a Span> for Cursor {
-    fn from(span: &'a Span) -> Self {
-        Self {
-            start: span.start(),
-            end: span.end(),
         }
     }
 }
