@@ -40,7 +40,8 @@ impl Buf {
         buf.as_str()
     }
 
-    pub(crate) fn pair(&mut self, span: Span) -> syn::Result<(LineColumn, LineColumn)> {
+    /// Construct a cursor from a span.
+    pub(crate) fn cursor(&mut self, span: Span) -> syn::Result<Cursor> {
         let start = span.start();
         let end = span.end();
 
@@ -48,7 +49,8 @@ impl Buf {
             // Try compat.
             let (start, end) = self.find_line_column(span)?;
 
-            Ok((
+            Ok(Cursor::new(
+                span,
                 LineColumn {
                     line: 1,
                     column: start,
@@ -59,7 +61,11 @@ impl Buf {
                 },
             ))
         } else {
-            Ok((LineColumn::new(start), LineColumn::new(end)))
+            Ok(Cursor::new(
+                span,
+                LineColumn::new(start),
+                LineColumn::new(end),
+            ))
         }
     }
 
@@ -93,13 +99,11 @@ impl Buf {
 
     /// Join two spans.
     pub(crate) fn join(&mut self, a: Span, b: Span) -> syn::Result<Cursor> {
-        Ok(Cursor::new(self.start(a)?, self.end(b)?))
-    }
-
-    /// Construct a cursor from a span.
-    pub(crate) fn from_span(&mut self, span: Span) -> syn::Result<Cursor> {
-        let (start, end) = self.pair(span)?;
-        Ok(Cursor::new(start, end))
+        Ok(Cursor::new(
+            a.join(b).unwrap_or(a),
+            self.start(a)?,
+            self.end(b)?,
+        ))
     }
 
     /// Try to decode line and column information using the debug implementation of
