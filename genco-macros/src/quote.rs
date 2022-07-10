@@ -272,7 +272,6 @@ impl<'a> Quote<'a> {
     }
 
     fn parse_expression(&mut self, encoder: &mut Encoder, input: ParseStream) -> Result<()> {
-        let span = input.span();
         let start = input.parse::<Token![$]>()?.span();
 
         // Single identifier without quoting.
@@ -280,8 +279,7 @@ impl<'a> Quote<'a> {
             let ident = input.parse::<syn::Ident>()?;
             let cursor = self.buf.join(start, ident.span())?;
 
-            encoder.encode(span, cursor, Ast::EvalIdent { ident })?;
-
+            encoder.encode(cursor, Ast::EvalIdent { ident })?;
             return Ok(());
         }
 
@@ -314,7 +312,7 @@ impl<'a> Quote<'a> {
             }
         };
 
-        encoder.encode(span, cursor, ast)?;
+        encoder.encode(cursor, ast)?;
         Ok(())
     }
 
@@ -336,8 +334,8 @@ impl<'a> Quote<'a> {
 
                 let cursor = self.buf.join(a, b)?;
                 let mut punct = Punct::new('$', Spacing::Joint);
-                punct.set_span(b);
-                encoder.encode(b, cursor, Ast::Tree { tt: punct.into() })?;
+                punct.set_span(cursor.span);
+                encoder.encode(cursor, Ast::Tree { tt: punct.into() })?;
                 continue;
             }
 
@@ -358,7 +356,6 @@ impl<'a> Quote<'a> {
                         let cursor = self.buf.join(start, end)?;
 
                         encoder.encode(
-                            content.span(),
                             cursor,
                             Ast::String {
                                 has_eval: options.has_eval,
@@ -382,7 +379,7 @@ impl<'a> Quote<'a> {
                         }
 
                         let cursor = self.buf.join(start.span(), end.span())?;
-                        encoder.encode(name.span(), cursor, Ast::Control { control })?;
+                        encoder.encode(cursor, Ast::Control { control })?;
                     }
                     (LiteralName::Ident(string), _) => {
                         return Err(syn::Error::new(
@@ -404,9 +401,8 @@ impl<'a> Quote<'a> {
 
             if input.peek(syn::LitStr) {
                 let s = input.parse::<syn::LitStr>()?;
-                let cursor = self.buf.from_span(s.span())?;
-                let span = s.span();
-                encoder.encode(span, cursor, Ast::Quoted { s })?;
+                let cursor = self.buf.cursor(s.span())?;
+                encoder.encode(cursor, Ast::Quoted { s })?;
                 continue;
             }
 
@@ -451,10 +447,8 @@ impl<'a> Quote<'a> {
             }
 
             let tt: TokenTree = input.parse()?;
-            let cursor = self.buf.from_span(tt.span())?;
-            let span = tt.span();
-
-            encoder.encode(span, cursor, Ast::Tree { tt })?;
+            let cursor = self.buf.cursor(tt.span())?;
+            encoder.encode(cursor, Ast::Tree { tt })?;
         }
 
         Ok(())
@@ -468,21 +462,13 @@ impl<'a> Quote<'a> {
         input: ParseStream,
         group_depth: usize,
     ) -> Result<()> {
-        let cursor = self.buf.from_span(span)?;
+        let cursor = self.buf.cursor(span)?;
 
-        encoder.encode(
-            span,
-            cursor.first_character(),
-            Ast::DelimiterOpen { delimiter },
-        )?;
+        encoder.encode(cursor.first_character(), Ast::DelimiterOpen { delimiter })?;
 
         self.parse_inner(encoder, input, group_depth + 1)?;
 
-        encoder.encode(
-            span,
-            cursor.last_character(),
-            Ast::DelimiterClose { delimiter },
-        )?;
+        encoder.encode(cursor.last_character(), Ast::DelimiterClose { delimiter })?;
 
         Ok(())
     }

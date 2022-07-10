@@ -56,8 +56,8 @@ impl<'a> Encoder<'a> {
     }
 
     /// Encode a single item into the encoder.
-    pub(crate) fn encode(&mut self, span: Span, cursor: Cursor, ast: Ast) -> Result<()> {
-        self.step(cursor, span)?;
+    pub(crate) fn encode(&mut self, cursor: Cursor, ast: Ast) -> Result<()> {
+        self.step(cursor)?;
 
         match ast {
             Ast::Tree { tt, .. } => {
@@ -126,10 +126,10 @@ impl<'a> Encoder<'a> {
         Ok((self.requirements, self.output))
     }
 
-    pub(crate) fn step(&mut self, next: Cursor, to_span: Span) -> Result<()> {
+    pub(crate) fn step(&mut self, next: Cursor) -> Result<()> {
         if let Some(from) = self.from() {
             // Insert spacing if appropriate.
-            self.tokenize_whitespace(from, next.start, Some(to_span))?;
+            self.tokenize_whitespace(from, next.start, Some(next.span))?;
         }
 
         // Assign the current cursor to the next item.
