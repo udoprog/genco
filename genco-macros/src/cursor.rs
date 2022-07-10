@@ -1,5 +1,3 @@
-use proc_macro2::Span;
-
 use crate::fake::LineColumn;
 
 #[derive(Clone, Copy, Debug)]
@@ -9,21 +7,12 @@ pub(crate) struct Cursor {
 }
 
 impl Cursor {
-    /// Join two spans.
-    pub(crate) fn join(a: Span, b: Span) -> syn::Result<Self> {
-        Ok(Cursor {
-            start: LineColumn::start(a)?,
-            end: LineColumn::end(b)?,
-        })
+    /// Construt a cursor.
+    pub(crate) fn new(start: LineColumn, end: LineColumn) -> Cursor {
+        Self { start, end }
     }
 
-    /// Construct a cursor from a span.
-    pub(crate) fn from_span(span: Span) -> syn::Result<Self> {
-        let (start, end) = LineColumn::pair(span)?;
-        Ok(Self { start, end })
-    }
-
-    /// Calculate the start character for the span.
+    /// Calculate the start character for the cursor.
     pub(crate) fn first_character(self) -> Self {
         Cursor {
             start: self.start,
@@ -34,7 +23,7 @@ impl Cursor {
         }
     }
 
-    /// Calculate the span for the end character.
+    /// Calculate the end character for the cursor.
     pub(crate) fn last_character(self) -> Self {
         Cursor {
             start: LineColumn {
