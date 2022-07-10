@@ -128,12 +128,12 @@ where
 
     /// Append the given tokens.
     ///
-    /// This append function takes anything implementing [FormatInto] making
-    /// the argument's behavior customizable. Most primitive types have built-in
+    /// This append function takes anything implementing [FormatInto] making the
+    /// argument's behavior customizable. Most primitive types have built-in
     /// implementations of [FormatInto] treating them as raw tokens.
     ///
-    /// Most notabley, things implementing [FormatInto] can be used as
-    /// arguments for [interpolation] in the [quote!] macro.
+    /// Most notabley, things implementing [FormatInto] can be used as arguments
+    /// for [interpolation] in the [quote!] macro.
     ///
     /// [quote!]: macro.quote.html
     /// [interpolation]: macro.quote.html#interpolation

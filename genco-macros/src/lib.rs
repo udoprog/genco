@@ -53,12 +53,12 @@ mod token;
 ///
 /// # Interpolation
 ///
-/// Variables are interpolated using `#`, so to include the variable `test`, you
-/// would write `#test`. Interpolated variables must implement [FormatInto].
+/// Variables are interpolated using `$`, so to include the variable `test`, you
+/// would write `$test`. Interpolated variables must implement [FormatInto].
 /// Expressions can be interpolated with `$(<expr>)`.
 ///
-/// > *Note:* The `#` punctuation itself can be escaped by repeating it twice.
-/// > So `##` would produce a single `#` token.
+/// > *Note:* The `$` punctuation itself can be escaped by repeating it twice.
+/// > So `$$` would produce a single `$` token.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -565,7 +565,7 @@ mod token;
 ///
 /// **Spaces** — Two tokens that are separated are spaced. Regardless of how
 /// many spaces there are between them. This can be controlled manually by
-/// inserting the [`$[' ']`] escape sequence in the token stream.
+/// inserting the [`$[' ']`][escape] escape sequence in the token stream.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -597,7 +597,7 @@ mod token;
 ///
 /// **Line breaking** — Line breaks are detected by leaving two empty lines
 /// between two tokens. This can be controlled manually by inserting the
-/// [`$['\n']`] escape in the token stream.
+/// [`$['\n']`][escape] escape in the token stream.
 ///
 /// ```rust
 /// use genco::prelude::*;
@@ -689,8 +689,7 @@ mod token;
 ///    |         ^^^^^^^
 /// ```
 ///
-/// [`$[' ']`]: #escape-sequences
-/// [`$['\n']`]: #escape-sequences
+/// [escape]: #escape-sequences
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let receiver = &syn::Ident::new("__genco_macros_toks", Span::call_site());

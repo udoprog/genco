@@ -175,7 +175,7 @@ where
 
 /// Escape the given string according to a C-family escape sequence.
 ///
-/// See https://en.wikipedia.org/wiki/Escape_sequences_in_C
+/// See <https://en.wikipedia.org/wiki/Escape_sequences_in_C>.
 ///
 /// This is one of the more common escape sequences and is provided here so you
 /// can use it if a language you've implemented requires it.

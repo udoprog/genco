@@ -46,8 +46,8 @@ where
     CloseEval,
 }
 
-/// Formatting an item is the same as adding said item to the token stream
-/// through [item()][Tokens::item()].
+/// Formatting an item is the same as simply adding that item to the token
+/// stream.
 ///
 /// # Examples
 ///
