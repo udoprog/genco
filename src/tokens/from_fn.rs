@@ -7,8 +7,7 @@ use crate::Tokens;
 ///
 /// # Examples
 ///
-/// ```rust
-/// # fn main() -> genco::fmt::Result {
+/// ```
 /// use genco::{quote, quote_in};
 /// use genco::lang::{Lang, Rust};
 /// use genco::tokens::{ItemStr, FormatInto, Tokens, from_fn, static_literal};
@@ -22,8 +21,7 @@ use crate::Tokens;
 ///
 /// let c = comment("hello world");
 /// let _: Tokens<Rust> = quote!($c $['\n'] $c);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn from_fn<F, L>(f: F) -> FromFn<F>
 where

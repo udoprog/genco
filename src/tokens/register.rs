@@ -6,10 +6,9 @@ use crate::Tokens;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let write_bytes_ext = rust::import("byteorder", "WriteBytesExt").with_alias("_");
 /// let read_bytes_ext = rust::import("byteorder", "ReadBytesExt").with_alias("_");
 /// let cursor = &rust::import("std::io", "Cursor");
@@ -44,8 +43,7 @@ use crate::Tokens;
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn register<T, L>(inner: T) -> RegisterFn<T>
 where
@@ -87,10 +85,9 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let mut tokens = rust::Tokens::new();
 ///
 /// let hash_map = rust::import("std::collections", "HashMap");
@@ -104,8 +101,7 @@ where
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub trait Register<L>
 where

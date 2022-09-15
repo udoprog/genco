@@ -116,10 +116,9 @@ impl Swift {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let toks = quote!($(swift::import("Foo", "Debug")));
 ///
 /// assert_eq!(
@@ -130,8 +129,7 @@ impl Swift {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<M, N>(module: M, name: N) -> Import
 where

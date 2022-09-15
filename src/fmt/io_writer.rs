@@ -6,11 +6,10 @@ use std::io;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use genco::fmt;
 ///
-/// # fn main() -> anyhow::Result<()> {
 /// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens: rust::Tokens = quote! {
@@ -32,8 +31,7 @@ use std::io;
 /// let string = std::str::from_utf8(&vector)?;
 ///
 /// assert_eq!("let mut m = HashMap::new();\nm.insert(1u32, 2u32);", string);
-/// # Ok(())
-/// # }
+/// # Ok::<_, anyhow::Error>(())
 /// ```
 pub struct IoWriter<W>
 where

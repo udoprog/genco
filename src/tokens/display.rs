@@ -19,11 +19,10 @@ use std::fmt;
 ///
 /// Example showcasing quoted strings when generating Rust.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use std::fmt;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// struct Foo(());
 ///
 /// impl fmt::Display for Foo {
@@ -50,8 +49,7 @@ use std::fmt;
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn display<T>(inner: T) -> Display<T>
 where

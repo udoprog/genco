@@ -150,10 +150,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
     ///     $(python::import("collections", "namedtuple").with_alias("nt"))
     /// };
@@ -166,8 +165,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn with_alias<T>(self, alias: T) -> Self
     where
@@ -183,10 +181,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
     ///     $(python::import("collections", "namedtuple").qualified())
     /// };
@@ -199,8 +196,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn qualified(self) -> Self {
         Self {
@@ -215,10 +211,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
     ///     $(python::import("collections", "namedtuple").with_module_alias("c"))
     /// };
@@ -231,8 +226,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn with_module_alias<T>(self, module_alias: T) -> Self
     where
@@ -262,10 +256,9 @@ impl ImportModule {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let toks = quote! {
     ///     $(python::import_module("collections").with_alias("c"))
     /// };
@@ -278,8 +271,7 @@ impl ImportModule {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn with_alias<N>(self, new_alias: N) -> Self
     where
@@ -359,10 +351,9 @@ impl Python {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     $(python::import("collections", "namedtuple").with_alias("nt"))
 ///     $(python::import("collections", "namedtuple"))
@@ -383,8 +374,7 @@ impl Python {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<M, N>(module: M, name: N) -> Import
 where
@@ -404,10 +394,9 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     $(python::import_module("collections"))
 ///     $(python::import_module("collections").with_alias("c"))
@@ -423,8 +412,7 @@ where
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import_module<M>(module: M) -> ImportModule
 where

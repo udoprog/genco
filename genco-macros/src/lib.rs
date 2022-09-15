@@ -30,10 +30,9 @@ mod token;
 /// > a `nightly` compiler. See the [main genco documentation] for more
 /// > information.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let hash_map = &dart::import("dart:collection", "HashMap");
 ///
 /// let tokens: dart::Tokens = quote! {
@@ -47,8 +46,7 @@ mod token;
 /// };
 ///
 /// println!("{}", tokens.to_file_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// # Interpolation
@@ -60,10 +58,9 @@ mod token;
 /// > *Note:* The `$` punctuation itself can be escaped by repeating it twice.
 /// > So `$$` would produce a single `$` token.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let hash_map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens: rust::Tokens = quote! {
@@ -82,26 +79,22 @@ mod token;
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
 ///
 /// The following is an expression interpolated with `$(<expr>)`.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
-///
-/// # fn main() -> genco::fmt::Result {
 ///
 /// let tokens: genco::Tokens = quote! {
 ///     hello $("world".to_uppercase())
 /// };
 ///
 /// assert_eq!("hello WORLD", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -110,7 +103,7 @@ mod token;
 /// freely make use of Rust operations like the try keyword (`?`) if
 /// appropriate:
 ///
-/// ```rust
+/// ```
 /// use std::error::Error;
 ///
 /// use genco::prelude::*;
@@ -152,17 +145,15 @@ mod token;
 ///   following tokens have an empty line separating them. This corresponds to
 ///   the [Tokens::line] function.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote!(foo$['\r']bar$['\n']baz$[' ']biz);
 ///
 /// assert_eq!("foo\nbar\n\nbaz biz", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -178,10 +169,9 @@ mod token;
 ///
 /// [Lang::write_quoted]: https://docs.rs/genco/0/genco/lang/trait.Lang.html#method.write_quoted
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let tokens: java::Tokens = quote! {
 ///     "hello world 😊"
 ///     $(quoted("hello world 😊"))
@@ -198,8 +188,7 @@ mod token;
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// # Efficient String Quoting
@@ -220,16 +209,14 @@ mod token;
 ///
 /// Here you can see the items produced by the macro.
 ///
-/// ```rust
+/// ```
 /// # use genco::prelude::*;
-/// # fn main() -> genco::fmt::Result {
 /// # let tokens: rust::Tokens = quote! {
 /// #     "hello world 😊"
 /// #     $(quoted("hello world 😊"))
 /// #     $("\"hello world 😊\"")
 /// #     $[str](hello world $[const]("😊"))
 /// # };
-/// #
 /// use genco::tokens::{Item, ItemStr};
 ///
 /// assert_eq!(
@@ -250,8 +237,7 @@ mod token;
 ///     ],
 ///     tokens,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -291,10 +277,9 @@ mod token;
 /// This means that `$(foo)` is not the same as `$(foo )` since the latter will
 /// have a space preserved at the end.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let smile = "😊";
 ///
 /// let t: dart::Tokens = quote!($[str](Hello $[const](smile) $(world)));
@@ -305,8 +290,7 @@ mod token;
 ///
 /// let t: js::Tokens = quote!($[str](Hello $[const](smile) $(world)));
 /// assert_eq!("`Hello 😊 ${world}`", t.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -337,10 +321,9 @@ mod token;
 /// during regular quoting will work here as well, with the addition that
 /// anything defined in `<bindings>` will be made available to the statement.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
@@ -348,8 +331,7 @@ mod token;
 /// };
 ///
 /// assert_eq!("Your numbers are: 3 4 5", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -365,10 +347,9 @@ mod token;
 /// > trailing is preserved. `join (,)` and `join (, )` would therefore produce
 /// > different results.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let numbers = 3..=5;
 ///
 /// let tokens: Tokens<()> = quote! {
@@ -376,8 +357,7 @@ mod token;
 /// };
 ///
 /// assert_eq!("Your numbers are: 3, 4, 5.", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -394,10 +374,9 @@ mod token;
 /// `$(if <pattern> { <then> } else { <else> })`. `<else>` is also a quoted
 /// expression.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// fn greeting(hello: bool, name: &str) -> Tokens<()> {
 ///     quote!(Custom Greeting: $(if hello {
 ///         Hello $name
@@ -411,8 +390,7 @@ mod token;
 ///
 /// let tokens = greeting(false, "John");
 /// assert_eq!("Custom Greeting: Goodbye John", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -420,10 +398,9 @@ mod token;
 /// The `<else>` branch is optional, conditionals which do not have an else
 /// branch and evaluated to `false` won't produce any tokens:
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// fn greeting(hello: bool, name: &str) -> Tokens<()> {
 ///     quote!(Custom Greeting:$(if hello {
 ///         $[' ']Hello $name
@@ -435,8 +412,7 @@ mod token;
 ///
 /// let tokens = greeting(false, "John");
 /// assert_eq!("Custom Greeting:", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -448,10 +424,9 @@ mod token;
 /// against each subsequent `<pattern>`. If a pattern matches, the arm with the
 /// matching `<quoted>` block is evaluated.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// fn greeting(name: &str) -> Tokens<()> {
 ///     quote!(Hello $(match name {
 ///         "John" | "Jane" => $("Random Stranger"),
@@ -464,18 +439,16 @@ mod token;
 ///
 /// let tokens = greeting("Mio");
 /// assert_eq!("Hello Mio", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// If a match arm contains parenthesis (`=> (<quoted>)`), the expansion will be
 /// *whitespace sensitive*. Allowing leading and trailing whitespace to be
 /// preserved:
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// fn greeting(name: &str) -> Tokens<()> {
 ///     quote!(Hello$(match name {
 ///         "John" | "Jane" => ( $("Random Stranger")),
@@ -488,16 +461,14 @@ mod token;
 ///
 /// let tokens = greeting("Mio");
 /// assert_eq!("Hello Mio", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// The following is an example with more complex matching:
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// enum Greeting {
 ///     Named(&'static str),
 ///     Unknown,
@@ -519,8 +490,7 @@ mod token;
 ///
 /// let tokens = greeting(Greeting::Named("Mio"));
 /// assert_eq!("Hello Mio", tokens.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -535,10 +505,9 @@ mod token;
 /// For a more compact variant you can omit the braces with `$(ref <binding> =>
 /// <expr>)`.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// fn quote_greeting(surname: &str, lastname: Option<&str>) -> rust::Tokens {
 ///     quote! {
 ///         Hello $surname$(ref toks {
@@ -552,8 +521,7 @@ mod token;
 ///
 /// assert_eq!("Hello John", quote_greeting("John", None).to_string()?);
 /// assert_eq!("Hello John Doe", quote_greeting("John", Some("Doe")).to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -567,10 +535,9 @@ mod token;
 /// many spaces there are between them. This can be controlled manually by
 /// inserting the [`$[' ']`][escape] escape sequence in the token stream.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn     test()     {
 ///         println!("Hello... ");
@@ -589,8 +556,7 @@ mod token;
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -599,10 +565,9 @@ mod token;
 /// between two tokens. This can be controlled manually by inserting the
 /// [`$['\n']`][escape] escape in the token stream.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn test() {
 ///         println!("Hello... ");
@@ -623,8 +588,7 @@ mod token;
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// <br>
@@ -640,10 +604,9 @@ mod token;
 /// All indentations inserted during the macro will be unrolled at the end of
 /// it. So any trailing indentations will be matched by unindentations.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn test() {
 ///             println!("Hello... ");
@@ -662,13 +625,12 @@ mod token;
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// Example showcasing an indentation mismatch:
 ///
-/// ```rust,compile_fail
+/// ```,compile_fail
 /// use genco::prelude::*;
 ///
 /// let tokens: rust::Tokens = quote! {
@@ -730,7 +692,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// reference like `&mut rust::Tokens` will have to be dereferenced when used
 /// with this macro.
 ///
-/// ```rust
+/// ```
 /// # use genco::prelude::*;
 ///
 /// # fn generate() -> rust::Tokens {
@@ -751,7 +713,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
 /// let mut tokens = rust::Tokens::new();
@@ -767,7 +729,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///
 /// [quote_in!] can be used inside of a [quote!] through [a scope].
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
 /// let tokens: rust::Tokens = quote! {
@@ -807,11 +769,10 @@ pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 /// In the below example, `f1` and `f2` are equivalent. In here [quote_fn!]
 /// simply makes it easier to build.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use genco::tokens::from_fn;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let f1 = from_fn(move |t| {
 ///     quote_in!{ *t =>
 ///         println!("Hello World");
@@ -834,16 +795,14 @@ pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///     ],
 ///     tokens.to_file_vec()?,
 /// };
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// # Examples which borrow
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// fn greeting(name: &str) -> impl FormatInto<Rust> + '_ {
 ///     quote_fn! {
 ///         println!($[str](Hello $[const](name)))
@@ -868,8 +827,7 @@ pub fn quote_in(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 ///     ],
 ///     tokens.to_file_vec()?
 /// };
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 #[proc_macro]
 pub fn quote_fn(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

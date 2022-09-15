@@ -97,7 +97,6 @@
 //! ```rust,no_run
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let hash_map = rust::import("std::collections", "HashMap");
 //!
 //! let tokens: rust::Tokens = quote! {
@@ -108,8 +107,7 @@
 //! };
 //!
 //! println!("{}", tokens.to_file_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 //!
 //! This would produce:

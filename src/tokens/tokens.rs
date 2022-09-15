@@ -31,7 +31,7 @@ use std::vec;
 ///   effect.
 /// * Every ['\n'] must be preceeded by a ['\r'].
 ///
-/// ```rust
+/// ```
 /// use genco::Tokens;
 /// use genco::tokens::Item;
 ///
@@ -70,7 +70,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
     /// let tokens = Tokens::<()>::new();
@@ -88,7 +88,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
     /// let tokens = Tokens::<()>::with_capacity(10);
@@ -106,7 +106,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     /// use genco::tokens::{ItemStr, Item};
     ///
@@ -140,7 +140,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
     /// let mut tokens = Tokens::<()>::new();
@@ -166,7 +166,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     /// use genco::tokens::{Item, ItemStr};
     ///
@@ -195,7 +195,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
     /// let debug = rust::import("std::fmt", "Debug");
@@ -221,17 +221,15 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let write_bytes_ext = rust::import("byteorder", "WriteBytesExt").with_alias("_");
     ///
     /// let tokens = quote!($(register(write_bytes_ext)));
     ///
     /// assert_eq!("use byteorder::WriteBytesExt as _;\n", tokens.to_file_string()?);
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     ///
     /// [quote!]: macro.quote.html
@@ -244,7 +242,7 @@ where
 
     /// Check if tokens contain no items.
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
     /// let tokens: Tokens<()> = quote!();
@@ -265,10 +263,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.space();
@@ -284,8 +281,7 @@ where
     ///     ],
     ///     tokens.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn space(&mut self) {
         if let Some(Item::Space) = self.items.last() {
@@ -305,10 +301,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.push();
@@ -324,8 +319,7 @@ where
     ///     ],
     ///     tokens.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn push(&mut self) {
         let item = loop {
@@ -354,10 +348,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.line();
@@ -374,8 +367,7 @@ where
     ///     ],
     ///     tokens.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn line(&mut self) {
         let item = loop {
@@ -402,10 +394,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.indent();
@@ -423,8 +414,7 @@ where
     ///     ],
     ///     tokens.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn indent(&mut self) {
         self.indentation(1);
@@ -448,10 +438,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let mut tokens = Tokens::<()>::new();
     ///
     /// tokens.indent();
@@ -475,8 +464,7 @@ where
     ///     ],
     ///     tokens.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn unindent(&mut self) {
         self.indentation(-1);
@@ -504,11 +492,10 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```,no_run
     /// use genco::prelude::*;
     /// use genco::fmt;
     ///
-    /// # fn main() -> fmt::Result {
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
@@ -528,8 +515,7 @@ where
     /// let format = rust::Format::default();
     ///
     /// tokens.format(&mut formatter, &config, &format)?;
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     ///
     /// [LangItem::format()]: crate::lang::LangItem::format()
@@ -547,7 +533,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     /// use genco::tokens::{Item, ItemStr};
     ///
@@ -604,11 +590,10 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```,no_run
     /// use genco::prelude::*;
     /// use genco::fmt;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
@@ -625,8 +610,7 @@ where
     /// let config = rust::Config::default();
     ///
     /// tokens.format_file(&mut formatter, &config)?;
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn format_file(&self, out: &mut fmt::Formatter<'_>, config: &L::Config) -> fmt::Result {
         L::format_file(self, out, config)?;
@@ -689,11 +673,10 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     /// use genco::fmt;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
@@ -705,8 +688,7 @@ where
     ///     "use std::collections::HashMap;\n\nlet mut m = HashMap::new();\nm.insert(1u32, 2u32);\n",
     ///     tokens.to_file_string()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn to_file_string(&self) -> fmt::Result<String> {
         let mut w = fmt::FmtWriter::new(String::new());
@@ -727,10 +709,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
@@ -742,8 +723,7 @@ where
     ///     "let mut m = HashMap::new();\nm.insert(1u32, 2u32);",
     ///     tokens.to_string()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn to_string(&self) -> fmt::Result<String> {
         let mut w = fmt::FmtWriter::new(String::new());
@@ -765,10 +745,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
@@ -785,16 +764,14 @@ where
     ///     ],
     ///     tokens.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     ///
     /// # Example with Python indentation
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let tokens: python::Tokens = quote! {
     ///     def foo():
     ///         pass
@@ -813,8 +790,7 @@ where
     ///     ],
     ///     tokens.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn to_file_vec(&self) -> fmt::Result<Vec<String>> {
         let mut w = fmt::VecWriter::new();
@@ -835,10 +811,9 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let map = rust::import("std::collections", "HashMap");
     ///
     /// let tokens: rust::Tokens = quote! {
@@ -853,8 +828,7 @@ where
     ///     ],
     ///     tokens.to_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn to_vec(&self) -> fmt::Result<Vec<String>> {
         let mut w = fmt::VecWriter::new();
@@ -932,7 +906,7 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use genco::tokens::{ItemStr, Item};
 ///

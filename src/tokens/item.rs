@@ -51,11 +51,10 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use genco::tokens::{Item, ItemStr};
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let foo = Item::Literal(ItemStr::Static("foo"));
 /// let bar = Item::Literal(ItemStr::Box("bar".into()));
 ///
@@ -73,8 +72,7 @@ where
 ///     ] as Vec<Item<()>>,
 ///     result,
 /// };
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<L> FormatInto<L> for Item<L>
 where

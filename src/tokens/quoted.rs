@@ -12,10 +12,9 @@ use crate::tokens::{FormatInto, Item, Tokens};
 ///
 /// Example showcasing quoted strings when generating Rust.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens = quote! {
@@ -32,26 +31,23 @@ use crate::tokens::{FormatInto, Item, Tokens};
 ///     ],
 ///     tokens.to_file_vec()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// # Example: A quote inside a quote
 ///
 /// Note that this requires extra buffering to occur when formatting the token stream.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let tokens: python::Tokens = quote!($[str](Hello $[const](quoted("World 😊"))));
 ///
 /// assert_eq!(
 ///     "\"Hello \\\"World \\U0001f60a\\\"\"",
 ///     tokens.to_string()?,
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// [quote!]: macro.quote.html

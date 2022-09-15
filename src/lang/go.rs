@@ -155,10 +155,9 @@ impl Go {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let ty = go::import("foo/bar", "Debug");
 ///
 /// let toks = quote! {
@@ -173,8 +172,7 @@ impl Go {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<M, N>(module: M, name: N) -> Import
 where
