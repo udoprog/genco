@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.2]
+
+### Added
+* Added `Copy` and `Clone` implementations for `FromFn` ([#31]).
+
+### Changed
+* Changed internal syntax of doc tests ([#32]).
+
+[#31]: https://github.com/udoprog/genco/issues/31
+[#32]: https://github.com/udoprog/genco/issues/32
+[0.17.2]: https://github.com/udoprog/genco/compare/0.17.1...0.17.2
+
+## [0.17.1]
+### Changed
+* Documentation fixes.
+
+[0.17.1]: https://github.com/udoprog/genco/compare/0.17.0...0.17.1
 ## [0.17.0]
 
 ### Added
