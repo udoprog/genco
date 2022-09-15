@@ -9,7 +9,6 @@ use crate::fmt;
 /// use genco::prelude::*;
 /// use genco::fmt;
 ///
-/// # fn main() -> fmt::Result {
 /// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens: rust::Tokens = quote! {
@@ -32,7 +31,6 @@ use crate::fmt;
 ///
 /// assert_eq!("let mut m = HashMap::new();\nm.insert(1u32, 2u32);", string);
 /// # Ok::<_, genco::fmt::Error>(())
-/// # }
 /// ```
 pub struct FmtWriter<W>
 where
