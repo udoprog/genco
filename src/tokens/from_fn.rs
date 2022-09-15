@@ -2,25 +2,26 @@ use crate::lang::Lang;
 use crate::tokens;
 use crate::Tokens;
 
-/// Construct a formatter from a function.
+/// Construct a [FormatInto][crate::tokens::FormatInto] implementation from a
+/// function.
 ///
 /// # Examples
 ///
 /// ```rust
 /// # fn main() -> genco::fmt::Result {
-/// use genco::quote_in;
-/// use genco::lang::Lang;
-/// use genco::tokens::{ItemStr, FormatInto, from_fn, static_literal};
+/// use genco::{quote, quote_in};
+/// use genco::lang::{Lang, Rust};
+/// use genco::tokens::{ItemStr, FormatInto, Tokens, from_fn, static_literal};
 ///
-/// fn comment<L>(s: impl Into<ItemStr>) -> impl FormatInto<L>
-/// where
-///     L: Lang
-/// {
+/// fn comment(s: impl Into<ItemStr> + Copy) -> impl FormatInto<Rust> + Copy {
 ///     from_fn(move |tokens| {
 ///         let s = s.into();
 ///         quote_in!(*tokens => $(static_literal("//")) #s);
 ///     })
 /// }
+///
+/// let c = comment("hello world");
+/// let _: Tokens<Rust> = quote!($c $['\n'] $c);
 /// # Ok(())
 /// # }
 /// ```
@@ -34,7 +35,8 @@ where
 
 /// A captured function used for formatting tokens.
 ///
-/// Created using [from_fn()].
+/// Constructed using [from_fn()] or the [quote_fn!][crate::quote_fn] macro.
+#[derive(Clone, Copy)]
 pub struct FromFn<F> {
     f: F,
 }
