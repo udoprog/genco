@@ -5,7 +5,7 @@ use crate::fmt;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use genco::fmt;
 ///
@@ -31,7 +31,7 @@ use crate::fmt;
 /// let string = w.into_inner();
 ///
 /// assert_eq!("let mut m = HashMap::new();\nm.insert(1u32, 2u32);", string);
-/// # Ok(())
+/// # Ok::<_, genco::fmt::Error>(())
 /// # }
 /// ```
 pub struct FmtWriter<W>

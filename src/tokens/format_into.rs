@@ -17,8 +17,7 @@ use std::rc::Rc;
 ///
 /// # Examples
 ///
-/// ```rust
-/// # fn main() -> genco::fmt::Result {
+/// ```
 /// use genco::quote_in;
 /// use genco::tokens::{ItemStr, FormatInto, from_fn, static_literal};
 /// use genco::lang::Lang;
@@ -32,8 +31,7 @@ use std::rc::Rc;
 ///         quote_in!(*tokens => $(static_literal("//")) $s);
 ///     })
 /// }
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub trait FormatInto<L>
 where
@@ -62,17 +60,15 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let a: &Tokens = &quote!(foo bar);
 ///
 /// let result = quote!($a baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<'a, L> FormatInto<L> for &'a Tokens<L>
 where
@@ -88,10 +84,9 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let mut vec = Vec::<Tokens>::new();
 /// vec.push(quote!(foo));
 /// vec.push(quote!($[' ']bar));
@@ -99,8 +94,7 @@ where
 /// let result = quote!($vec baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<L, T> FormatInto<L> for Vec<T>
 where
@@ -121,18 +115,16 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let vec = vec!["foo", " ", "bar"];
 /// let slice = &vec[..];
 ///
 /// let result: Tokens = quote!($slice baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<'a, L, T> FormatInto<L> for &'a [T]
 where
@@ -150,18 +142,16 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let foo = "foo";
 /// let bar = "bar";
 ///
 /// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<'a, L> FormatInto<L> for &'a str
 where
@@ -176,18 +166,16 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let foo = String::from("foo");
 /// let bar = String::from("bar");
 ///
 /// let result: Tokens = quote!($(&foo) $(&bar) baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<'a, L> FormatInto<L> for &'a String
 where
@@ -203,18 +191,16 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let foo = String::from("foo");
 /// let bar = String::from("bar");
 ///
 /// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<L> FormatInto<L> for String
 where
@@ -229,19 +215,17 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use std::rc::Rc;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let foo = Rc::new(String::from("foo"));
 /// let bar = Rc::new(String::from("bar"));
 ///
 /// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<L> FormatInto<L> for Rc<String>
 where
@@ -257,19 +241,17 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use std::rc::Rc;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let foo = Rc::new(String::from("foo"));
 /// let bar = Rc::new(String::from("bar"));
 ///
 /// let result: Tokens = quote!($(&foo) $(&bar) baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<'a, L> FormatInto<L> for &'a Rc<String>
 where
@@ -285,7 +267,7 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
 /// let name = "John";
@@ -307,11 +289,10 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use std::rc::Rc;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let foo = Some("foo");
 /// let bar = Some("bar");
 /// let biz = None::<&str>;
@@ -319,8 +300,7 @@ where
 /// let result: Tokens = quote!($foo $bar baz $biz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<L, T> FormatInto<L> for Option<T>
 where

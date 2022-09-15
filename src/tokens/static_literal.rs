@@ -25,15 +25,13 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
-/// # fn main() -> genco::fmt::Result {
+/// ```
 /// use genco::prelude::*;
 /// use genco::tokens;
 ///
 /// let mut tokens = Tokens::<()>::new();
 /// tokens.append(tokens::static_literal("hello"));
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// [append()]: crate::Tokens::append()

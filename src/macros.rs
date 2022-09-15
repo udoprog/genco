@@ -4,7 +4,7 @@
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::fmt;
 /// use std::fmt::Write as _;
 ///
@@ -86,7 +86,6 @@
 ///
 /// use genco::{quote, Tokens};
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let a = Import("first");
 /// let b = ImportDefault("second");
 ///
@@ -105,8 +104,7 @@
 ///     ],
 ///     t.to_file_vec()?
 /// };
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 #[macro_export]
 macro_rules! impl_lang {

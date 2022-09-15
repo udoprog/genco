@@ -4,11 +4,10 @@ use crate::fmt;
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use genco::fmt;
 ///
-/// # fn main() -> fmt::Result {
 /// let map = rust::import("std::collections", "HashMap");
 ///
 /// let tokens: rust::Tokens = quote! {
@@ -36,8 +35,7 @@ use crate::fmt;
 ///     ],
 ///     vec
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 #[derive(Default)]
 pub struct VecWriter {

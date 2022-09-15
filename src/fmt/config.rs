@@ -2,11 +2,10 @@ use crate::lang::Lang;
 
 /// Indentation configuration.
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use genco::fmt;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let tokens: rust::Tokens = quote! {
 ///     fn foo() -> u32 {
 ///         42u32
@@ -29,8 +28,7 @@ use crate::lang::Lang;
 ///     ],
 ///     w.into_vec(),
 /// };
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub enum Indentation {

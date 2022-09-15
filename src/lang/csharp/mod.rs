@@ -214,10 +214,9 @@ impl Csharp {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let a = csharp::import("Foo.Bar", "A");
 /// let b = csharp::import("Foo.Bar", "B");
 /// let ob = csharp::import("Foo.Baz", "B");
@@ -238,8 +237,7 @@ impl Csharp {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<P, N>(namespace: P, name: N) -> Import
 where
@@ -257,11 +255,10 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use std::iter;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     $(csharp::block_comment(vec!["Foo"]))
 ///     $(csharp::block_comment(iter::empty::<&str>()))
@@ -275,8 +272,7 @@ where
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn block_comment<T>(comment: T) -> BlockComment<T>
 where
@@ -290,10 +286,9 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     $(csharp::comment(&["Foo"]))
 ///     $(csharp::comment(&["Bar"]))
@@ -306,8 +301,7 @@ where
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn comment<T>(comment: T) -> Comment<T>
 where

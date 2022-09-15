@@ -222,10 +222,9 @@ impl Dart {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let a = dart::import("package:http/http.dart", "A");
 /// let b = dart::import("package:http/http.dart", "B");
 /// let c = dart::import("package:http/http.dart", "C").with_alias("h2");
@@ -250,8 +249,7 @@ impl Dart {
 /// ];
 ///
 /// assert_eq!(expected, toks.to_file_vec()?);
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<P, N>(path: P, name: N) -> Import
 where
@@ -269,11 +267,10 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use std::iter;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     $(dart::doc_comment(vec!["Foo"]))
 ///     $(dart::doc_comment(iter::empty::<&str>()))
@@ -287,8 +284,7 @@ where
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn doc_comment<T>(comment: T) -> DocComment<T>
 where

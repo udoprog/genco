@@ -122,11 +122,10 @@ impl Config {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     /// use genco::fmt;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let optional = java::import("java.util", "Optional");
     ///
     /// let toks = quote!($optional);
@@ -146,8 +145,7 @@ impl Config {
     ///     ],
     ///     w.into_vec(),
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn with_package<P>(self, package: P) -> Self
     where
@@ -216,10 +214,9 @@ impl Java {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let integer = java::import("java.lang", "Integer");
 /// let a = java::import("java.io", "A");
 ///
@@ -237,8 +234,7 @@ impl Java {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<P, N>(package: P, name: N) -> Import
 where
@@ -255,11 +251,10 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 /// use std::iter;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let toks = quote! {
 ///     $(java::block_comment(vec!["first line", "second line"]))
 ///     $(java::block_comment(iter::empty::<&str>()))
@@ -278,8 +273,7 @@ where
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn block_comment<T>(comment: T) -> BlockComment<T>
 where

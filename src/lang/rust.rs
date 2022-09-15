@@ -263,10 +263,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
     ///
     /// let toks = quote!($ty);
@@ -279,8 +278,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn with_alias<A: Into<ItemStr>>(self, alias: A) -> Self {
         Self {
@@ -296,10 +294,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").with_module_alias("other");
     ///
     /// let toks = quote!($ty);
@@ -312,8 +309,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     ///
     /// [qualified()]: Self::qualified()
@@ -335,10 +331,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").qualified();
     ///
     /// let toks = quote!($ty);
@@ -351,8 +346,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn qualified(self) -> Self {
         Self {
@@ -367,10 +361,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let ty = rust::import("std::fmt", "Debug").direct();
     ///
     /// let toks = quote!($ty);
@@ -383,8 +376,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn direct(self) -> Self {
         Self {
@@ -606,10 +598,9 @@ impl Rust {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let a = rust::import("std::fmt", "Debug").qualified();
 /// let b = rust::import("std::fmt", "Debug").with_module_alias("fmt2");
 /// let c = rust::import("std::fmt", "Debug");
@@ -633,16 +624,14 @@ impl Rust {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// # Example with an alias
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let ty = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
 ///
 /// let toks = quote!{
@@ -657,16 +646,14 @@ impl Rust {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// # Example with a module alias
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let ty = rust::import("std::fmt", "Debug").with_module_alias("fmt2");
 ///
 /// let toks = quote!{
@@ -681,16 +668,14 @@ impl Rust {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
 /// # Example with multiple aliases
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let a = rust::import("std::fmt", "Debug").with_alias("FmtDebug");
 /// let b = rust::import("std::fmt", "Debug").with_alias("FmtDebug2");
 ///
@@ -708,8 +693,7 @@ impl Rust {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<M, N>(module: M, name: N) -> Import
 where

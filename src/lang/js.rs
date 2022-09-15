@@ -203,11 +203,10 @@ impl Config {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     /// use genco::fmt;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let foo1 = js::import(js::Module::Path("foo/bar.js".into()), "Foo1");
     /// let foo2 = js::import(js::Module::Path("foo/bar.js".into()), "Foo2");
     /// let react = js::import("react", "React").into_default();
@@ -236,8 +235,7 @@ impl Config {
     ///     ],
     ///     w.into_vec()
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn with_module_path<M>(self, module_path: M) -> Self
     where
@@ -291,10 +289,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let a = js::import("collections", "vec");
     /// let b = js::import("collections", "vec").with_alias("list");
     ///
@@ -312,8 +309,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn with_alias<N>(self, alias: N) -> Self
     where
@@ -330,10 +326,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let default_vec = js::import("collections", "defaultVec").into_default();
     ///
     /// let toks = quote!($default_vec);
@@ -346,8 +341,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn into_default(self) -> Self {
         Self {
@@ -361,10 +355,9 @@ impl Import {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use genco::prelude::*;
     ///
-    /// # fn main() -> genco::fmt::Result {
     /// let all = js::import("collections", "all").into_wildcard();
     ///
     /// let toks = quote!($all);
@@ -377,8 +370,7 @@ impl Import {
     ///     ],
     ///     toks.to_file_vec()?
     /// );
-    /// # Ok(())
-    /// # }
+    /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn into_wildcard(self) -> Self {
         Self {
@@ -529,10 +521,9 @@ impl JavaScript {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use genco::prelude::*;
 ///
-/// # fn main() -> genco::fmt::Result {
 /// let default_vec = js::import("collections", "defaultVec").into_default();
 /// let all = js::import("collections", "all").into_wildcard();
 /// let vec = js::import("collections", "vec");
@@ -557,8 +548,7 @@ impl JavaScript {
 ///     ],
 ///     toks.to_file_vec()?
 /// );
-/// # Ok(())
-/// # }
+/// # Ok::<_, genco::fmt::Error>(())
 /// ```
 pub fn import<M, N>(module: M, name: N) -> Import
 where
