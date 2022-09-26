@@ -25,11 +25,12 @@ use std::vec;
 ///
 /// This stream of tokens provides the following structural guarantees.
 ///
-/// * Only one [' '] may occur in sequence.
-/// * Only one ['\r'] may occur in sequence.
-/// * A ['\r'] may never be preceeded by a ['\n'], since it would have no
-///   effect.
-/// * Every ['\n'] must be preceeded by a ['\r'].
+/// * Only one [`space`] occurs in sequence and indicates spacing between
+///   tokens.
+/// * Only one [`push`] occurs in sequence and indicates that the next token
+///   should be spaced onto a new line.
+/// * A [`line`] is never by a [`push`] since it would have no effect. A line
+///   ensures an empty line between two tokens.
 ///
 /// ```
 /// use genco::Tokens;
@@ -37,15 +38,33 @@ use std::vec;
 ///
 /// let mut tokens = Tokens::<()>::new();
 ///
+/// // The first push token is "overriden" by a line.
+/// tokens.space();
+/// tokens.space();
+///
+/// assert_eq!(vec![Item::Space::<()>], tokens);
+///
+/// let mut tokens = Tokens::<()>::new();
+///
+/// tokens.space();
 /// tokens.push();
 /// tokens.push();
 ///
 /// assert_eq!(vec![Item::Push::<()>], tokens);
+///
+/// let mut tokens = Tokens::<()>::new();
+///
+/// // The first space and push tokens are "overriden" by a line.
+/// tokens.space();
+/// tokens.push();
+/// tokens.line();
+///
+/// assert_eq!(vec![Item::Line::<()>], tokens);
 /// ```
 ///
-/// [' ']: Self::space()
-/// ['\r']: Self::push()
-/// ['\n']: Self::line()
+/// [`space`]: Self::space
+/// [`push`]: Self::push
+/// [`line`]: Self::line
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Tokens<L = ()>
 where
@@ -158,11 +177,7 @@ where
     /// Extend with another stream of tokens.
     ///
     /// This respects the structural requirements of adding one element at a
-    /// time, like you would get by calling [' '], ['\r'], or ['\n'].
-    ///
-    /// [' ']: Self::space()
-    /// ['\r']: Self::push()
-    /// ['\n']: Self::line()
+    /// time, like you would get by calling [`space`], [`push`], or [`line`].
     ///
     /// # Examples
     ///
@@ -175,6 +190,10 @@ where
     ///
     /// assert_eq!(tokens, quote!(foo bar baz));
     /// ```
+    ///
+    /// [`space`]: Self::space
+    /// [`push`]: Self::push
+    /// [`line`]: Self::line
     pub fn extend<I>(&mut self, it: I)
     where
         I: IntoIterator<Item = Item<L>>,
@@ -329,7 +348,7 @@ where
                     self.items.push(Item::Line);
                     return;
                 }
-                Some(Item::Push) => continue,
+                Some(Item::Space | Item::Push) => continue,
                 item => break item,
             }
         };
@@ -387,10 +406,10 @@ where
     /// the beginning of a line preceeding any non-whitespace tokens.
     ///
     /// An indentation has no effect unless it's *followed* by non-whitespace
-    /// tokens. It also acts like a ['\r'], in that it will shift any tokens to
+    /// tokens. It also acts like a [`push`], in that it will shift any tokens to
     /// a new line.
     ///
-    /// ['\r']: Self::push
+    /// [`push`]: Self::push
     ///
     /// # Examples
     ///
@@ -426,7 +445,7 @@ where
     /// the beginning of a line preceeding any non-whitespace tokens.
     ///
     /// An indentation has no effect unless it's *followed* by non-whitespace
-    /// tokens. It also acts like a ['\r'], in that it will shift any tokens to
+    /// tokens. It also acts like a [`push`], in that it will shift any tokens to
     /// a new line.
     ///
     /// Indentation can never go below zero, and will just be ignored if that
@@ -434,7 +453,7 @@ where
     /// stream, so any negative indentation in place will have to be countered
     /// before indentation starts again.
     ///
-    /// ['\r']: Self::push
+    /// [`push`]: Self::push
     ///
     /// # Examples
     ///
