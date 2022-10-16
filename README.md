@@ -55,7 +55,7 @@ cargo +nightly run --example rust
 
 <br>
 
-### Supported Languages
+## Supported Languages
 
 The following are languages which have built-in support in genco.
 
@@ -91,7 +91,7 @@ cargo +nightly run --example rust
 
 <br>
 
-### Rust Example
+## Rust Example
 
 The following is a simple program producing Rust code to stdout with custom
 configuration:
@@ -150,5 +150,3 @@ fn main() {
 [impl_lang!]: https://docs.rs/genco/0/genco/macro.impl_lang.html
 [quoted()]: https://docs.rs/genco/0/genco/tokens/fn.quoted.html
 [Open an issue!]: https://github.com/udoprog/genco/issues/new
-
-License: MIT/Apache-2.0
