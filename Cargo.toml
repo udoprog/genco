@@ -2,17 +2,15 @@
 name = "genco"
 version = "0.17.2"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
-license = "MIT/Apache-2.0"
 edition = "2018"
-readme = "README.md"
-repository = "https://github.com/udoprog/genco"
-homepage = "https://github.com/udoprog/genco"
+description = "A whitespace-aware quasiquoter for beautiful code generation."
 documentation = "https://docs.rs/genco"
+readme = "README.md"
+homepage = "https://github.com/udoprog/genco"
+repository = "https://github.com/udoprog/genco"
+license = "MIT/Apache-2.0"
 keywords = ["template", "code-generation"]
 categories = ["template-engine"]
-description = """
-A whitespace-aware quasiquoter for beautiful code generation.
-"""
 
 [dependencies]
 genco-macros = {path = "./genco-macros", version = "0.17.2"}
