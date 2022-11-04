@@ -13,10 +13,12 @@ fn main() -> anyhow::Result<()> {
     // Trait that we import since we want to return it.
     let result = rust::import("anyhow", "Result");
 
+    let fn_name = "test";
+
     let tokens = quote! {
         $(register(write_bytes_ext))
 
-        fn test() -> $result {
+        fn $fn_name() -> $result {
             let mut data = vec![];
             data.write_u16::<$little_endian>(517)?;
             data.write_u16::<$big_endian>(768)?;
