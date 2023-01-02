@@ -1,6 +1,6 @@
 [package]
 name = "genco"
-version = "0.17.2"
+version = "0.17.3"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
 description = "A whitespace-aware quasiquoter for beautiful code generation."
@@ -13,7 +13,7 @@ keywords = ["code-generation", "template"]
 categories = ["template-engine"]
 
 [dependencies]
-genco-macros = {path = "./genco-macros", version = "0.17.2"}
+genco-macros = {path = "./genco-macros", version = "0.17.3"}
 
 relative-path = "1.2.0"
 smallvec = "1.4.0"

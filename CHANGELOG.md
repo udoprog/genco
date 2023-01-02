@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+[Unreleased]: https://github.com/udoprog/genco/compare/0.17.3...master
+
+## [0.17.3]
+
+### Changed
+* Fixed badge in project.
+
+[0.17.3]: https://github.com/udoprog/genco/compare/0.17.2...0.17.3
+
 ## [0.17.2]
 
 ### Added
@@ -76,4 +85,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.15.0]: https://github.com/udoprog/genco/compare/0.14.2...0.15.0
 [0.15.1]: https://github.com/udoprog/genco/compare/0.15.0...0.15.1
 [0.16.0]: https://github.com/udoprog/genco/compare/0.15.1...0.16.0
-[Unreleased]: https://github.com/udoprog/genco/compare/0.17.0...master
