@@ -7,16 +7,27 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - run: rustup toolchain install nightly --profile minimal
-    - run: cargo +nightly build --all --workspace
-
   test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - run: rustup toolchain install nightly --profile minimal
-    - run: cargo +nightly test --all --workspace
+    - uses: dtolnay/rust-toolchain@nightly
+    - run: cargo test --workspace --all-targets
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@1.68
+      with:
+        components: clippy
+    - run: cargo clippy --workspace --all-features --all-targets -- -D warnings
+
+  rustfmt:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
+    - run: cargo fmt --check --all
