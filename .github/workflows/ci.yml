@@ -1,14 +1,22 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        override: true
+    - run: rustup toolchain install nightly --profile minimal
+    - run: cargo +nightly build --all --workspace
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: rustup toolchain install nightly --profile minimal
     - run: cargo +nightly test --all --workspace
