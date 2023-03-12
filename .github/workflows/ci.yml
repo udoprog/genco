@@ -13,6 +13,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: dtolnay/rust-toolchain@nightly
     - run: cargo test --workspace --all-targets
+    - run: cargo test --workspace --doc
 
   clippy:
     runs-on: ubuntu-latest
