@@ -172,7 +172,7 @@ impl<'a> Quote<'a> {
         };
 
         let parser = Quote::new(self.receiver);
-        let (r, stream) = parser.parse(&input)?;
+        let (r, stream) = parser.parse(input)?;
         req.merge_with(r);
 
         let ast = Ast::Loop {

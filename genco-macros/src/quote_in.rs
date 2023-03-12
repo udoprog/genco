@@ -17,7 +17,7 @@ impl Parse for QuoteIn {
         let parser = crate::quote::Quote::new(receiver);
         let (req, output) = parser.parse(input)?;
 
-        let check = req.into_check(&receiver);
+        let check = req.into_check(receiver);
 
         // Give the assignment its own span to improve diagnostics.
         let assign_mut = q::quote_spanned! { expr.span() =>

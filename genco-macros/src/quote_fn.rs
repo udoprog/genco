@@ -12,7 +12,7 @@ impl Parse for QuoteFn {
         let parser = crate::quote::Quote::new(receiver);
         let (req, output) = parser.parse(input)?;
 
-        let check = req.into_check(&receiver);
+        let check = req.into_check(receiver);
 
         let stream = q::quote! {
             genco::tokens::from_fn(move |#receiver| {

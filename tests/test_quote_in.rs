@@ -13,7 +13,7 @@ fn test_quote_in() -> genco::fmt::Result {
 #[test]
 fn test_quote_into_unit() -> genco::fmt::Result {
     let tokens = &mut go::Tokens::new();
-    let _: () = quote_in!(*tokens => uint32);
+    quote_in!(*tokens => uint32);
     assert_eq!("uint32", tokens.to_string()?);
     Ok(())
 }

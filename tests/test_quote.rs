@@ -48,13 +48,11 @@ fn test_quote() -> genco::fmt::Result {
 
 #[test]
 fn test_tight_quote() -> genco::fmt::Result {
-    let foo = "foo";
-    let bar = "bar";
-    let baz = "baz";
-    let tokens: rust::Tokens = quote!($(foo)$(bar)$(baz));
-
+    let a = "foo";
+    let b = "bar";
+    let c = "baz";
+    let tokens: rust::Tokens = quote!($(a)$(b)$(c));
     assert_eq!("foobarbaz", tokens.to_string()?);
-
     Ok(())
 }
 

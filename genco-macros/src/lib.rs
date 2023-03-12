@@ -4,7 +4,7 @@
 //! [<img alt="build status" src="https://img.shields.io/github/actions/workflow/status/udoprog/genco/ci.yml?branch=main&style=for-the-badge" height="20">](https://github.com/udoprog/genco/actions?query=branch%3Amain)
 
 #![recursion_limit = "256"]
-#![doc(html_root_url = "https://docs.rs/genco/0.15.0")]
+#![allow(clippy::type_complexity)]
 
 extern crate proc_macro;
 
@@ -670,7 +670,7 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         Err(e) => return proc_macro::TokenStream::from(e.to_compile_error()),
     };
 
-    let check = req.into_check(&receiver);
+    let check = req.into_check(receiver);
 
     let gen = q::quote! {{
         let mut #receiver = genco::tokens::Tokens::new();

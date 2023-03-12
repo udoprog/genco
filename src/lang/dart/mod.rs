@@ -148,7 +148,7 @@ impl_lang! {
                 out.write_str(SEP)?;
             }
 
-            out.write_str(&*self.name)?;
+            out.write_str(&self.name)?;
             Ok(())
         }
     }

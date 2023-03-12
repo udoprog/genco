@@ -860,7 +860,7 @@ where
     }
 }
 
-impl<'a, L> cmp::PartialEq<Vec<Item<L>>> for Tokens<L>
+impl<L> cmp::PartialEq<Vec<Item<L>>> for Tokens<L>
 where
     L: Lang,
 {
@@ -869,7 +869,7 @@ where
     }
 }
 
-impl<'a, L> cmp::PartialEq<Tokens<L>> for Vec<Item<L>>
+impl<L> cmp::PartialEq<Tokens<L>> for Vec<Item<L>>
 where
     L: Lang,
 {
@@ -878,7 +878,7 @@ where
     }
 }
 
-impl<'a, L> cmp::PartialEq<[Item<L>]> for Tokens<L>
+impl<L> cmp::PartialEq<[Item<L>]> for Tokens<L>
 where
     L: Lang,
 {
@@ -887,7 +887,7 @@ where
     }
 }
 
-impl<'a, L> cmp::PartialEq<Tokens<L>> for [Item<L>]
+impl<L> cmp::PartialEq<Tokens<L>> for [Item<L>]
 where
     L: Lang,
 {

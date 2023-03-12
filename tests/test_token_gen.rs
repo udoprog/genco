@@ -80,7 +80,7 @@ fn test_tricky_continuation() {
     let bar = Static("bar");
 
     quote_in! {
-        &mut output =>
+        output =>
         foo, $(ref output {
             output.append(&bar);
             output.append(Static(","));
@@ -493,7 +493,7 @@ fn test_indentation_management2() -> fmt::Result {
             Literal(Static("pass")),
             Indentation(-1)
         ],
-        tokens.clone(),
+        tokens,
     };
 
     assert_eq!(

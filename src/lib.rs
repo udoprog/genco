@@ -112,7 +112,7 @@
 //!
 //! This would produce:
 //!
-//! ```rust,no_run
+//! ```rust,no_test
 //! use std::collections::HashMap;
 //!
 //! fn main() {
@@ -152,6 +152,7 @@
 
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
+#![allow(clippy::needless_doctest_main)]
 
 pub use genco_macros::{quote, quote_fn, quote_in};
 

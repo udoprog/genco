@@ -38,7 +38,7 @@ where
 impl AsRef<str> for ItemStr {
     fn as_ref(&self) -> &str {
         match self {
-            Self::Box(b) => &**b,
+            Self::Box(b) => b,
             Self::Static(s) => s,
         }
     }
@@ -49,7 +49,7 @@ impl Deref for ItemStr {
 
     fn deref(&self) -> &str {
         match self {
-            Self::Box(b) => &**b,
+            Self::Box(b) => b,
             Self::Static(s) => s,
         }
     }
