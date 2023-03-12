@@ -113,7 +113,7 @@ println!("{}", tokens.to_file_string()?);
 
 This would produce:
 
-```rust
+```no_test,rust
 use std::collections::HashMap;
 
 fn main() {
