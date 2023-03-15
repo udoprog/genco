@@ -12,17 +12,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: ["1.58", stable]
+        rust: ["1.58", stable, nightly]
     steps:
     - uses: actions/checkout@v3
     - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{matrix.rust}}
     - run: cargo build --workspace
-    - run: cargo test --workspace --all-targets
+    - run: cargo build --workspace --all-targets
       if: matrix.rust == 'stable'
     - run: cargo test --workspace --doc
-      if: matrix.rust == 'stable'
+      if: matrix.rust == 'nightly'
+    - run: cargo test --workspace --all-targets
+      if: matrix.rust == 'nightly'
 
   clippy:
     runs-on: ubuntu-latest
