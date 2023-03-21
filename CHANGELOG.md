@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/udoprog/genco/compare/0.17.3...master
 
+## [0.17.4]
+
+### Changed
+* Update project documentation.
+
+[0.17.4]: https://github.com/udoprog/genco/compare/0.17.3...0.17.4
+
 ## [0.17.3]
 
 ### Changed
