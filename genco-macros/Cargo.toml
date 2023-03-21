@@ -1,6 +1,6 @@
 [package]
 name = "genco-macros"
-version = "0.17.3"
+version = "0.17.4"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
 rust-version = "1.58"
@@ -21,7 +21,7 @@ q = {package = "quote", version = "1.0.3"}
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 
 [dev-dependencies]
-genco = { path = "..", version = "0.17.3" }
+genco = { path = "..", version = "0.17.4" }
 
 [lib]
 proc-macro = true
