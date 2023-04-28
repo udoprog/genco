@@ -17,6 +17,7 @@
 //! # }
 //! ```
 
+pub mod c;
 pub mod csharp;
 pub mod dart;
 pub mod go;
@@ -26,6 +27,7 @@ pub mod python;
 pub mod rust;
 pub mod swift;
 
+pub use self::c::C;
 pub use self::csharp::Csharp;
 pub use self::dart::Dart;
 pub use self::go::Go;
