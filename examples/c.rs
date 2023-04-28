@@ -3,7 +3,7 @@ use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     // Import `printf` from `<stdio.h>`
-    let printf = &c::include("stdio.h", "printf", false);
+    let printf = &c::include("stdio.h", "printf", true);
 
     let day = "tuesday";
     let name = "George";

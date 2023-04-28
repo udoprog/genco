@@ -94,11 +94,11 @@ impl C {
             return;
         }
 
-        for (file, relative) in includes {
-            if relative {
-                quote_in!(*out => #include $(quoted(file)));
-            } else {
+        for (file, system_header) in includes {
+            if system_header {
                 quote_in!(*out => #include <$(file)>);
+            } else {
+                quote_in!(*out => #include $(quoted(file)));
             }
             out.push();
         }
