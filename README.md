@@ -77,6 +77,9 @@ The following are languages which have built-in support in genco.
 * [🌐 <b>JavaScript</b>][js]<br>
   <small>[Example][js-example]</small>
 
+* [🇨 <b>C</b>][c]<br>
+  <small>[Example][c-example]</small>
+
 * [🐍 <b>Python</b>][python]<br>
   <small>[Example][python-example]</small><br>
   **Requires a `nightly` compiler**
@@ -136,6 +139,8 @@ fn main() {
 [dart-example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
 [js]: https://docs.rs/genco/latest/genco/lang/js/index.html
 [js-example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
+[c]: https://docs.rs/genco/latest/genco/lang/c/index.html
+[c-example]: https://github.com/udoprog/genco/blob/master/examples/c.rs
 [python]: https://docs.rs/genco/latest/genco/lang/python/index.html
 [python-example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
 [solve namespace conflicts]: https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html
