@@ -49,7 +49,8 @@ impl_lang! {
     }
 }
 
-/// The include of a C file `#include "foo/bar.h"`.
+/// The include statement for a C header file such as `#include "foo/bar.h"` or 
+/// `#include <stdio.h>`.
 ///
 /// Created using the [include()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -58,8 +59,8 @@ pub struct Import {
     path: ItemStr,
     /// Item declared in the included file.
     item: ItemStr,
-    /// Whether the import is specified as a relative path `""` or as a system include `<>`
-    relative: bool,
+    /// Whether the include is specified as a system header using `<>` or a local header using `""`.
+    system_header: bool,
 }
 
 /// Format for C.
@@ -86,7 +87,7 @@ impl C {
         let mut includes = BTreeSet::new();
 
         for include in tokens.walk_imports() {
-            includes.insert((&include.path, include.relative));
+            includes.insert((&include.path, include.system_header));
         }
 
         if includes.is_empty() {
@@ -106,16 +107,16 @@ impl C {
     }
 }
 
-/// Including a C header file `#include "foo/bar.h"`, and standard library
-/// header `#include <stdio.h>`.
+/// Include a local C header file such as `#include "foo/bar.h"`, or a system
+/// header such as `#include <stdio.h>`.
 ///
 /// # Examples
 ///
 /// ```
 /// use genco::prelude::*;
 ///
-/// let fizzbuzz = c::include("foo/bar.h", "fizzbuzz", true);
-/// let printf = c::include("stdio.h", "printf", false);
+/// let fizzbuzz = c::include("foo/bar.h", "fizzbuzz", false);
+/// let printf = c::include("stdio.h", "printf", true);
 ///
 /// let fizzbuzz_toks = quote! {
 ///     $fizzbuzz
@@ -142,7 +143,7 @@ impl C {
 /// );
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-pub fn include<M, N>(path: M, item: N, relative: bool) -> Import
+pub fn include<M, N>(path: M, item: N, system_header: bool) -> Import
 where
     M: Into<ItemStr>,
     N: Into<ItemStr>,
@@ -150,6 +151,6 @@ where
     Import {
         path: path.into(),
         item: item.into(),
-        relative,
+        system_header,
     }
 }
