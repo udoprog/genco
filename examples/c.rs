@@ -2,7 +2,7 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
-    let printf = &c::include("stdio.h", "printf", true);
+    let printf = &c::include_system("stdio.h", "printf");
 
     let day = "tuesday";
     let name = "George";

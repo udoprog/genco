@@ -59,8 +59,8 @@ pub struct Import {
     path: ItemStr,
     /// Item declared in the included file.
     item: ItemStr,
-    /// Whether the include is specified as a system header using `<>` or a local header using `""`.
-    system_header: bool,
+    /// True if the include is specified as a system header using `<>`, false if a local header using `""`.
+    system: bool,
 }
 
 /// Format for C.
@@ -87,7 +87,7 @@ impl C {
         let mut includes = BTreeSet::new();
 
         for include in tokens.walk_imports() {
-            includes.insert((&include.path, include.system_header));
+            includes.insert((&include.path, include.system));
         }
 
         if includes.is_empty() {
@@ -107,22 +107,17 @@ impl C {
     }
 }
 
-/// Include a local C header file such as `#include "foo/bar.h"`, or a system
-/// header such as `#include <stdio.h>`.
+/// Include an item declared a local C header file such as `#include "foo/bar.h"`
 ///
 /// # Examples
 ///
 /// ```
 /// use genco::prelude::*;
 ///
-/// let fizzbuzz = c::include("foo/bar.h", "fizzbuzz", false);
-/// let printf = c::include("stdio.h", "printf", true);
+/// let fizzbuzz = c::include("foo/bar.h", "fizzbuzz");
 ///
 /// let fizzbuzz_toks = quote! {
 ///     $fizzbuzz
-/// };
-/// let printf_toks = quote! {
-///     $printf
 /// };
 ///
 /// assert_eq!(
@@ -133,6 +128,33 @@ impl C {
 ///     ],
 ///     fizzbuzz_toks.to_file_vec()?
 /// );
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+pub fn include<M, N>(path: M, item: N) -> Import
+where
+    M: Into<ItemStr>,
+    N: Into<ItemStr>,
+{
+    Import {
+        path: path.into(),
+        item: item.into(),
+        system: false,
+    }
+}
+
+/// Include an item declared in a C system header such as `#include <stdio.h>`.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+///
+/// let printf = c::include_system("stdio.h", "printf");
+///
+/// let printf_toks = quote! {
+///     $printf
+/// };
+///
 /// assert_eq!(
 ///     vec![
 ///        "#include <stdio.h>",
@@ -143,7 +165,7 @@ impl C {
 /// );
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-pub fn include<M, N>(path: M, item: N, system_header: bool) -> Import
+pub fn include_system<M, N>(path: M, item: N) -> Import
 where
     M: Into<ItemStr>,
     N: Into<ItemStr>,
@@ -151,6 +173,6 @@ where
     Import {
         path: path.into(),
         item: item.into(),
-        system_header,
+        system: true,
     }
 }
