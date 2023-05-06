@@ -49,7 +49,7 @@ impl_lang! {
     }
 }
 
-/// The include statement for a C header file such as `#include "foo/bar.h"` or 
+/// The include statement for a C header file such as `#include "foo/bar.h"` or
 /// `#include <stdio.h>`.
 ///
 /// Created using the [include()] function.
