@@ -107,7 +107,7 @@ impl C {
     }
 }
 
-/// Include an item declared a local C header file such as `#include "foo/bar.h"`
+/// Include an item declared in a local C header file such as `#include "foo/bar.h"`
 ///
 /// # Examples
 ///
