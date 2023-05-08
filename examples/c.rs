@@ -23,7 +23,7 @@ fn main() -> anyhow::Result<()> {
     let mut w = fmt::IoWriter::new(stdout.lock());
 
     let fmt = fmt::Config::from_lang::<C>();
-    let config = c::Config::default().with_package("main");
+    let config = c::Config::default();
 
     tokens.format_file(&mut w.as_formatter(&fmt), &config)?;
     Ok(())

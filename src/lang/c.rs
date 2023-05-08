@@ -28,11 +28,6 @@ impl_lang! {
         ) -> fmt::Result {
             let mut header = Tokens::new();
 
-            if let Some(package) = &config.package {
-                quote_in!(header => package $package);
-                header.line();
-            }
-
             Self::imports(&mut header, tokens);
             let format = Format::default();
             header.format(out, config, &format)?;
@@ -69,18 +64,7 @@ pub struct Format {}
 
 /// Config data for C.
 #[derive(Debug, Default)]
-pub struct Config {
-    package: Option<ItemStr>,
-}
-
-impl Config {
-    /// Configure the specified package.
-    pub fn with_package<P: Into<ItemStr>>(self, package: P) -> Self {
-        Self {
-            package: Some(package.into()),
-        }
-    }
-}
+pub struct Config {}
 
 impl C {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
