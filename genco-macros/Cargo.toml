@@ -18,7 +18,7 @@ categories = ["template-engine"]
 [dependencies]
 syn = { version = "1.0.31", features = ["full"] }
 q = { package = "quote", version = "1.0.3" }
-proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
+proc-macro2 = { version = "1.0.63", features = ["span-locations"] }
 
 [dev-dependencies]
 genco = { path = "..", version = "0.17.5" }

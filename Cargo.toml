@@ -25,3 +25,6 @@ rand = "0.7.3"
 
 [workspace]
 members = ["genco-macros"]
+
+[patch.crates-io]
+proc-macro2 = { git = "https://github.com/hydro-project/proc-macro2", branch = "new-span-locs" }

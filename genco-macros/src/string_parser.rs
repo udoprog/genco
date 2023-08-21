@@ -1,9 +1,11 @@
 //! Helper to parse quoted strings.
 
 use crate::ast::LiteralName;
+use crate::fake::LineColumn;
 use crate::quote::parse_internal_function;
 use crate::requirements::Requirements;
-use proc_macro2::{LineColumn, Span, TokenStream, TokenTree};
+
+use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::parse::ParseStream;
 use syn::spanned::Spanned;
 use syn::token;
@@ -16,17 +18,17 @@ pub(crate) struct Options {
     pub(crate) has_eval: bool,
 }
 
-fn adjust_start(start: LineColumn) -> LineColumn {
+fn adjust_start(start: Span) -> LineColumn {
     LineColumn {
-        line: start.line,
-        column: start.column + 1,
+        line: start.line(),
+        column: start.column() + 1,
     }
 }
 
-fn adjust_end(end: LineColumn) -> LineColumn {
+fn adjust_end(end: Span) -> LineColumn {
     LineColumn {
-        line: end.line,
-        column: end.column.saturating_sub(1),
+        line: end.line(),
+        column: end.column().saturating_sub(1),
     }
 }
 
@@ -220,7 +222,11 @@ impl<'a> StringParser<'a> {
             if input.peek(syn::Token![$]) && input.peek2(syn::Token![$]) {
                 let start = input.parse::<syn::Token![$]>()?;
                 let escape = input.parse::<syn::Token![$]>()?;
-                encoder.encode_char('$', start.span().start(), escape.span().end())?;
+                encoder.encode_char(
+                    '$',
+                    LineColumn::new(start.span().start()),
+                    LineColumn::new(escape.span().end()),
+                )?;
                 continue;
             }
 
@@ -233,10 +239,18 @@ impl<'a> StringParser<'a> {
                             // existing static buffer.
                             if content.peek(syn::LitStr) && content.peek2(crate::token::Eof) {
                                 let s = content.parse::<syn::LitStr>()?;
-                                encoder.encode_str(&s.value(), start.start(), Some(end.end()))?;
+                                encoder.encode_str(
+                                    &s.value(),
+                                    LineColumn::new(start.start()),
+                                    Some(LineColumn::new(end.end())),
+                                )?;
                             } else {
                                 let expr = content.parse::<syn::Expr>()?;
-                                encoder.raw_expr(&expr, start.start(), Some(end.end()))?;
+                                encoder.raw_expr(
+                                    &expr,
+                                    LineColumn::new(start.start()),
+                                    Some(LineColumn::new(end.end())),
+                                )?;
                             }
                         }
                         (literal_name, _) => {
@@ -254,7 +268,11 @@ impl<'a> StringParser<'a> {
 
                     if !input.peek(token::Paren) {
                         let ident = input.parse::<syn::Ident>()?;
-                        encoder.eval_ident(&ident, start.start(), Some(ident.span().end()))?;
+                        encoder.eval_ident(
+                            &ident,
+                            LineColumn::new(start.start()),
+                            Some(LineColumn::new(ident.span().end())),
+                        )?;
                         continue;
                     }
 
@@ -265,14 +283,22 @@ impl<'a> StringParser<'a> {
                         .with_span(content.span())?
                         .parse(&content)?;
                     requirements.merge_with(req);
-                    encoder.eval_stream(stream, start.start(), Some(end.end()))?;
+                    encoder.eval_stream(
+                        stream,
+                        LineColumn::new(start.start()),
+                        Some(LineColumn::new(end.end())),
+                    )?;
                 }
 
                 continue;
             }
 
             let tt = input.parse::<TokenTree>()?;
-            encoder.extend_tt(&tt, tt.span().start(), Some(tt.span().end()))?;
+            encoder.extend_tt(
+                &tt,
+                LineColumn::new(tt.span().start()),
+                Some(LineColumn::new(tt.span().end())),
+            )?;
         }
 
         let (options, stream) = encoder.finalize(self.end)?;

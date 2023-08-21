@@ -17,10 +17,10 @@ pub(crate) struct LineColumn {
 }
 
 impl LineColumn {
-    fn new(line_column: proc_macro2::LineColumn) -> Self {
+    pub(crate) fn new(span: Span) -> Self {
         Self {
-            line: line_column.line,
-            column: line_column.column,
+            line: span.line(),
+            column: span.column(),
         }
     }
 }
@@ -45,7 +45,7 @@ impl Buf {
         let start = span.start();
         let end = span.end();
 
-        if (start.line == 0 && start.column == 0) || (end.line == 0 && end.column == 0) {
+        if (start.line() == 0 && start.column() == 0) || (end.line() == 0 && end.column() == 0) {
             // Try compat.
             let (start, end) = self.find_line_column(span)?;
 
@@ -74,7 +74,7 @@ impl Buf {
         let start = span.start();
 
         // Try to use compat layer.
-        if start.line == 0 && start.column == 0 {
+        if start.line() == 0 && start.column() == 0 {
             // Try compat.
             let (column, _) = self.find_line_column(span)?;
             Ok(LineColumn { line: 1, column })
@@ -88,7 +88,7 @@ impl Buf {
         let end = span.end();
 
         // Try to use compat layer.
-        if end.line == 0 && end.column == 0 {
+        if end.line() == 0 && end.column() == 0 {
             // Try compat.
             let (_, column) = self.find_line_column(span)?;
             Ok(LineColumn { line: 1, column })
