@@ -348,7 +348,7 @@ impl<'a> Quote<'a> {
                         ));
                     }
                     (LiteralName::Ident("str"), Some(content)) => {
-                        let parser = StringParser::new(self.receiver, end);
+                        let parser = StringParser::new(self.receiver, &self.buf, end)?;
 
                         let (options, r, stream) = parser.parse(&content)?;
                         encoder.requirements.merge_with(r);
