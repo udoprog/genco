@@ -1,3 +1,4 @@
+use std::cell::{RefCell, RefMut};
 use std::fmt::Arguments;
 
 use proc_macro2::Span;
@@ -17,84 +18,97 @@ pub(crate) struct LineColumn {
 }
 
 impl LineColumn {
-    fn new(line_column: proc_macro2::LineColumn) -> Self {
-        Self {
-            line: line_column.line,
-            column: line_column.column,
-        }
+    #[cfg(proc_macro_span)]
+    pub(crate) fn start(span: Span) -> Option<Self> {
+        let span = span.unwrap().start();
+
+        Some(Self {
+            line: span.line(),
+            column: span.column(),
+        })
+    }
+
+    #[cfg(proc_macro_span)]
+    pub(crate) fn end(span: Span) -> Option<Self> {
+        let span = span.unwrap().end();
+
+        Some(Self {
+            line: span.line(),
+            column: span.column(),
+        })
+    }
+
+    #[cfg(not(proc_macro_span))]
+    pub(crate) fn start(_: Span) -> Option<Self> {
+        None
+    }
+
+    #[cfg(not(proc_macro_span))]
+    pub(crate) fn end(_: Span) -> Option<Self> {
+        None
     }
 }
 
 #[derive(Default)]
 pub(crate) struct Buf {
-    buf: Option<String>,
+    buf: RefCell<String>,
 }
 
 impl Buf {
     /// Format the given arguments and return the associated string.
-    fn format(&mut self, args: Arguments<'_>) -> &str {
+    fn format(&self, args: Arguments<'_>) -> RefMut<'_, str> {
         use std::fmt::Write;
-        let buf = self.buf.get_or_insert_with(String::default);
+        let mut buf = self.buf.borrow_mut();
         buf.clear();
         buf.write_fmt(args).unwrap();
-        buf.as_str()
+        RefMut::map(buf, |buf| buf.as_mut_str())
     }
 
     /// Construct a cursor from a span.
-    pub(crate) fn cursor(&mut self, span: Span) -> syn::Result<Cursor> {
-        let start = span.start();
-        let end = span.end();
+    pub(crate) fn cursor(&self, span: Span) -> syn::Result<Cursor> {
+        let start = LineColumn::start(span);
+        let end = LineColumn::end(span);
 
-        if (start.line == 0 && start.column == 0) || (end.line == 0 && end.column == 0) {
-            // Try compat.
-            let (start, end) = self.find_line_column(span)?;
-
-            Ok(Cursor::new(
-                span,
-                LineColumn {
-                    line: 1,
-                    column: start,
-                },
-                LineColumn {
-                    line: 1,
-                    column: end,
-                },
-            ))
-        } else {
-            Ok(Cursor::new(
-                span,
-                LineColumn::new(start),
-                LineColumn::new(end),
-            ))
+        if let (Some(start), Some(end)) = (start, end) {
+            return Ok(Cursor::new(span, start, end));
         }
+
+        // Try compat.
+        let (start, end) = self.find_line_column(span)?;
+
+        Ok(Cursor::new(
+            span,
+            LineColumn {
+                line: 1,
+                column: start,
+            },
+            LineColumn {
+                line: 1,
+                column: end,
+            },
+        ))
     }
 
     /// The start of the given span.
     pub(crate) fn start(&mut self, span: Span) -> syn::Result<LineColumn> {
-        let start = span.start();
-
-        // Try to use compat layer.
-        if start.line == 0 && start.column == 0 {
-            // Try compat.
-            let (column, _) = self.find_line_column(span)?;
-            Ok(LineColumn { line: 1, column })
-        } else {
-            Ok(LineColumn::new(start))
+        if let Some(start) = LineColumn::start(span) {
+            return Ok(start);
         }
+
+        // Try compat.
+        let (column, _) = self.find_line_column(span)?;
+        Ok(LineColumn { line: 1, column })
     }
 
     /// The start of the given span.
     pub(crate) fn end(&mut self, span: Span) -> syn::Result<LineColumn> {
-        let end = span.end();
-
-        // Try to use compat layer.
-        if end.line == 0 && end.column == 0 {
-            // Try compat.
-            let (_, column) = self.find_line_column(span)?;
-            Ok(LineColumn { line: 1, column })
-        } else {
-            Ok(LineColumn::new(end))
+        if let Some(end) = LineColumn::end(span) {
+            return Ok(end);
         }
+
+        // Try compat.
+        let (_, column) = self.find_line_column(span)?;
+        Ok(LineColumn { line: 1, column })
     }
 
     /// Join two spans.
@@ -108,14 +122,14 @@ impl Buf {
 
     /// Try to decode line and column information using the debug implementation of
     /// a `span` which leaks the byte offset of a thing.
-    fn find_line_column(&mut self, span: Span) -> syn::Result<(usize, usize)> {
+    fn find_line_column(&self, span: Span) -> syn::Result<(usize, usize)> {
         match self.find_line_column_inner(span) {
             Some((start, end)) => Ok((start, end)),
             None => Err(syn::Error::new(span, ERROR)),
         }
     }
 
-    fn find_line_column_inner(&mut self, span: Span) -> Option<(usize, usize)> {
+    fn find_line_column_inner(&self, span: Span) -> Option<(usize, usize)> {
         let text = self.format(format_args!("{:?}", span));
         let start = text.find('(')?;
         let (start, end) = text

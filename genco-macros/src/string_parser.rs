@@ -1,9 +1,11 @@
 //! Helper to parse quoted strings.
 
 use crate::ast::LiteralName;
+use crate::fake::{Buf, LineColumn};
 use crate::quote::parse_internal_function;
 use crate::requirements::Requirements;
-use proc_macro2::{LineColumn, Span, TokenStream, TokenTree};
+
+use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::parse::ParseStream;
 use syn::spanned::Spanned;
 use syn::token;
@@ -194,22 +196,26 @@ impl<'a> Encoder<'a> {
 
 pub struct StringParser<'a> {
     receiver: &'a syn::Ident,
+    buf: &'a Buf,
     start: LineColumn,
     end: LineColumn,
     span: Span,
 }
 
 impl<'a> StringParser<'a> {
-    pub(crate) fn new(receiver: &'a syn::Ident, span: Span) -> Self {
-        Self {
+    pub(crate) fn new(receiver: &'a syn::Ident, buf: &'a Buf, span: Span) -> syn::Result<Self> {
+        let cursor = buf.cursor(span)?;
+
+        Ok(Self {
             receiver,
+            buf,
             // Note: adjusting span since we expect the quoted string to be
             // withing a block, where the interior span is one character pulled
             // in in each direction.
-            start: adjust_start(span.start()),
-            end: adjust_end(span.end()),
+            start: adjust_start(cursor.start),
+            end: adjust_end(cursor.end),
             span,
-        }
+        })
     }
 
     pub(crate) fn parse(self, input: ParseStream) -> Result<(Options, Requirements, TokenStream)> {
@@ -220,7 +226,9 @@ impl<'a> StringParser<'a> {
             if input.peek(syn::Token![$]) && input.peek2(syn::Token![$]) {
                 let start = input.parse::<syn::Token![$]>()?;
                 let escape = input.parse::<syn::Token![$]>()?;
-                encoder.encode_char('$', start.span().start(), escape.span().end())?;
+                let start = self.buf.cursor(start.span())?;
+                let escape = self.buf.cursor(escape.span())?;
+                encoder.encode_char('$', start.start, escape.end)?;
                 continue;
             }
 
@@ -228,15 +236,18 @@ impl<'a> StringParser<'a> {
                 if let Some((name, content, [start, end])) = parse_internal_function(input)? {
                     match (name.as_literal_name(), content) {
                         (LiteralName::Ident("const"), Some(content)) => {
+                            let start = self.buf.cursor(start)?;
+                            let end = self.buf.cursor(end)?;
+
                             // Compile-time string optimization. A single,
                             // enclosed literal string can be added to the
                             // existing static buffer.
                             if content.peek(syn::LitStr) && content.peek2(crate::token::Eof) {
                                 let s = content.parse::<syn::LitStr>()?;
-                                encoder.encode_str(&s.value(), start.start(), Some(end.end()))?;
+                                encoder.encode_str(&s.value(), start.start, Some(end.end))?;
                             } else {
                                 let expr = content.parse::<syn::Expr>()?;
-                                encoder.raw_expr(&expr, start.start(), Some(end.end()))?;
+                                encoder.raw_expr(&expr, start.start, Some(end.end))?;
                             }
                         }
                         (literal_name, _) => {
@@ -254,7 +265,9 @@ impl<'a> StringParser<'a> {
 
                     if !input.peek(token::Paren) {
                         let ident = input.parse::<syn::Ident>()?;
-                        encoder.eval_ident(&ident, start.start(), Some(ident.span().end()))?;
+                        let start = self.buf.cursor(start.span())?;
+                        let end = self.buf.cursor(ident.span())?.end;
+                        encoder.eval_ident(&ident, start.start, Some(end))?;
                         continue;
                     }
 
@@ -265,14 +278,17 @@ impl<'a> StringParser<'a> {
                         .with_span(content.span())?
                         .parse(&content)?;
                     requirements.merge_with(req);
-                    encoder.eval_stream(stream, start.start(), Some(end.end()))?;
+                    let start = self.buf.cursor(start.span())?;
+                    let end = self.buf.cursor(end.span())?;
+                    encoder.eval_stream(stream, start.start, Some(end.end))?;
                 }
 
                 continue;
             }
 
             let tt = input.parse::<TokenTree>()?;
-            encoder.extend_tt(&tt, tt.span().start(), Some(tt.span().end()))?;
+            let cursor = self.buf.cursor(tt.span())?;
+            encoder.extend_tt(&tt, cursor.start, Some(cursor.end))?;
         }
 
         let (options, stream) = encoder.finalize(self.end)?;
