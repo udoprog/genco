@@ -1,6 +1,6 @@
 [package]
 name = "genco-macros"
-version = "0.17.5"
+version = "0.17.6"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
 rust-version = "1.58"
@@ -11,7 +11,7 @@ documentation = "https://docs.rs/genco"
 readme = "README.md"
 homepage = "https://github.com/udoprog/genco"
 repository = "https://github.com/udoprog/genco"
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 keywords = ["code-generation", "template"]
 categories = ["template-engine"]
 
@@ -21,7 +21,7 @@ q = { package = "quote", version = "1.0.3" }
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 
 [dev-dependencies]
-genco = { path = "..", version = "0.17.5" }
+genco = { path = "..", version = "0.17.6" }
 
 [lib]
 proc-macro = true

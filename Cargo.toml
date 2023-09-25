@@ -1,6 +1,6 @@
 [package]
 name = "genco"
-version = "0.17.5"
+version = "0.17.6"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
 rust-version = "1.58"
@@ -9,12 +9,12 @@ documentation = "https://docs.rs/genco"
 readme = "README.md"
 homepage = "https://github.com/udoprog/genco"
 repository = "https://github.com/udoprog/genco"
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 keywords = ["code-generation", "template"]
 categories = ["template-engine"]
 
 [dependencies]
-genco-macros = { path = "./genco-macros", version = "=0.17.5" }
+genco-macros = { path = "./genco-macros", version = "=0.17.6" }
 
 relative-path = "1.2.0"
 smallvec = "1.4.0"
