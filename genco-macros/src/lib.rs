@@ -11,6 +11,29 @@ extern crate proc_macro;
 use proc_macro2::Span;
 use syn::parse::{ParseStream, Parser as _};
 
+struct Ctxt {
+    receiver: syn::Ident,
+    module: syn::Path,
+}
+
+impl Default for Ctxt {
+    fn default() -> Self {
+        let mut module = syn::Path {
+            leading_colon: None,
+            segments: syn::punctuated::Punctuated::default(),
+        };
+
+        module
+            .segments
+            .push(syn::Ident::new("genco", Span::call_site()).into());
+
+        Self {
+            receiver: syn::Ident::new("__genco_macros_toks", Span::call_site()),
+            module,
+        }
+    }
+}
+
 mod ast;
 mod cursor;
 mod encoder;
@@ -659,9 +682,8 @@ mod token;
 /// [escape]: #escape-sequences
 #[proc_macro]
 pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let receiver = &syn::Ident::new("__genco_macros_toks", Span::call_site());
-
-    let parser = crate::quote::Quote::new(receiver);
+    let cx = Ctxt::default();
+    let parser = crate::quote::Quote::new(&cx);
 
     let parser = move |stream: ParseStream| parser.parse(stream);
 
@@ -670,10 +692,12 @@ pub fn quote(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
         Err(e) => return proc_macro::TokenStream::from(e.to_compile_error()),
     };
 
-    let check = req.into_check(receiver);
+    let check = req.into_check(&cx.receiver);
+
+    let Ctxt { receiver, module } = &cx;
 
     let gen = q::quote! {{
-        let mut #receiver = genco::tokens::Tokens::new();
+        let mut #receiver = #module::tokens::Tokens::new();
 
         {
             let mut #receiver = &mut #receiver;

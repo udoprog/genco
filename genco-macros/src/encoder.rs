@@ -3,14 +3,15 @@ use crate::cursor::Cursor;
 use crate::fake::LineColumn;
 use crate::requirements::Requirements;
 use crate::static_buffer::StaticBuffer;
+use crate::Ctxt;
 
 use proc_macro2::{Span, TokenStream};
 use syn::Result;
 
 /// Struct to deal with emitting the necessary spacing.
 pub(crate) struct Encoder<'a> {
-    /// The identifier that received the input.
-    receiver: &'a syn::Ident,
+    /// Context for encoding.
+    cx: &'a Ctxt,
     /// Use to modify the initial line/column in case something was processed
     /// before the input was handed off to the quote parser.
     ///
@@ -38,15 +39,15 @@ pub(crate) struct Encoder<'a> {
 
 impl<'a> Encoder<'a> {
     pub(crate) fn new(
-        receiver: &'a syn::Ident,
+        cx: &'a Ctxt,
         span_start: Option<LineColumn>,
         span_end: Option<LineColumn>,
     ) -> Self {
         Self {
-            receiver,
+            cx,
             span_start,
             span_end,
-            item_buffer: StaticBuffer::new(receiver),
+            item_buffer: StaticBuffer::new(cx),
             output: TokenStream::new(),
             last: None,
             last_start_column: None,
@@ -151,29 +152,32 @@ impl<'a> Encoder<'a> {
     }
 
     pub(crate) fn encode_string(&mut self, has_eval: bool, stream: TokenStream) {
+        let Ctxt { receiver, module } = self.cx;
+
         self.item_buffer.flush(&mut self.output);
-        let receiver = self.receiver;
 
         self.output.extend(q::quote! {
-            #receiver.append(genco::tokens::Item::OpenQuote(#has_eval));
+            #receiver.append(#module::tokens::Item::OpenQuote(#has_eval));
             #stream
-            #receiver.append(genco::tokens::Item::CloseQuote);
+            #receiver.append(#module::tokens::Item::CloseQuote);
         });
     }
 
     pub(crate) fn encode_quoted(&mut self, s: syn::LitStr) {
-        let receiver = self.receiver;
+        let Ctxt { receiver, module } = self.cx;
+
         self.item_buffer.flush(&mut self.output);
 
         self.output.extend(q::quote! {
-            #receiver.append(genco::tokens::Item::OpenQuote(false));
-            #receiver.append(genco::tokens::ItemStr::Static(#s));
-            #receiver.append(genco::tokens::Item::CloseQuote);
+            #receiver.append(#module::tokens::Item::OpenQuote(false));
+            #receiver.append(#module::tokens::ItemStr::Static(#s));
+            #receiver.append(#module::tokens::Item::CloseQuote);
         });
     }
 
     pub(crate) fn encode_control(&mut self, control: Control) {
-        let receiver = self.receiver;
+        let Ctxt { receiver, .. } = self.cx;
+
         self.item_buffer.flush(&mut self.output);
 
         match control.kind {
@@ -193,7 +197,7 @@ impl<'a> Encoder<'a> {
     }
 
     pub(crate) fn encode_scope(&mut self, binding: Option<syn::Ident>, content: TokenStream) {
-        let receiver = self.receiver;
+        let Ctxt { receiver, .. } = self.cx;
 
         if binding.is_some() {
             self.item_buffer.flush(&mut self.output);
@@ -209,7 +213,8 @@ impl<'a> Encoder<'a> {
 
     /// Encode an evaluation of the given expression.
     pub(crate) fn encode_eval_ident(&mut self, ident: syn::Ident) {
-        let receiver = self.receiver;
+        let Ctxt { receiver, .. } = self.cx;
+
         self.item_buffer.flush(&mut self.output);
         self.output.extend(q::quote! {
             #receiver.append(#ident);
@@ -218,7 +223,8 @@ impl<'a> Encoder<'a> {
 
     /// Encode an evaluation of the given expression.
     pub(crate) fn encode_eval(&mut self, expr: syn::Expr) {
-        let receiver = self.receiver;
+        let Ctxt { receiver, .. } = self.cx;
+
         self.item_buffer.flush(&mut self.output);
         self.output.extend(q::quote! {
             #receiver.append(#expr);
@@ -335,6 +341,8 @@ impl<'a> Encoder<'a> {
 
     /// Finalize the encoder.
     fn finalize(&mut self) -> Result<()> {
+        let Ctxt { receiver, .. } = self.cx;
+
         // evaluate whitespace in case we have an explicit end span.
         while let Some(to) = self.span_end.take() {
             if let Some(from) = self.from() {
@@ -344,8 +352,6 @@ impl<'a> Encoder<'a> {
         }
 
         self.item_buffer.flush(&mut self.output);
-
-        let receiver = self.receiver;
 
         while self.indents.pop().is_some() {
             self.output.extend(q::quote!(#receiver.unindent();));
@@ -362,7 +368,7 @@ impl<'a> Encoder<'a> {
         to: LineColumn,
         to_span: Option<Span>,
     ) -> Result<()> {
-        let r = self.receiver;
+        let Ctxt { receiver: r, .. } = self.cx;
 
         // Do nothing if empty span.
         if from == to {
