@@ -1,9 +1,7 @@
 //! Helper to parse quoted strings.
 
-use crate::ast::LiteralName;
-use crate::fake::{Buf, LineColumn};
-use crate::quote::parse_internal_function;
-use crate::requirements::Requirements;
+use std::cell::{Cell, RefCell};
+use std::fmt::Write;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::parse::ParseStream;
@@ -11,11 +9,17 @@ use syn::spanned::Spanned;
 use syn::token;
 use syn::Result;
 
+use crate::ast::LiteralName;
+use crate::fake::{Buf, LineColumn};
+use crate::quote::parse_internal_function;
+use crate::requirements::Requirements;
+use crate::Ctxt;
+
 /// Options for the parsed string.
-#[derive(Default, Clone, Copy)]
+#[derive(Default)]
 pub(crate) struct Options {
     /// If the parsed string has any evaluation statements in it.
-    pub(crate) has_eval: bool,
+    pub(crate) has_eval: Cell<bool>,
 }
 
 fn adjust_start(start: LineColumn) -> LineColumn {
@@ -33,150 +37,159 @@ fn adjust_end(end: LineColumn) -> LineColumn {
 }
 
 struct Encoder<'a> {
-    receiver: &'a syn::Ident,
-    cursor: Option<LineColumn>,
+    cx: &'a Ctxt,
     span: Span,
-    count: usize,
-    buffer: String,
-    stream: TokenStream,
+    cursor: Cell<Option<LineColumn>>,
+    count: Cell<usize>,
+    buf: RefCell<String>,
+    stream: RefCell<TokenStream>,
     pub(crate) options: Options,
 }
 
 impl<'a> Encoder<'a> {
-    pub fn new(receiver: &'a syn::Ident, cursor: LineColumn, span: Span) -> Self {
+    pub fn new(cx: &'a Ctxt, cursor: LineColumn, span: Span) -> Self {
         Self {
-            receiver,
-            cursor: Some(cursor),
+            cx,
             span,
-            count: 0,
-            buffer: String::new(),
-            stream: TokenStream::new(),
+            cursor: Cell::new(Some(cursor)),
+            count: Cell::new(0),
+            buf: RefCell::new(String::new()),
+            stream: RefCell::new(TokenStream::new()),
             options: Options::default(),
         }
     }
 
-    pub(crate) fn finalize(mut self, end: LineColumn) -> Result<(Options, TokenStream)> {
+    pub(crate) fn finalize(self, end: LineColumn) -> Result<(Options, TokenStream)> {
         self.flush(Some(end), None)?;
-        Ok((self.options, self.stream))
+        Ok((self.options, self.stream.into_inner()))
     }
 
     /// Encode a single character and replace the cursor with the given
     /// location.
-    pub(crate) fn encode_char(&mut self, c: char, from: LineColumn, to: LineColumn) -> Result<()> {
+    pub(crate) fn encode_char(&self, c: char, from: LineColumn, to: LineColumn) -> Result<()> {
         self.flush_whitespace(Some(from), Some(to))?;
-        self.buffer.push(c);
-        self.cursor = Some(to);
+        self.buf.borrow_mut().push(c);
+        self.cursor.set(Some(to));
         Ok(())
     }
 
     /// Encode a string directly to the static buffer as an optimization.
     pub(crate) fn encode_str(
-        &mut self,
+        &self,
         s: &str,
         from: LineColumn,
         to: Option<LineColumn>,
     ) -> Result<()> {
         self.flush_whitespace(Some(from), to)?;
-        self.buffer.push_str(s);
+        self.buf.borrow_mut().push_str(s);
         Ok(())
     }
 
     /// Eval the given identifier.
     pub(crate) fn eval_ident(
-        &mut self,
+        &self,
         ident: &syn::Ident,
         from: LineColumn,
         to: Option<LineColumn>,
     ) -> Result<()> {
+        let Ctxt { receiver, module } = self.cx;
+
         self.flush(Some(from), to)?;
-        let receiver = self.receiver;
 
         let ident = syn::LitStr::new(&ident.to_string(), ident.span());
 
-        self.stream.extend(q::quote! {
-            #receiver.append(genco::tokens::Item::OpenEval);
-            #receiver.append(genco::tokens::Item::Literal(genco::tokens::ItemStr::Static(#ident)));
-            #receiver.append(genco::tokens::Item::CloseEval);
+        self.stream.borrow_mut().extend(q::quote! {
+            #receiver.append(#module::tokens::Item::OpenEval);
+            #receiver.append(#module::tokens::Item::Literal(#module::tokens::ItemStr::Static(#ident)));
+            #receiver.append(#module::tokens::Item::CloseEval);
         });
 
-        self.options.has_eval = true;
+        self.options.has_eval.set(true);
         Ok(())
     }
 
     /// Eval the given expression.
     pub(crate) fn eval_stream(
-        &mut self,
+        &self,
         expr: TokenStream,
         from: LineColumn,
         to: Option<LineColumn>,
     ) -> Result<()> {
         self.flush(Some(from), to)?;
-        let receiver = self.receiver;
 
-        self.stream.extend(q::quote! {
-            #receiver.append(genco::tokens::Item::OpenEval);
+        let Ctxt { receiver, module } = self.cx;
+
+        self.stream.borrow_mut().extend(q::quote! {
+            #receiver.append(#module::tokens::Item::OpenEval);
             #expr
-            #receiver.append(genco::tokens::Item::CloseEval);
+            #receiver.append(#module::tokens::Item::CloseEval);
         });
 
-        self.options.has_eval = true;
+        self.options.has_eval.set(true);
         Ok(())
     }
 
     /// Extend the content of the string with the given raw stream.
     pub(crate) fn raw_expr(
-        &mut self,
+        &self,
         expr: &syn::Expr,
         from: LineColumn,
         to: Option<LineColumn>,
     ) -> Result<()> {
         self.flush(Some(from), to)?;
-        let receiver = self.receiver;
-        self.stream.extend(q::quote! {
+
+        let Ctxt { receiver, .. } = self.cx;
+
+        self.stream.borrow_mut().extend(q::quote! {
             #receiver.append(#expr);
         });
         Ok(())
     }
 
     pub(crate) fn extend_tt(
-        &mut self,
+        &self,
         tt: &TokenTree,
         from: LineColumn,
         to: Option<LineColumn>,
     ) -> Result<()> {
         self.flush_whitespace(Some(from), to)?;
-        self.buffer.push_str(&tt.to_string());
+        write!(self.buf.borrow_mut(), "{tt}").unwrap();
         Ok(())
     }
 
     /// Flush the outgoing buffer.
-    pub fn flush(&mut self, from: Option<LineColumn>, to: Option<LineColumn>) -> Result<()> {
+    pub fn flush(&self, from: Option<LineColumn>, to: Option<LineColumn>) -> Result<()> {
+        let Ctxt { receiver, module } = self.cx;
+
         self.flush_whitespace(from, to)?;
-        let receiver = self.receiver;
 
-        if self.buffer.is_empty() {
-            return Ok(());
-        }
+        let lit = {
+            let buf = self.buf.borrow();
 
-        let lit = syn::LitStr::new(&self.buffer, self.span);
+            if buf.is_empty() {
+                return Ok(());
+            }
 
-        self.count += 1;
+            syn::LitStr::new(buf.as_str(), self.span)
+        };
 
-        self.stream.extend(q::quote! {
-            #receiver.append(genco::tokens::ItemStr::Static(#lit));
+        self.count.set(self.count.get().wrapping_add(1));
+
+        self.stream.borrow_mut().extend(q::quote! {
+            #receiver.append(#module::tokens::ItemStr::Static(#lit));
         });
 
-        self.buffer.clear();
+        self.buf.borrow_mut().clear();
         Ok(())
     }
 
     /// Flush the outgoing buffer.
     pub(crate) fn flush_whitespace(
-        &mut self,
+        &self,
         from: Option<LineColumn>,
         to: Option<LineColumn>,
     ) -> Result<()> {
-        if let (Some(from), Some(cursor)) = (from, self.cursor) {
+        if let (Some(from), Some(cursor)) = (from, self.cursor.get()) {
             if cursor.line != from.line {
                 return Err(syn::Error::new(
                     self.span,
@@ -185,17 +198,17 @@ impl<'a> Encoder<'a> {
             }
 
             for _ in 0..from.column.saturating_sub(cursor.column) {
-                self.buffer.push(' ');
+                self.buf.borrow_mut().push(' ');
             }
         }
 
-        self.cursor = to;
+        self.cursor.set(to);
         Ok(())
     }
 }
 
 pub struct StringParser<'a> {
-    receiver: &'a syn::Ident,
+    cx: &'a Ctxt,
     buf: &'a Buf,
     start: LineColumn,
     end: LineColumn,
@@ -203,11 +216,11 @@ pub struct StringParser<'a> {
 }
 
 impl<'a> StringParser<'a> {
-    pub(crate) fn new(receiver: &'a syn::Ident, buf: &'a Buf, span: Span) -> syn::Result<Self> {
+    pub(crate) fn new(cx: &'a Ctxt, buf: &'a Buf, span: Span) -> syn::Result<Self> {
         let cursor = buf.cursor(span)?;
 
         Ok(Self {
-            receiver,
+            cx,
             buf,
             // Note: adjusting span since we expect the quoted string to be
             // withing a block, where the interior span is one character pulled
@@ -220,7 +233,7 @@ impl<'a> StringParser<'a> {
 
     pub(crate) fn parse(self, input: ParseStream) -> Result<(Options, Requirements, TokenStream)> {
         let mut requirements = Requirements::default();
-        let mut encoder = Encoder::new(self.receiver, self.start, self.span);
+        let encoder = Encoder::new(self.cx, self.start, self.span);
 
         while !input.is_empty() {
             if input.peek(syn::Token![$]) && input.peek2(syn::Token![$]) {
@@ -274,7 +287,7 @@ impl<'a> StringParser<'a> {
                     let content;
                     let end = syn::parenthesized!(content in input).span;
 
-                    let (req, stream) = crate::quote::Quote::new(self.receiver)
+                    let (req, stream) = crate::quote::Quote::new(self.cx)
                         .with_span(content.span())?
                         .parse(&content)?;
                     requirements.merge_with(req);

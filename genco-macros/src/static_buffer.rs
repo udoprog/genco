@@ -1,16 +1,18 @@
 use proc_macro2::{Span, TokenStream};
 
+use crate::Ctxt;
+
 /// Buffer used to resolve static items.
 pub(crate) struct StaticBuffer<'a> {
-    receiver: &'a syn::Ident,
+    cx: &'a Ctxt,
     buffer: String,
 }
 
 impl<'a> StaticBuffer<'a> {
     /// Construct a new line buffer.
-    pub(crate) fn new(receiver: &'a syn::Ident) -> Self {
+    pub(crate) fn new(cx: &'a Ctxt) -> Self {
         Self {
-            receiver,
+            cx,
             buffer: String::new(),
         }
     }
@@ -28,9 +30,10 @@ impl<'a> StaticBuffer<'a> {
     /// Flush the line buffer if necessary.
     pub(crate) fn flush(&mut self, tokens: &mut TokenStream) {
         if !self.buffer.is_empty() {
-            let receiver = self.receiver;
+            let Ctxt { receiver, module } = self.cx;
+
             let s = syn::LitStr::new(&self.buffer, Span::call_site());
-            tokens.extend(q::quote!(#receiver.append(genco::tokens::ItemStr::Static(#s));));
+            tokens.extend(q::quote!(#receiver.append(#module::tokens::ItemStr::Static(#s));));
             self.buffer.clear();
         }
     }

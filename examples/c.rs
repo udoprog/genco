@@ -9,7 +9,7 @@ fn main() -> anyhow::Result<()> {
 
     let tokens = quote! {
         const char* greet_user() {
-            return $(quoted(format!("Hello {}!", name)));
+            return $(quoted(format_args!("Hello {}!", name)));
         }
 
         int main() {

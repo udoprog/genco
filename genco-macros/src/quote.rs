@@ -9,11 +9,11 @@ use crate::fake::Buf;
 use crate::fake::LineColumn;
 use crate::requirements::Requirements;
 use crate::string_parser::StringParser;
+use crate::Ctxt;
 
 pub(crate) struct Quote<'a> {
-    /// Used to set the receiver identifier which is being modified by this
-    /// macro.
-    receiver: &'a syn::Ident,
+    /// Context variables.
+    cx: &'a Ctxt,
     /// Use to modify the initial line/column in case something was processed
     /// before the input was handed off to the quote parser.
     ///
@@ -32,9 +32,9 @@ pub(crate) struct Quote<'a> {
 
 impl<'a> Quote<'a> {
     /// Construct a new quote parser.
-    pub(crate) fn new(receiver: &'a syn::Ident) -> Self {
+    pub(crate) fn new(cx: &'a Ctxt) -> Self {
         Self {
-            receiver,
+            cx,
             span_start: None,
             span_end: None,
             until_comma: false,
@@ -43,9 +43,9 @@ impl<'a> Quote<'a> {
     }
 
     /// Construct a new quote parser that will only parse until the given token.
-    pub(crate) fn new_until_comma(receiver: &'a syn::Ident) -> Self {
+    pub(crate) fn new_until_comma(cx: &'a Ctxt) -> Self {
         Self {
-            receiver,
+            cx,
             span_start: None,
             span_end: None,
             until_comma: true,
@@ -78,7 +78,7 @@ impl<'a> Quote<'a> {
 
     /// Parse until end of stream.
     pub(crate) fn parse(mut self, input: ParseStream) -> Result<(Requirements, TokenStream)> {
-        let mut encoder = Encoder::new(self.receiver, self.span_start, self.span_end);
+        let mut encoder = Encoder::new(self.cx, self.span_start, self.span_end);
         self.parse_inner(&mut encoder, input, 0)?;
         encoder.into_output()
     }
@@ -90,7 +90,7 @@ impl<'a> Quote<'a> {
 
         if input.peek(Token![=>]) {
             input.parse::<Token![=>]>()?;
-            let (req, then_branch) = Quote::new(self.receiver).parse(input)?;
+            let (req, then_branch) = Quote::new(self.cx).parse(input)?;
 
             return Ok((
                 req,
@@ -107,7 +107,7 @@ impl<'a> Quote<'a> {
         let content;
         syn::braced!(content in input);
 
-        let (r, then_branch) = Quote::new(self.receiver).parse(&content)?;
+        let (r, then_branch) = Quote::new(self.cx).parse(&content)?;
         req.merge_with(r);
 
         let else_branch = if input.peek(Token![else]) {
@@ -116,7 +116,7 @@ impl<'a> Quote<'a> {
             let content;
             syn::braced!(content in input);
 
-            let (r, else_branch) = Quote::new(self.receiver).parse(&content)?;
+            let (r, else_branch) = Quote::new(self.cx).parse(&content)?;
             req.merge_with(r);
 
             Some(else_branch)
@@ -151,9 +151,7 @@ impl<'a> Quote<'a> {
             let content;
             let paren = syn::parenthesized!(content in input);
 
-            let (r, join) = Quote::new(self.receiver)
-                .with_span(paren.span)?
-                .parse(&content)?;
+            let (r, join) = Quote::new(self.cx).with_span(paren.span)?.parse(&content)?;
             req.merge_with(r);
 
             Some(join)
@@ -171,7 +169,7 @@ impl<'a> Quote<'a> {
             &content
         };
 
-        let parser = Quote::new(self.receiver);
+        let parser = Quote::new(self.cx);
         let (r, stream) = parser.parse(input)?;
         req.merge_with(r);
 
@@ -213,17 +211,15 @@ impl<'a> Quote<'a> {
                 let block;
                 syn::braced!(block in body);
 
-                let parser = Quote::new(self.receiver);
+                let parser = Quote::new(self.cx);
                 parser.parse(&block)?
             } else if body.peek(token::Paren) {
                 let block;
                 let paren = syn::parenthesized!(block in body);
 
-                Quote::new(self.receiver)
-                    .with_span(paren.span)?
-                    .parse(&block)?
+                Quote::new(self.cx).with_span(paren.span)?.parse(&block)?
             } else {
-                let parser = Quote::new_until_comma(self.receiver);
+                let parser = Quote::new_until_comma(self.cx);
                 parser.parse(&body)?
             };
 
@@ -348,7 +344,7 @@ impl<'a> Quote<'a> {
                         ));
                     }
                     (LiteralName::Ident("str"), Some(content)) => {
-                        let parser = StringParser::new(self.receiver, &self.buf, end)?;
+                        let parser = StringParser::new(self.cx, &self.buf, end)?;
 
                         let (options, r, stream) = parser.parse(&content)?;
                         encoder.requirements.merge_with(r);
@@ -358,7 +354,7 @@ impl<'a> Quote<'a> {
                         encoder.encode(
                             cursor,
                             Ast::String {
-                                has_eval: options.has_eval,
+                                has_eval: options.has_eval.get(),
                                 stream,
                             },
                         )?;
