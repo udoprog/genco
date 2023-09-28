@@ -23,8 +23,8 @@ impl LineColumn {
         let span = span.unwrap().start();
 
         Some(Self {
-            line: span.line(),
-            column: span.column(),
+            line: span.line,
+            column: span.column,
         })
     }
 
@@ -33,8 +33,8 @@ impl LineColumn {
         let span = span.unwrap().end();
 
         Some(Self {
-            line: span.line(),
-            column: span.column(),
+            line: span.line,
+            column: span.column,
         })
     }
 
