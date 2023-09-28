@@ -5,7 +5,7 @@ use proc_macro2::Span;
 
 use crate::cursor::Cursor;
 
-/// Erro rmessage raise.d
+/// Error message raised.
 const ERROR: &str = "Your compiler does not support spans which are required by genco and compat doesn't work, see: https://github.com/rust-lang/rust/issues/54725";
 
 /// Internal line-column abstraction.
