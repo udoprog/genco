@@ -103,7 +103,7 @@
 //!
 //! let tokens: rust::Tokens = quote! {
 //!     fn main() {
-//!         let mut m = #hash_map::new();
+//!         let mut m = $hash_map::new();
 //!         m.insert(1u32, 2u32);
 //!     }
 //! };
