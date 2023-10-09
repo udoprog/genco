@@ -141,7 +141,7 @@ impl<'a> Quote<'a> {
         let mut req = Requirements::default();
 
         input.parse::<Token![for]>()?;
-        let pattern = input.parse::<syn::Pat>()?;
+        let pattern = syn::Pat::parse_single(input)?;
         input.parse::<Token![in]>()?;
         let expr = syn::Expr::parse_without_eager_brace(input)?;
 
@@ -151,7 +151,9 @@ impl<'a> Quote<'a> {
             let content;
             let paren = syn::parenthesized!(content in input);
 
-            let (r, join) = Quote::new(self.cx).with_span(paren.span)?.parse(&content)?;
+            let (r, join) = Quote::new(self.cx)
+                .with_span(paren.span.span())?
+                .parse(&content)?;
             req.merge_with(r);
 
             Some(join)
@@ -195,7 +197,7 @@ impl<'a> Quote<'a> {
 
         while !body.is_empty() {
             let attr = input.call(syn::Attribute::parse_outer)?;
-            let pattern = multi_pat_with_leading_vert(&body)?;
+            let pattern = syn::Pat::parse_multi_with_leading_vert(&body)?;
 
             let condition = if body.peek(Token![if]) {
                 body.parse::<Token![if]>()?;
@@ -217,7 +219,9 @@ impl<'a> Quote<'a> {
                 let block;
                 let paren = syn::parenthesized!(block in body);
 
-                Quote::new(self.cx).with_span(paren.span)?.parse(&block)?
+                Quote::new(self.cx)
+                    .with_span(paren.span.span())?
+                    .parse(&block)?
             } else {
                 let parser = Quote::new_until_comma(self.cx);
                 parser.parse(&body)?
@@ -282,7 +286,7 @@ impl<'a> Quote<'a> {
         let scope;
         let outer = syn::parenthesized!(scope in input);
 
-        let cursor = self.buf.join(start, outer.span)?;
+        let cursor = self.buf.join(start, outer.span.span())?;
 
         let ast = if scope.peek(Token![if]) {
             let (req, ast) = self.parse_condition(&scope)?;
@@ -409,7 +413,7 @@ impl<'a> Quote<'a> {
                 self.parse_group(
                     encoder,
                     Delimiter::Brace,
-                    braces.span,
+                    braces.span.span(),
                     &content,
                     group_depth,
                 )?;
@@ -422,7 +426,7 @@ impl<'a> Quote<'a> {
                 self.parse_group(
                     encoder,
                     Delimiter::Parenthesis,
-                    braces.span,
+                    braces.span.span(),
                     &content,
                     group_depth,
                 )?;
@@ -435,7 +439,7 @@ impl<'a> Quote<'a> {
                 self.parse_group(
                     encoder,
                     Delimiter::Bracket,
-                    braces.span,
+                    braces.span.span(),
                     &content,
                     group_depth,
                 )?;
@@ -495,10 +499,12 @@ pub(crate) fn parse_internal_function<'a>(
         Name::Const(function.parse()?)
     } else if function.peek(syn::LitChar) {
         let c = function.parse::<syn::LitChar>()?;
-        Name::Char(c.span(), c.value())
+        let value = c.value();
+        Name::Char(c, value)
     } else {
         let ident = function.parse::<syn::Ident>()?;
-        Name::Ident(ident.span(), ident.to_string())
+        let str = ident.to_string();
+        Name::Ident(ident, str)
     };
 
     if !function.is_empty() {
@@ -513,35 +519,5 @@ pub(crate) fn parse_internal_function<'a>(
         (None, brackets.span)
     };
 
-    Ok(Some((name, content, [start.span(), end])))
-}
-
-// NB: copied from: https://github.com/dtolnay/syn/blob/80c6889684da7e0a30ef5d0b03e9d73fa6160541/src/pat.rs#L792
-//
-// TODO: remove once made public in syn.
-fn multi_pat_with_leading_vert(input: ParseStream) -> Result<syn::Pat> {
-    let leading_vert: Option<Token![|]> = input.parse()?;
-    multi_pat_impl(input, leading_vert)
-}
-
-fn multi_pat_impl(input: ParseStream, leading_vert: Option<Token![|]>) -> Result<syn::Pat> {
-    let mut pat: syn::Pat = input.parse()?;
-    if leading_vert.is_some()
-        || input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=])
-    {
-        let mut cases = syn::punctuated::Punctuated::new();
-        cases.push_value(pat);
-        while input.peek(Token![|]) && !input.peek(Token![||]) && !input.peek(Token![|=]) {
-            let punct = input.parse()?;
-            cases.push_punct(punct);
-            let pat: syn::Pat = input.parse()?;
-            cases.push_value(pat);
-        }
-        pat = syn::Pat::Or(syn::PatOr {
-            attrs: Vec::new(),
-            leading_vert,
-            cases,
-        });
-    }
-    Ok(pat)
+    Ok(Some((name, content, [start.span(), end.span()])))
 }

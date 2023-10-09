@@ -16,7 +16,7 @@ keywords = ["code-generation", "template"]
 categories = ["template-engine"]
 
 [dependencies]
-syn = { version = "1.0.31", features = ["full"] }
+syn = { version = "2.0.38", features = ["full"] }
 q = { package = "quote", version = "1.0.3" }
 proc-macro2 = { version = "1.0.10", features = ["span-locations"] }
 
