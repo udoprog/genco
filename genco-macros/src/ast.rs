@@ -1,7 +1,7 @@
 use core::fmt;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
-use syn::{spanned::Spanned, Token};
+use syn::{Ident, LitChar, Token};
 
 use crate::static_buffer::StaticBuffer;
 
@@ -64,9 +64,9 @@ pub(crate) enum Name {
     /// The name is the `const` token.
     Const(Token![const]),
     /// Custom name.
-    Ident(Span, String),
+    Ident(Ident, String),
     /// Character name.
-    Char(Span, char),
+    Char(LitChar, char),
 }
 
 impl Name {
@@ -80,11 +80,12 @@ impl Name {
     }
 }
 
-impl Spanned for Name {
-    fn span(&self) -> Span {
+impl q::ToTokens for Name {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
-            Name::Const(t) => t.span,
-            Name::Ident(span, _) | Name::Char(span, _) => *span,
+            Name::Const(t) => t.to_tokens(tokens),
+            Name::Ident(_, name) => name.to_tokens(tokens),
+            Name::Char(_, c) => c.to_tokens(tokens),
         }
     }
 }
