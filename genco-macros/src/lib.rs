@@ -44,7 +44,6 @@ mod quote_in;
 mod requirements;
 mod static_buffer;
 mod string_parser;
-mod token;
 
 /// Whitespace sensitive quasi-quoting.
 ///
