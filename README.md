@@ -127,31 +127,31 @@ fn main() {
 
 <br>
 
-[rust]: https://docs.rs/genco/latest/genco/lang/rust/index.html
-[rust-example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
-[java]: https://docs.rs/genco/latest/genco/lang/java/index.html
-[java-example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
-[c#]: https://docs.rs/genco/latest/genco/lang/csharp/index.html
-[c#-example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
-[go]: https://docs.rs/genco/latest/genco/lang/go/index.html
-[go-example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
-[dart]: https://docs.rs/genco/latest/genco/lang/dart/index.html
-[dart-example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
-[js]: https://docs.rs/genco/latest/genco/lang/js/index.html
-[js-example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
-[c]: https://docs.rs/genco/latest/genco/lang/c/index.html
 [c-example]: https://github.com/udoprog/genco/blob/master/examples/c.rs
-[python]: https://docs.rs/genco/latest/genco/lang/python/index.html
-[python-example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
-[solve namespace conflicts]: https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html
-[indentation is meaningful]: https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements
-[token streams]: https://docs.rs/genco/latest/genco/tokens/struct.Tokens.html
-[import statements]: https://docs.rs/genco/latest/genco/macro.quote.html#imports
-[quote strings]: https://docs.rs/genco/latest/genco/macro.quote.html#string-quoting
-[interpolate]: https://docs.rs/genco/latest/genco/macro.quote.html#quoted-string-interpolation
-[whitespace detection]: https://docs.rs/genco/latest/genco/macro.quote.html#whitespace-detection
-[quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
-[quote_in!]: https://docs.rs/genco/latest/genco/macro.quote_in.html
+[c]: https://docs.rs/genco/latest/genco/lang/c/index.html
+[c#-example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
+[c#]: https://docs.rs/genco/latest/genco/lang/csharp/index.html
+[dart-example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
+[dart]: https://docs.rs/genco/latest/genco/lang/dart/index.html
+[go-example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
+[go]: https://docs.rs/genco/latest/genco/lang/go/index.html
 [impl_lang!]: https://docs.rs/genco/latest/genco/macro.impl_lang.html
-[quoted()]: https://docs.rs/genco/latest/genco/tokens/fn.quoted.html
+[import statements]: https://docs.rs/genco/latest/genco/macro.quote.html#imports
+[indentation is meaningful]: https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements
+[interpolate]: https://docs.rs/genco/latest/genco/macro.quote.html#quoted-string-interpolation
+[java-example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
+[java]: https://docs.rs/genco/latest/genco/lang/java/index.html
+[js-example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
+[js]: https://docs.rs/genco/latest/genco/lang/js/index.html
 [Open an issue!]: https://github.com/udoprog/genco/issues/new
+[python-example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
+[python]: https://docs.rs/genco/latest/genco/lang/python/index.html
+[quote strings]: https://docs.rs/genco/latest/genco/macro.quote.html#string-quoting
+[quote_in!]: https://docs.rs/genco/latest/genco/macro.quote_in.html
+[quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
+[quoted()]: https://docs.rs/genco/latest/genco/tokens/fn.quoted.html
+[rust-example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
+[rust]: https://docs.rs/genco/latest/genco/lang/rust/index.html
+[solve namespace conflicts]: https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html
+[token streams]: https://docs.rs/genco/latest/genco/tokens/struct.Tokens.html
+[whitespace detection]: https://docs.rs/genco/latest/genco/macro.quote.html#whitespace-detection
