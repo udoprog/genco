@@ -302,9 +302,8 @@ impl<'a> Quote<'a> {
             ast
         } else if scope.peek(Token![ref]) {
             self.parse_scope(&scope)?
-        } else if scope.peek(syn::LitStr) && scope.peek2(crate::token::Eof) {
+        } else if crate::string_parser::is_lit_str_opt(scope.fork())? {
             let string = scope.parse::<syn::LitStr>()?.value();
-
             Ast::Literal { string }
         } else {
             Ast::Eval {

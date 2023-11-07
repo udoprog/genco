@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::fmt::Write;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
-use syn::parse::ParseStream;
+use syn::parse::{ParseBuffer, ParseStream};
 use syn::spanned::Spanned;
 use syn::token;
 use syn::Result;
@@ -255,7 +255,7 @@ impl<'a> StringParser<'a> {
                             // Compile-time string optimization. A single,
                             // enclosed literal string can be added to the
                             // existing static buffer.
-                            if content.peek(syn::LitStr) && content.peek2(crate::token::Eof) {
+                            if is_lit_str_opt(content.fork())? {
                                 let s = content.parse::<syn::LitStr>()?;
                                 encoder.encode_str(&s.value(), start.start, Some(end.end))?;
                             } else {
@@ -307,4 +307,12 @@ impl<'a> StringParser<'a> {
         let (options, stream) = encoder.finalize(self.end)?;
         Ok((options, requirements, stream))
     }
+}
+
+pub(crate) fn is_lit_str_opt(content: ParseBuffer<'_>) -> syn::Result<bool> {
+    if content.parse::<Option<syn::LitStr>>()?.is_none() {
+        return Ok(false);
+    }
+
+    Ok(content.is_empty())
 }
