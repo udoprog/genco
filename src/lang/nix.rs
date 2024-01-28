@@ -100,17 +100,16 @@ pub struct ImportWith {
 #[derive(Debug, Default)]
 pub struct Format {}
 
-/// Config
+/// Nix formatting configuration.
 #[derive(Debug, Default)]
 pub struct Config {
-    /// Scoped
     scoped: bool,
 }
 
 impl Config {
     /// With scoped
     pub fn with_scoped(self, scoped: bool) -> Self {
-        Self { scoped: scoped }
+        Self { scoped }
     }
 }
 
@@ -124,7 +123,7 @@ impl Nix {
                     arguments.insert(argument.0.to_string());
                 }
                 Import::Inherit(inherit) => {
-                    let argument = inherit.path.split(".").next();
+                    let argument = inherit.path.split('.').next();
                     if let Some(a) = argument {
                         arguments.insert(a.to_string());
                     }
@@ -134,7 +133,7 @@ impl Nix {
                     for import in value.walk_imports() {
                         match import {
                             Import::Inherit(inherit) => {
-                                let argument = inherit.path.split(".").next();
+                                let argument = inherit.path.split('.').next();
                                 if let Some(a) = argument {
                                     arguments.insert(a.to_string());
                                 }
@@ -175,11 +174,8 @@ impl Nix {
         let mut withs = BTreeSet::new();
 
         for imports in tokens.walk_imports() {
-            match imports {
-                Import::With(with) => {
-                    withs.insert(&with.argument);
-                }
-                _ => (),
+            if let Import::With(with) = imports {
+                withs.insert(&with.argument);
             }
         }
 

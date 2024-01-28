@@ -90,7 +90,7 @@ where
     where
         P: Parse<L>,
     {
-        if let Some(item) = self.items.get(0) {
+        if let Some(item) = self.items.first() {
             P::peek(item)
         } else {
             false
