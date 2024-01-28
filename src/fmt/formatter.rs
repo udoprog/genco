@@ -13,14 +13,14 @@ static TABS: &str =
     "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
 #[derive(Debug, Clone, Copy)]
-enum Line {
+enum Whitespace {
     Initial,
     None,
     Push,
     Line,
 }
 
-impl Line {
+impl Whitespace {
     /// Convert into an indentation level.
     ///
     /// If we return `None`, no indentation nor lines should be written since we
@@ -35,7 +35,7 @@ impl Line {
     }
 }
 
-impl Default for Line {
+impl Default for Whitespace {
     fn default() -> Self {
         Self::None
     }
@@ -50,7 +50,7 @@ pub struct Formatter<'a> {
     /// How many lines we want to add to the output stream.
     ///
     /// This will only be realized if we push non-whitespace.
-    line: Line,
+    line: Whitespace,
     /// How many spaces we want to add to the output stream.
     ///
     /// This will only be realized if we push non-whitespace, and will be reset
@@ -65,7 +65,7 @@ impl<'a> Formatter<'a> {
     pub(crate) fn new(write: &'a mut (dyn fmt::Write + 'a), config: &'a Config) -> Formatter<'a> {
         Formatter {
             write,
-            line: Line::Initial,
+            line: Whitespace::Initial,
             spaces: 0usize,
             indent: 0i16,
             config,
@@ -90,7 +90,7 @@ impl<'a> Formatter<'a> {
     ///
     /// This will also reset any whitespace we have pending.
     pub(crate) fn write_trailing_line(&mut self) -> fmt::Result {
-        self.line = Line::default();
+        self.line = Whitespace::default();
         self.spaces = 0;
         self.write.write_trailing_line(self.config)?;
         Ok(())
@@ -108,9 +108,9 @@ impl<'a> Formatter<'a> {
 
     fn push(&mut self) {
         self.line = match self.line {
-            Line::Initial => return,
-            Line::Line => return,
-            _ => Line::Push,
+            Whitespace::Initial => return,
+            Whitespace::Line => return,
+            _ => Whitespace::Push,
         };
 
         self.spaces = 0;
@@ -119,8 +119,8 @@ impl<'a> Formatter<'a> {
     /// Push a new line.
     fn line(&mut self) {
         self.line = match self.line {
-            Line::Initial => return,
-            _ => Line::Line,
+            Whitespace::Initial => return,
+            _ => Whitespace::Line,
         };
 
         self.spaces = 0;
