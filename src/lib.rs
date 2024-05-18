@@ -645,7 +645,7 @@
 ///         $first and $second.
 ///     )
 /// };
-/// assert_eq!(" A and B. C and D.", tokens.to_string()?);
+/// assert_eq!("A and B.\nC and D.", tokens.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
@@ -665,7 +665,7 @@
 ///     )
 /// };
 ///
-/// assert_eq!(" First is A Second is B", tokens.to_string()?);
+/// assert_eq!("First is A\nSecond is B", tokens.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
