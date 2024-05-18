@@ -115,10 +115,8 @@ impl<'a> Encoder<'a> {
                 condition, arms, ..
             } => {
                 self.encode_match(condition, arms);
-            },
-            Ast::Let {
-                name, expr
-            } => {
+            }
+            Ast::Let { name, expr } => {
                 self.encode_let(name, expr);
             }
         }

@@ -348,13 +348,13 @@ fn test_let() {
     };
 
     // Function call in expression
-    let foo = "bar";
+    let x = "bar";
     fn baz(s: &str) -> String {
         format!("{s}baz")
     }
 
     let tokens: rust::Tokens = quote! {
-        $(let a = baz(foo)) $a
+        $(let a = baz(x)) $a
     };
 
     assert_eq! {
@@ -363,9 +363,9 @@ fn test_let() {
     };
 
     // Complex expression
-    let foo = 2;
+    let x = 2;
     let tokens: rust::Tokens = quote! {
-        $(let even = if foo % 2 == 0 { "even" } else { "odd" }) $even
+        $(let even = if x % 2 == 0 { "even" } else { "odd" }) $even
     };
 
     assert_eq! {
@@ -391,8 +391,18 @@ fn test_mutable_let() {
     assert_eq!(
         tokens,
         vec![
-            Push, Literal(Static("First")), Space, Literal(Static("is")), Space, Literal("A".into()),
-            Push, Literal(Static("Second")), Space, Literal(Static("is")), Space, Literal("B".into())
+            Push,
+            Literal(Static("First")),
+            Space,
+            Literal(Static("is")),
+            Space,
+            Literal("A".into()),
+            Push,
+            Literal(Static("Second")),
+            Space,
+            Literal(Static("is")),
+            Space,
+            Literal("B".into())
         ]
     );
 }

@@ -253,10 +253,7 @@ impl<'a> Quote<'a> {
         input.parse::<Token![=]>()?;
         let expr = syn::Expr::parse_without_eager_brace(input)?;
 
-        let ast = Ast::Let {
-            name,
-            expr,
-        };
+        let ast = Ast::Let { name, expr };
 
         Ok((req, ast))
     }
