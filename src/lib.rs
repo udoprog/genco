@@ -629,6 +629,48 @@
 ///
 /// <br>
 ///
+/// # Variable assignment
+///
+/// You can use `$(let <binding> = <expr>)` to define variables with their value.
+/// This is useful within loops to compute values from iterator items.
+///
+/// ```
+/// use genco::prelude::*;
+///
+/// let names = ["A.B", "C.D"];
+///
+/// let tokens: Tokens<()> = quote! {
+///     $(for name in names =>
+///         $(let (first, second) = name.split_once('.').unwrap())
+///         $first and $second.
+///     )
+/// };
+/// assert_eq!("A and B.\nC and D.", tokens.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+///
+/// Variables can also be mutable:
+///
+/// ```
+/// use genco::prelude::*;
+/// let path = "A.B.C.D";
+///
+/// let tokens: Tokens<()> = quote! {
+///     $(let mut items = path.split('.'))
+///     $(if let Some(first) = items.next() =>
+///         First is $first
+///     )
+///     $(if let Some(second) = items.next() =>
+///         Second is $second
+///     )
+/// };
+///
+/// assert_eq!("First is A\nSecond is B", tokens.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+///
+/// <br>
+///
 /// # Scopes
 ///
 /// You can use `$(ref <binding> { <expr> })` to gain access to the current
