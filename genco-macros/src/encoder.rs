@@ -115,6 +115,11 @@ impl<'a> Encoder<'a> {
                 condition, arms, ..
             } => {
                 self.encode_match(condition, arms);
+            },
+            Ast::Let {
+                name, expr
+            } => {
+                self.encode_let(name, expr);
             }
         }
 
@@ -301,6 +306,15 @@ impl<'a> Encoder<'a> {
         };
 
         self.output.extend(m);
+    }
+
+    /// Encode a let statement
+    pub(crate) fn encode_let(&mut self, name: syn::Pat, expr: syn::Expr) {
+        self.item_buffer.flush(&mut self.output);
+
+        self.output.extend(q::quote! {
+            let #name = #expr;
+        })
     }
 
     fn from(&mut self) -> Option<LineColumn> {

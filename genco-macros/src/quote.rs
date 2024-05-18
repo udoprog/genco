@@ -244,6 +244,23 @@ impl<'a> Quote<'a> {
         Ok((req, Ast::Match { condition, arms }))
     }
 
+    fn parse_let(&self, input: ParseStream) -> Result<(Requirements, Ast)> {
+        input.parse::<Token![let]>()?;
+
+        let req = Requirements::default();
+
+        let name = syn::Pat::parse_single(input)?;
+        input.parse::<Token![=]>()?;
+        let expr = syn::Expr::parse_without_eager_brace(input)?;
+
+        let ast = Ast::Let {
+            name,
+            expr,
+        };
+
+        Ok((req, ast))
+    }
+
     /// Parse evaluation: `[*]<binding> => <expr>`.
     fn parse_scope(&self, input: ParseStream) -> Result<Ast> {
         input.parse::<Token![ref]>()?;
@@ -298,6 +315,10 @@ impl<'a> Quote<'a> {
             ast
         } else if scope.peek(Token![match]) {
             let (req, ast) = self.parse_match(&scope)?;
+            encoder.requirements.merge_with(req);
+            ast
+        } else if scope.peek(Token![let]) {
+            let (req, ast) = self.parse_let(&scope)?;
             encoder.requirements.merge_with(req);
             ast
         } else if scope.peek(Token![ref]) {

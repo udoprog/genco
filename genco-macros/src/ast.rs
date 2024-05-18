@@ -182,6 +182,12 @@ pub(crate) enum Ast {
         /// Else branch of the conditional.
         else_branch: Option<TokenStream>,
     },
+    Let {
+        /// Variable name (or names for a tuple)
+        name: syn::Pat,
+        /// Expression
+        expr: syn::Expr,
+    },
     Match {
         condition: syn::Expr,
         arms: Vec<MatchArm>,

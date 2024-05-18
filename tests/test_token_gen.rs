@@ -323,6 +323,81 @@ fn test_match() {
 }
 
 #[test]
+fn test_let() {
+    let tokens: rust::Tokens = quote! {
+        $(let x = 1) $x
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Space, Literal("1".into())]
+    };
+
+    // Tuple binding
+    let tokens: rust::Tokens = quote! {
+        $(let (a, b) = ("c", "d")) $a, $b
+    };
+
+    assert_eq! {
+        tokens,
+        vec![
+            Space, Literal("c".into()),
+            Literal(Static(",")),
+            Space, Literal("d".into())
+        ]
+    };
+
+    // Function call in expression
+    let foo = "bar";
+    fn baz(s: &str) -> String {
+        format!("{s}baz")
+    }
+
+    let tokens: rust::Tokens = quote! {
+        $(let a = baz(foo)) $a
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Space, Literal("barbaz".into())]
+    };
+
+    // Complex expression
+    let foo = 2;
+    let tokens: rust::Tokens = quote! {
+        $(let even = if foo % 2 == 0 { "even" } else { "odd" }) $even
+    };
+
+    assert_eq! {
+        tokens,
+        vec![Space, Literal("even".into())]
+    };
+}
+
+#[test]
+fn test_mutable_let() {
+    let path = "A.B.C.D";
+
+    let tokens: Tokens<()> = quote! {
+        $(let mut items = path.split('.'))
+        $(if let Some(first) = items.next() =>
+            First is $first
+        )
+        $(if let Some(second) = items.next() =>
+            Second is $second
+        )
+    };
+
+    assert_eq!(
+        tokens,
+        vec![
+            Push, Literal(Static("First")), Space, Literal(Static("is")), Space, Literal("A".into()),
+            Push, Literal(Static("Second")), Space, Literal(Static("is")), Space, Literal("B".into())
+        ]
+    );
+}
+
+#[test]
 fn test_empty_loop_whitespace() {
     // Bug: This should generate two commas. But did generate a space following
     // it!
