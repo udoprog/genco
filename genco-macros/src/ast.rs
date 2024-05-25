@@ -1,7 +1,7 @@
 use core::fmt;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
-use syn::{Ident, LitChar, Token};
+use syn::Token;
 
 use crate::static_buffer::StaticBuffer;
 
@@ -64,9 +64,9 @@ pub(crate) enum Name {
     /// The name is the `const` token.
     Const(Token![const]),
     /// Custom name.
-    Ident(Ident, String),
+    Ident(String),
     /// Character name.
-    Char(LitChar, char),
+    Char(char),
 }
 
 impl Name {
@@ -74,8 +74,8 @@ impl Name {
     pub(crate) fn as_literal_name(&self) -> LiteralName<'_> {
         match self {
             Name::Const(..) => LiteralName::Ident("const"),
-            Name::Ident(_, name) => LiteralName::Ident(name.as_str()),
-            Name::Char(_, c) => LiteralName::Char(*c),
+            Name::Ident(name) => LiteralName::Ident(name.as_str()),
+            Name::Char(c) => LiteralName::Char(*c),
         }
     }
 }
@@ -84,8 +84,8 @@ impl q::ToTokens for Name {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match self {
             Name::Const(t) => t.to_tokens(tokens),
-            Name::Ident(_, name) => name.to_tokens(tokens),
-            Name::Char(_, c) => c.to_tokens(tokens),
+            Name::Ident(name) => name.to_tokens(tokens),
+            Name::Char(c) => c.to_tokens(tokens),
         }
     }
 }

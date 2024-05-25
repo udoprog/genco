@@ -516,12 +516,10 @@ pub(crate) fn parse_internal_function<'a>(
         Name::Const(function.parse()?)
     } else if function.peek(syn::LitChar) {
         let c = function.parse::<syn::LitChar>()?;
-        let value = c.value();
-        Name::Char(c, value)
+        Name::Char(c.value())
     } else {
         let ident = function.parse::<syn::Ident>()?;
-        let str = ident.to_string();
-        Name::Ident(ident, str)
+        Name::Ident(ident.to_string())
     };
 
     if !function.is_empty() {
