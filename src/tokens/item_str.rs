@@ -26,7 +26,7 @@ where
     }
 }
 
-impl<'a, L> FormatInto<L> for &'a ItemStr
+impl<L> FormatInto<L> for &ItemStr
 where
     L: Lang,
 {

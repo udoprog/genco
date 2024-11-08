@@ -305,7 +305,7 @@ impl<'a> Formatter<'a> {
     }
 }
 
-impl<'a> std::fmt::Write for Formatter<'a> {
+impl std::fmt::Write for Formatter<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         if !s.is_empty() {
             Formatter::write_str(self, s)?;
@@ -315,7 +315,7 @@ impl<'a> std::fmt::Write for Formatter<'a> {
     }
 }
 
-impl<'a> std::fmt::Debug for Formatter<'a> {
+impl std::fmt::Debug for Formatter<'_> {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fmt.debug_struct("Formatter")
             .field("line", &self.line)
