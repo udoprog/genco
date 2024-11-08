@@ -146,7 +146,10 @@ impl Nix {
                     }
                 }
                 Import::With(with) => {
-                    arguments.insert(with.argument.to_string());
+                    let argument = with.argument.split('.').next();
+                    if let Some(a) = argument {
+                        arguments.insert(a.to_string());
+                    }
                 }
             }
         }
@@ -356,8 +359,8 @@ where
 /// ```
 /// use genco::prelude::*;
 ///
-/// let concat_map = nix::with("lib", "concatMap");
-/// let list_to_attrs = nix::with("lib", "listToAttrs");
+/// let concat_map = nix::with("inputs.nixpkgs.lib", "concatMap");
+/// let list_to_attrs = nix::with("inputs.nixpkgs.lib", "listToAttrs");
 ///
 /// let toks = quote! {
 ///     $list_to_attrs $concat_map
@@ -366,11 +369,11 @@ where
 /// assert_eq!(
 ///     vec![
 ///         "{",
-///         "    lib,",
+///         "    inputs,",
 ///         "    ...",
 ///         "}:",
 ///         "",
-///         "with lib;",
+///         "with inputs.nixpkgs.lib;",
 ///         "",
 ///         "listToAttrs concatMap",
 ///     ],
