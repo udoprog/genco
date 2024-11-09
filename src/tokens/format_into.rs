@@ -70,7 +70,7 @@ where
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L> FormatInto<L> for &'a Tokens<L>
+impl<L> FormatInto<L> for &Tokens<L>
 where
     L: Lang,
 {
@@ -126,7 +126,7 @@ where
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L, T> FormatInto<L> for &'a [T]
+impl<L, T> FormatInto<L> for &[T]
 where
     L: Lang,
     T: Clone + FormatInto<L>,
@@ -153,7 +153,7 @@ where
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L> FormatInto<L> for &'a str
+impl<L> FormatInto<L> for &str
 where
     L: Lang,
 {
@@ -177,7 +177,7 @@ where
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L> FormatInto<L> for &'a String
+impl<L> FormatInto<L> for &String
 where
     L: Lang,
 {
@@ -253,7 +253,7 @@ where
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L> FormatInto<L> for &'a Rc<String>
+impl<L> FormatInto<L> for &Rc<String>
 where
     L: Lang,
 {
@@ -276,7 +276,7 @@ where
 /// assert_eq!("Hello John", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L> FormatInto<L> for Arguments<'a>
+impl<L> FormatInto<L> for Arguments<'_>
 where
     L: Lang,
 {
