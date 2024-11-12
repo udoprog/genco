@@ -1,5 +1,6 @@
 use crate::lang::Lang;
 use crate::tokens::{Item, ItemStr, Tokens};
+use std::borrow::Cow;
 use std::fmt::Arguments;
 use std::rc::Rc;
 
@@ -104,6 +105,35 @@ where
     fn format_into(self, tokens: &mut Tokens<L>) {
         for t in self {
             tokens.append(t);
+        }
+    }
+}
+
+/// Formatting a reference to a vector of token streams is like formatting each,
+/// one after another.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+///
+/// let mut vec = Vec::<Tokens>::new();
+/// vec.push(quote!(foo));
+/// vec.push(quote!($[' ']bar));
+///
+/// let result = quote!($(&vec) baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+impl<L, T> FormatInto<L> for &Vec<T>
+where
+    L: Lang,
+    T: FormatInto<L> + Clone,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        for t in self {
+            tokens.append(t.clone());
         }
     }
 }
@@ -310,6 +340,128 @@ where
     fn format_into(self, tokens: &mut Tokens<L>) {
         if let Some(inner) = self {
             inner.format_into(tokens);
+        }
+    }
+}
+
+/// Cow strings are formatted by either borrowing or cloning the string.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+/// use std::borrow::Cow;
+///
+/// let foo = Cow::Borrowed("foo");
+/// let bar = Cow::Owned(String::from("bar"));
+///
+/// let result: Tokens = quote!($foo $bar baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+impl<'a, L> FormatInto<L> for Cow<'a, str>
+where
+    L: Lang,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        match self {
+            Cow::Borrowed(b) => tokens.item(Item::Literal(ItemStr::from(b))),
+            Cow::Owned(o) => o.format_into(tokens),
+        }
+    }
+}
+
+/// Cow strings are formatted by either borrowing or cloning the string.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+/// use std::borrow::Cow;
+///
+/// let foo = Cow::Borrowed("foo");
+/// let bar = Cow::Owned(String::from("bar"));
+///
+/// let result: Tokens = quote!($(&foo) $(&bar) baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+impl<'a, L> FormatInto<L> for &Cow<'a, str>
+where
+    L: Lang,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        match self {
+            Cow::Borrowed(b) => tokens.item(Item::Literal(ItemStr::from(b))),
+            Cow::Owned(o) => o.format_into(tokens),
+        }
+    }
+}
+
+/// Cow slices are formatted by either borrowing or cloning the slice.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+/// use std::borrow::Cow;
+///
+/// let foo = Cow::Borrowed(&["foo", " "]);
+/// let bar = Cow::Owned(vec!["bar"]);
+///
+/// let result: Tokens = quote!($foo $bar baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+impl<'a, L, T> FormatInto<L> for Cow<'a, [T]>
+where
+    L: Lang,
+    T: FormatInto<L> + Clone,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        match self {
+            Cow::Borrowed(b) => {
+                for t in b.iter() {
+                    tokens.append(t.clone());
+                }
+            }
+            Cow::Owned(o) => o.format_into(tokens),
+        }
+    }
+}
+
+/// Cow slices are formatted by either borrowing or cloning the slice.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+/// use std::borrow::Cow;
+///
+/// let foo = Cow::Borrowed(&["foo", " "]);
+/// let bar = Cow::Owned(vec!["bar"]);
+///
+/// let result: Tokens = quote!($(&foo) $(&bar) baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+impl<'a, L, T> FormatInto<L> for &Cow<'a, [T]>
+where
+    L: Lang,
+    T: FormatInto<L> + Clone,
+{
+    fn format_into(self, tokens: &mut Tokens<L>) {
+        match self {
+            Cow::Borrowed(b) => {
+                for t in b.iter() {
+                    tokens.append(t.clone());
+                }
+            }
+            Cow::Owned(o) => o.format_into(tokens),
         }
     }
 }
