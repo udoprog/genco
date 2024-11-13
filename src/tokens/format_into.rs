@@ -1,8 +1,9 @@
-use crate::lang::Lang;
-use crate::tokens::{Item, ItemStr, Tokens};
 use std::borrow::Cow;
 use std::fmt::Arguments;
 use std::rc::Rc;
+
+use crate::lang::Lang;
+use crate::tokens::{Item, ItemStr, Tokens};
 
 /// Trait for types that can be formatted in-place into a token stream.
 ///
@@ -246,8 +247,8 @@ where
 /// # Examples
 ///
 /// ```
-/// use genco::prelude::*;
 /// use std::rc::Rc;
+/// use genco::prelude::*;
 ///
 /// let foo = Rc::new(String::from("foo"));
 /// let bar = Rc::new(String::from("bar"));
@@ -272,8 +273,8 @@ where
 /// # Examples
 ///
 /// ```
-/// use genco::prelude::*;
 /// use std::rc::Rc;
+/// use genco::prelude::*;
 ///
 /// let foo = Rc::new(String::from("foo"));
 /// let bar = Rc::new(String::from("bar"));
@@ -320,8 +321,8 @@ where
 /// # Examples
 ///
 /// ```
-/// use genco::prelude::*;
 /// use std::rc::Rc;
+/// use genco::prelude::*;
 ///
 /// let foo = Some("foo");
 /// let bar = Some("bar");
@@ -349,11 +350,11 @@ where
 /// # Examples
 ///
 /// ```
-/// use genco::prelude::*;
 /// use std::borrow::Cow;
+/// use genco::prelude::*;
 ///
-/// let foo = Cow::Borrowed("foo");
-/// let bar = Cow::Owned(String::from("bar"));
+/// let foo = Cow::<str>::Borrowed("foo");
+/// let bar = Cow::<str>::Owned(String::from("bar"));
 ///
 /// let result: Tokens = quote!($foo $bar baz);
 ///
@@ -377,13 +378,13 @@ where
 /// # Examples
 ///
 /// ```
-/// use genco::prelude::*;
 /// use std::borrow::Cow;
+/// use genco::prelude::*;
 ///
-/// let foo = Cow::Borrowed("foo");
-/// let bar = Cow::Owned(String::from("bar"));
+/// let foo = &Cow::<str>::Borrowed("foo");
+/// let bar = &Cow::<str>::Owned(String::from("bar"));
 ///
-/// let result: Tokens = quote!($(&foo) $(&bar) baz);
+/// let result: Tokens = quote!($foo $bar baz);
 ///
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
@@ -405,15 +406,15 @@ where
 /// # Examples
 ///
 /// ```
-/// use genco::prelude::*;
 /// use std::borrow::Cow;
+/// use genco::prelude::*;
 ///
-/// let foo = Cow::Borrowed(&["foo", " "]);
-/// let bar = Cow::Owned(vec!["bar"]);
+/// let foo = Cow::<[&str]>::Borrowed(&["foo", "bar"]);
+/// let bar = Cow::<[&str]>::Owned(vec!["baz"]);
 ///
-/// let result: Tokens = quote!($foo $bar baz);
+/// let result: Tokens = quote!($foo $bar biz);
 ///
-/// assert_eq!("foo bar baz", result.to_string()?);
+/// assert_eq!("foobar baz biz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<'a, L, T> FormatInto<L> for Cow<'a, [T]>
@@ -438,15 +439,15 @@ where
 /// # Examples
 ///
 /// ```
-/// use genco::prelude::*;
 /// use std::borrow::Cow;
+/// use genco::prelude::*;
 ///
-/// let foo = Cow::Borrowed(&["foo", " "]);
-/// let bar = Cow::Owned(vec!["bar"]);
+/// let foo = &Cow::<[&str]>::Borrowed(&["foo", "bar"]);
+/// let bar = &Cow::<[&str]>::Owned(vec!["baz"]);
 ///
-/// let result: Tokens = quote!($(&foo) $(&bar) baz);
+/// let result: Tokens = quote!($foo $bar biz);
 ///
-/// assert_eq!("foo bar baz", result.to_string()?);
+/// assert_eq!("foobar baz biz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
 impl<'a, L, T> FormatInto<L> for &Cow<'a, [T]>
