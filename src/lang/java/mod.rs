@@ -16,15 +16,17 @@
 //! ```
 
 mod block_comment;
-
 pub use self::block_comment::BlockComment;
+
+use core::fmt::Write as _;
+
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::{String, ToString};
 
 use crate as genco;
 use crate::fmt;
 use crate::tokens::ItemStr;
 use crate::{quote, quote_in};
-use std::collections::{BTreeSet, HashMap};
-use std::fmt::Write as _;
 
 /// Tokens container specialized for Java.
 pub type Tokens = crate::Tokens<Java>;
@@ -38,7 +40,6 @@ impl_lang! {
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://docs.oracle.com/javase/tutorial/java/data/characters.html
-            use std::fmt::Write as _;
 
             for c in input.chars() {
                 match c {
@@ -107,7 +108,7 @@ const SEP: &str = ".";
 #[derive(Debug, Default)]
 pub struct Format {
     /// Types which has been imported into the local namespace.
-    imported: HashMap<String, String>,
+    imported: BTreeMap<String, String>,
 }
 
 /// Configuration for Java.
@@ -173,7 +174,7 @@ impl Java {
         out: &mut Tokens,
         tokens: &Tokens,
         config: &Config,
-        imported: &mut HashMap<String, String>,
+        imported: &mut BTreeMap<String, String>,
     ) {
         let mut modules = BTreeSet::new();
 

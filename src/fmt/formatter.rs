@@ -1,10 +1,12 @@
+use core::mem;
+
+use alloc::string::String;
+
 use crate::fmt;
 use crate::fmt::config::{Config, Indentation};
 use crate::fmt::cursor;
 use crate::lang::Lang;
 use crate::tokens::Item;
-
-use std::mem;
 
 /// Buffer used as indentation source.
 static SPACES: &str = "                                                                                                    ";
@@ -231,7 +233,7 @@ impl<'a> Formatter<'a> {
                 }
                 _ => {
                     // Anything else is an illegal state for formatting.
-                    return Err(std::fmt::Error);
+                    return Err(core::fmt::Error);
                 }
             }
         }
@@ -305,7 +307,7 @@ impl<'a> Formatter<'a> {
     }
 }
 
-impl std::fmt::Write for Formatter<'_> {
+impl core::fmt::Write for Formatter<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         if !s.is_empty() {
             Formatter::write_str(self, s)?;
@@ -315,8 +317,8 @@ impl std::fmt::Write for Formatter<'_> {
     }
 }
 
-impl std::fmt::Debug for Formatter<'_> {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for Formatter<'_> {
+    fn fmt(&self, fmt: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         fmt.debug_struct("Formatter")
             .field("line", &self.line)
             .field("spaces", &self.spaces)

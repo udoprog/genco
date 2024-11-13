@@ -49,11 +49,15 @@
 //! # }
 //! ```
 
+use core::fmt::Write as _;
+
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::String;
+
 use crate::fmt;
 use crate::tokens::ItemStr;
+
 use relative_path::{RelativePath, RelativePathBuf};
-use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Write as _;
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<JavaScript>;
@@ -74,8 +78,6 @@ impl_lang! {
             _format: &Self::Format,
             has_eval: bool,
         ) -> fmt::Result {
-            use std::fmt::Write as _;
-
             if has_eval {
                 out.write_char('`')?;
             } else {
@@ -92,8 +94,6 @@ impl_lang! {
             _format: &Self::Format,
             has_eval: bool,
         ) -> fmt::Result {
-            use std::fmt::Write as _;
-
             if has_eval {
                 out.write_char('`')?;
             } else {

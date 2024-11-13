@@ -13,6 +13,11 @@ license = "MIT OR Apache-2.0"
 keywords = ["code-generation", "template"]
 categories = ["template-engine"]
 
+[features]
+default = ["std", "alloc"]
+std = []
+alloc = []
+
 [dependencies]
 genco-macros = { path = "./genco-macros", version = "=0.17.9" }
 

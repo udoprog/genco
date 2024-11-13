@@ -34,14 +34,14 @@ use crate::fmt;
 /// ```
 pub struct FmtWriter<W>
 where
-    W: std::fmt::Write,
+    W: core::fmt::Write,
 {
     writer: W,
 }
 
 impl<W> FmtWriter<W>
 where
-    W: std::fmt::Write,
+    W: core::fmt::Write,
 {
     /// Construct a new line writer from the underlying writer.
     pub fn new(writer: W) -> Self {
@@ -59,24 +59,24 @@ where
     }
 }
 
-impl<W> std::fmt::Write for FmtWriter<W>
+impl<W> core::fmt::Write for FmtWriter<W>
 where
-    W: std::fmt::Write,
+    W: core::fmt::Write,
 {
     #[inline(always)]
-    fn write_char(&mut self, c: char) -> std::fmt::Result {
+    fn write_char(&mut self, c: char) -> core::fmt::Result {
         self.writer.write_char(c)
     }
 
     #[inline(always)]
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
         self.writer.write_str(s)
     }
 }
 
 impl<W> fmt::Write for FmtWriter<W>
 where
-    W: std::fmt::Write,
+    W: core::fmt::Write,
 {
     #[inline(always)]
     fn write_line(&mut self, config: &fmt::Config) -> fmt::Result {

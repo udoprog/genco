@@ -1,11 +1,15 @@
 //! Helper trait to take ownership of strings.
 
+use core::fmt;
+use core::ops::Deref;
+
+use alloc::borrow::{Cow, ToOwned};
+use alloc::boxed::Box;
+use alloc::rc::Rc;
+use alloc::string::String;
+
 use crate::lang::Lang;
 use crate::tokens::{FormatInto, Item, Tokens};
-use std::borrow::Cow;
-use std::fmt;
-use std::ops::Deref;
-use std::rc::Rc;
 
 /// A managed string that permits immutable borrowing.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]

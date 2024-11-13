@@ -34,7 +34,7 @@ where
     fn parse(item: &Item<L>) -> fmt::Result<&Self::Output> {
         match item {
             Item::Literal(s) => Ok(s),
-            _ => Err(std::fmt::Error),
+            _ => Err(core::fmt::Error),
         }
     }
 }
@@ -57,7 +57,7 @@ where
     fn parse(item: &Item<L>) -> fmt::Result<&Self::Output> {
         match item {
             Item::CloseEval => Ok(&()),
-            _ => Err(std::fmt::Error),
+            _ => Err(core::fmt::Error),
         }
     }
 }
@@ -114,7 +114,7 @@ where
     where
         P: Parse<L>,
     {
-        let item = self.next().ok_or(std::fmt::Error)?;
+        let item = self.next().ok_or(core::fmt::Error)?;
         P::parse(item)
     }
 }

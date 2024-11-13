@@ -1,5 +1,7 @@
 //! A single element
 
+use alloc::boxed::Box;
+
 use crate::lang::Lang;
 use crate::tokens::{FormatInto, ItemStr, Tokens};
 

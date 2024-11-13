@@ -51,26 +51,29 @@ mod config;
 mod cursor;
 mod fmt_writer;
 mod formatter;
+#[cfg(feature = "std")]
 mod io_writer;
 mod vec_writer;
 
 pub use self::config::{Config, Indentation};
 pub use self::fmt_writer::FmtWriter;
 pub use self::formatter::Formatter;
+#[cfg(feature = "std")]
 pub use self::io_writer::IoWriter;
 pub use self::vec_writer::VecWriter;
 
 /// Result type for the `fmt` module.
-pub type Result<T = ()> = std::result::Result<T, std::fmt::Error>;
+pub type Result<T = ()> = core::result::Result<T, core::fmt::Error>;
 /// Error for the `fmt` module.
-pub type Error = std::fmt::Error;
+pub type Error = core::fmt::Error;
 
 /// Trait that defines a line writer.
-pub(crate) trait Write: std::fmt::Write {
+pub(crate) trait Write: core::fmt::Write {
     /// Implement for writing a line.
     fn write_line(&mut self, config: &Config) -> Result;
 
     /// Implement for writing the trailing line ending of the file.
+    #[inline]
     fn write_trailing_line(&mut self, config: &Config) -> Result {
         self.write_line(config)
     }

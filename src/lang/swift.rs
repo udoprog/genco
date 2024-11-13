@@ -14,10 +14,12 @@
 //! # Ok(())
 //! # }
 
+use core::fmt::Write as _;
+
+use alloc::collections::BTreeSet;
+
 use crate::fmt;
 use crate::tokens::ItemStr;
-use std::collections::BTreeSet;
-use std::fmt::Write as _;
 
 /// Tokens container specialization for Rust.
 pub type Tokens = crate::Tokens<Swift>;

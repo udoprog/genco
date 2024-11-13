@@ -157,6 +157,16 @@
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
 #![allow(clippy::needless_doctest_main)]
+#![no_std]
+
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+#[cfg(not(feature = "alloc"))]
+compile_error!("genco: The `alloc` feature must be enabled");
 
 /// Whitespace sensitive quasi-quoting.
 ///

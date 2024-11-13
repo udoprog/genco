@@ -1,5 +1,6 @@
-use crate::fmt;
 use std::io;
+
+use crate::fmt;
 
 /// Helper struct to format a token stream to an underlying writer implementing
 /// [io::Write][std::io::Write].
@@ -60,22 +61,22 @@ where
     }
 }
 
-impl<W> std::fmt::Write for IoWriter<W>
+impl<W> core::fmt::Write for IoWriter<W>
 where
     W: io::Write,
 {
     #[inline(always)]
-    fn write_char(&mut self, c: char) -> std::fmt::Result {
+    fn write_char(&mut self, c: char) -> core::fmt::Result {
         self.writer
             .write_all(c.encode_utf8(&mut [0; 4]).as_bytes())
-            .map_err(|_| std::fmt::Error)
+            .map_err(|_| core::fmt::Error)
     }
 
     #[inline(always)]
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
         self.writer
             .write_all(s.as_bytes())
-            .map_err(|_| std::fmt::Error)
+            .map_err(|_| core::fmt::Error)
     }
 }
 
@@ -87,6 +88,6 @@ where
     fn write_line(&mut self, config: &fmt::Config) -> fmt::Result {
         self.writer
             .write_all(config.newline.as_bytes())
-            .map_err(|_| std::fmt::Error)
+            .map_err(|_| core::fmt::Error)
     }
 }

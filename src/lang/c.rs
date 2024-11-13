@@ -1,11 +1,13 @@
 //! Specialization for C code generation.
 
+use core::fmt::Write as _;
+
+use alloc::collections::BTreeSet;
+
 use crate as genco;
 use crate::fmt;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
-use std::collections::BTreeSet;
-use std::fmt::Write as _;
 
 /// Tokens container specialization for C.
 pub type Tokens = crate::Tokens<C>;

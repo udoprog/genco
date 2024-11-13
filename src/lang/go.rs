@@ -42,12 +42,14 @@
 //! # }
 //! ```
 
+use core::fmt::Write as _;
+
+use alloc::collections::BTreeSet;
+
 use crate as genco;
 use crate::fmt;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
-use std::collections::BTreeSet;
-use std::fmt::Write as _;
 
 const MODULE_SEP: &str = "/";
 const SEP: &str = ".";

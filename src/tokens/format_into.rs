@@ -1,6 +1,9 @@
-use std::borrow::Cow;
-use std::fmt::Arguments;
-use std::rc::Rc;
+use core::fmt::Arguments;
+
+use alloc::borrow::Cow;
+use alloc::rc::Rc;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 
 use crate::lang::Lang;
 use crate::tokens::{Item, ItemStr, Tokens};

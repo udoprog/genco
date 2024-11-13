@@ -1,7 +1,7 @@
 //! Helper to parse quoted strings.
 
-use std::cell::{Cell, RefCell};
-use std::fmt::Write;
+use core::cell::{Cell, RefCell};
+use core::fmt::Write;
 
 use proc_macro2::{Span, TokenStream, TokenTree};
 use syn::parse::{ParseBuffer, ParseStream};

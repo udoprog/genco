@@ -34,14 +34,16 @@
 //! ```
 
 mod doc_comment;
-
 pub use self::doc_comment::DocComment;
+
+use core::fmt::Write as _;
+
+use alloc::collections::BTreeSet;
 
 use crate as genco;
 use crate::fmt;
 use crate::quote_in;
 use crate::tokens::{quoted, ItemStr};
-use std::fmt::Write as _;
 
 const SEP: &str = ".";
 /// dart:core package.
@@ -188,8 +190,6 @@ impl Import {
 impl Dart {
     /// Resolve all imports.
     fn imports(out: &mut Tokens, input: &Tokens, _: &Config) {
-        use std::collections::BTreeSet;
-
         let mut modules = BTreeSet::new();
 
         for import in input.walk_imports() {
