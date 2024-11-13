@@ -39,6 +39,8 @@ pub use self::python::Python;
 pub use self::rust::Rust;
 pub use self::swift::Swift;
 
+use core::fmt::Write as _;
+
 use crate::fmt;
 use crate::Tokens;
 
@@ -48,7 +50,7 @@ use crate::Tokens;
 /// module.
 pub trait Lang
 where
-    Self: 'static + Sized + Copy + Eq + Ord + std::hash::Hash + std::fmt::Debug,
+    Self: 'static + Sized + Copy + Eq + Ord + core::hash::Hash + core::fmt::Debug,
 {
     /// Configuration associated with building a formatting element.
     type Config;
@@ -69,7 +71,6 @@ where
         _format: &Self::Format,
         _has_eval: bool,
     ) -> fmt::Result {
-        use std::fmt::Write as _;
         out.write_char('"')?;
         Ok(())
     }
@@ -81,7 +82,6 @@ where
         _format: &Self::Format,
         _has_eval: bool,
     ) -> fmt::Result {
-        use std::fmt::Write as _;
         out.write_char('"')?;
         Ok(())
     }
@@ -93,8 +93,6 @@ where
         format: &Self::Format,
         literal: &str,
     ) -> fmt::Result {
-        use std::fmt::Write as _;
-
         Self::start_string_eval(out, config, format)?;
         out.write_str(literal)?;
         Self::end_string_eval(out, config, format)?;
@@ -121,8 +119,6 @@ where
 
     /// Performing string quoting according to language convention.
     fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
-        use std::fmt::Write as _;
-
         out.write_str(input)
     }
 
@@ -166,7 +162,7 @@ where
 pub trait LangItem<L>
 where
     L: Lang,
-    Self: 'static + Clone + Eq + Ord + std::hash::Hash + std::fmt::Debug,
+    Self: 'static + Clone + Eq + Ord + core::hash::Hash + core::fmt::Debug,
 {
     /// Format the language item appropriately.
     fn format(
@@ -184,8 +180,6 @@ where
 /// This is one of the more common escape sequences and is provided here so you
 /// can use it if a language you've implemented requires it.
 pub fn c_family_write_quoted(out: &mut fmt::Formatter, input: &str) -> fmt::Result {
-    use std::fmt::Write as _;
-
     for c in input.chars() {
         match c {
             // alert (bell)

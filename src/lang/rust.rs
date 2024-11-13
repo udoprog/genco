@@ -38,10 +38,12 @@
 //! # Ok(())
 //! # }
 
+use core::fmt::Write as _;
+
+use alloc::collections::{BTreeMap, BTreeSet, VecDeque};
+
 use crate::fmt;
 use crate::tokens::ItemStr;
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
-use std::fmt::Write as _;
 
 const SEP: &str = "::";
 
@@ -408,9 +410,10 @@ impl Import {
 
 impl Rust {
     fn imports(out: &mut Tokens, config: &Config, tokens: &Tokens) {
+        use alloc::collections::btree_set;
+
         use crate as genco;
         use crate::quote_in;
-        use std::collections::btree_set;
 
         let mut modules = BTreeMap::<&ItemStr, Import>::new();
 
@@ -539,7 +542,7 @@ impl Rust {
             type Item = RenderItem<'a>;
 
             fn next(&mut self) -> Option<Self::Item> {
-                if std::mem::take(&mut self.self_import) {
+                if core::mem::take(&mut self.self_import) {
                     // Only render self-import if it's not a top level module.
                     if self.module.split(SEP).count() > 1 {
                         return Some(RenderItem::SelfImport);

@@ -10,14 +10,18 @@
 //! ```
 #![allow(clippy::module_inception)]
 
+use core::cmp;
+use core::iter::FromIterator;
+use core::mem;
+use core::slice;
+
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::vec::{self, Vec};
+
 use crate::fmt;
 use crate::lang::{Lang, LangSupportsEval};
 use crate::tokens::{FormatInto, Item, Register};
-use std::cmp;
-use std::iter::FromIterator;
-use std::mem;
-use std::slice;
-use std::vec;
 
 /// A stream of tokens.
 ///
@@ -864,6 +868,7 @@ impl<L> cmp::PartialEq<Vec<Item<L>>> for Tokens<L>
 where
     L: Lang,
 {
+    #[inline]
     fn eq(&self, other: &Vec<Item<L>>) -> bool {
         self.items == *other
     }
@@ -1056,6 +1061,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use core::fmt::Write as _;
+
+    use alloc::string::String;
+    use alloc::vec;
+    use alloc::vec::Vec;
+
     use crate as genco;
     use crate::fmt;
     use crate::{quote, Tokens};
@@ -1073,7 +1084,6 @@ mod tests {
 
         Import {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
-                use std::fmt::Write as _;
                 write!(out, "{}", self.0)
             }
         }

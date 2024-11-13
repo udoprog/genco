@@ -1,3 +1,6 @@
+use alloc::string::String;
+use alloc::vec::Vec;
+
 use crate::fmt;
 
 /// Helper struct to format a token stream as a vector of strings.
@@ -61,14 +64,14 @@ impl VecWriter {
     }
 }
 
-impl std::fmt::Write for VecWriter {
+impl core::fmt::Write for VecWriter {
     #[inline(always)]
-    fn write_char(&mut self, c: char) -> std::fmt::Result {
+    fn write_char(&mut self, c: char) -> core::fmt::Result {
         self.line_buffer.write_char(c)
     }
 
     #[inline(always)]
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
         self.line_buffer.write_str(s)
     }
 }

@@ -1,5 +1,5 @@
-use std::cell::{RefCell, RefMut};
-use std::fmt::Arguments;
+use core::cell::{RefCell, RefMut};
+use core::fmt::Arguments;
 
 use proc_macro2::Span;
 

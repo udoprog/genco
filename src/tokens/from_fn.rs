@@ -23,6 +23,7 @@ use crate::Tokens;
 /// let _: Tokens<Rust> = quote!($c $['\n'] $c);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
+#[inline]
 pub fn from_fn<F, L>(f: F) -> FromFn<F>
 where
     F: FnOnce(&mut Tokens<L>),
@@ -44,6 +45,7 @@ where
     L: Lang,
     F: FnOnce(&mut Tokens<L>),
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         (self.f)(tokens);
     }

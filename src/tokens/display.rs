@@ -1,7 +1,10 @@
+use core::fmt;
+
+use alloc::string::ToString;
+
 use crate::lang::Lang;
 use crate::tokens::{FormatInto, Item};
 use crate::Tokens;
-use std::fmt;
 
 /// Function to build a string literal.
 ///

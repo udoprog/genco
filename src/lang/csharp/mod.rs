@@ -20,12 +20,15 @@
 mod block_comment;
 mod comment;
 
+use core::fmt::Write as _;
+
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::{String, ToString};
+
 use crate as genco;
 use crate::fmt;
 use crate::quote_in;
 use crate::tokens::ItemStr;
-use std::collections::{BTreeSet, HashMap, HashSet};
-use std::fmt::Write as _;
 
 pub use self::block_comment::BlockComment;
 pub use self::comment::Comment;
@@ -119,7 +122,7 @@ pub struct Format {
     /// their use has to be qualified or not.
     ///
     /// A missing name means that it has to be used in a qualified manner.
-    imported_names: HashMap<String, String>,
+    imported_names: BTreeMap<String, String>,
 }
 
 /// Config data for Csharp formatting.
@@ -170,7 +173,7 @@ impl Csharp {
         out: &mut Tokens,
         tokens: &Tokens,
         config: &Config,
-        imported_names: &mut HashMap<String, String>,
+        imported_names: &mut BTreeMap<String, String>,
     ) {
         let mut modules = BTreeSet::new();
 
@@ -182,7 +185,7 @@ impl Csharp {
             return;
         }
 
-        let mut imported = HashSet::new();
+        let mut imported = BTreeSet::new();
 
         for (namespace, name) in modules {
             if Some(namespace) == config.namespace.as_deref() {

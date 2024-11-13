@@ -1,10 +1,14 @@
 //! Nix
+
+use core::fmt::Write as _;
+
+use alloc::collections::BTreeSet;
+use alloc::string::ToString;
+
 use crate as genco;
 use crate::fmt;
 use crate::quote_in;
 use crate::tokens::ItemStr;
-use std::collections::BTreeSet;
-use std::fmt::Write as _;
 
 /// Tokens
 pub type Tokens = crate::Tokens<Nix>;
