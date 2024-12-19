@@ -364,7 +364,7 @@ where
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L> FormatInto<L> for Cow<'a, str>
+impl<L> FormatInto<L> for Cow<'_, str>
 where
     L: Lang,
 {
@@ -392,7 +392,7 @@ where
 /// assert_eq!("foo bar baz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L> FormatInto<L> for &Cow<'a, str>
+impl<L> FormatInto<L> for &Cow<'_, str>
 where
     L: Lang,
 {
@@ -420,7 +420,7 @@ where
 /// assert_eq!("foobar baz biz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L, T> FormatInto<L> for Cow<'a, [T]>
+impl<L, T> FormatInto<L> for Cow<'_, [T]>
 where
     L: Lang,
     T: FormatInto<L> + Clone,
@@ -453,7 +453,7 @@ where
 /// assert_eq!("foobar baz biz", result.to_string()?);
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-impl<'a, L, T> FormatInto<L> for &Cow<'a, [T]>
+impl<L, T> FormatInto<L> for &Cow<'_, [T]>
 where
     L: Lang,
     T: FormatInto<L> + Clone,
