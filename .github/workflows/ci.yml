@@ -13,24 +13,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@1.66
+    - run: cargo build --workspace --lib
+    - run: cargo build --workspace --lib --no-default-features --features alloc
+
   test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        rust: ['1.66', stable, nightly]
+        rust: [stable, nightly]
     steps:
     - uses: actions/checkout@v4
     - uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{matrix.rust}}
-    - run: cargo build --workspace
-    - run: cargo build --workspace --no-default-features --features alloc
     - run: cargo build --workspace --all-targets
       if: matrix.rust == 'stable'
-    - run: cargo test --workspace --doc
-      if: matrix.rust == 'nightly'
     - run: cargo test --workspace --all-targets
+      if: matrix.rust == 'nightly'
+    - run: cargo test --workspace --doc
       if: matrix.rust == 'nightly'
 
   clippy:
