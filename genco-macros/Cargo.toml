@@ -16,7 +16,7 @@ keywords = ["code-generation", "template"]
 categories = ["template-engine"]
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(proc_macro_span)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(proc_macro_span, has_proc_macro_span)'] }
 
 [dependencies]
 syn = { version = "2.0.38", features = ["full"] }

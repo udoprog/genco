@@ -10,13 +10,16 @@ fn main() {
         nightly: false,
     });
 
-    if version.nightly {
+    if version.nightly && version.minor < 88 {
         println!("cargo:rustc-cfg=proc_macro_span");
+        println!("cargo:rustc-cfg=has_proc_macro_span");
+    } else if version.minor >= 88 {
+        // The relevant parts are stable since 1.88
+        println!("cargo:rustc-cfg=has_proc_macro_span");
     }
 }
 
 struct RustcVersion {
-    #[allow(unused)]
     minor: u32,
     nightly: bool,
 }
@@ -27,9 +30,11 @@ fn rustc_version() -> Option<RustcVersion> {
     let version = str::from_utf8(&output.stdout).ok()?;
     let nightly = version.contains("nightly") || version.contains("dev");
     let mut pieces = version.split('.');
-    if pieces.next() != Some("rustc 1") {
+
+    if pieces.next()? != "rustc 1" {
         return None;
     }
+
     let minor = pieces.next()?.parse().ok()?;
     Some(RustcVersion { minor, nightly })
 }
