@@ -3,7 +3,7 @@ name = "genco-macros"
 version = "0.17.10"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
-rust-version = "1.66"
+rust-version = "1.88"
 description = """
 A whitespace-aware quasiquoter for beautiful code generation.
 """

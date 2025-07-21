@@ -55,7 +55,7 @@ impl_lang! {
                     c if c.is_ascii() && !c.is_control() => out.write_char(c)?,
                     c => {
                         for c in c.encode_utf16(&mut [0u16; 2]) {
-                            write!(out, "\\u{:04x}", c)?;
+                            write!(out, "\\u{c:04x}")?;
                         }
                     }
                 }

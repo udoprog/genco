@@ -13,7 +13,7 @@ fn test_register() -> genco::fmt::Result {
         }
     };
 
-    println!("{:?}", tokens);
+    println!("{tokens:?}");
 
     assert_eq!(
         vec![

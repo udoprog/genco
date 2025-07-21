@@ -130,7 +130,7 @@ impl Buf {
     }
 
     fn find_line_column_inner(&self, span: Span) -> Option<(usize, usize)> {
-        let text = self.format(format_args!("{:?}", span));
+        let text = self.format(format_args!("{span:?}"));
         let start = text.find('(')?;
         let (start, end) = text
             .get(start.checked_add(1)?..text.len().checked_sub(1)?)?
