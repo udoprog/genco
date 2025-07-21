@@ -22,6 +22,8 @@ pub mod csharp;
 pub mod dart;
 pub mod go;
 pub mod java;
+
+pub mod kotlin;
 pub mod js;
 pub mod nix;
 pub mod python;
@@ -33,6 +35,7 @@ pub use self::csharp::Csharp;
 pub use self::dart::Dart;
 pub use self::go::Go;
 pub use self::java::Java;
+pub use self::kotlin::Kotlin;
 pub use self::js::JavaScript;
 pub use self::nix::Nix;
 pub use self::python::Python;
