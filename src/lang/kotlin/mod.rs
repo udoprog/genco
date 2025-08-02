@@ -21,7 +21,7 @@ use core::fmt::Write as _;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::{String, ToString};
-
+use std::println;
 use crate as genco;
 use crate::fmt;
 use crate::tokens::ItemStr;
@@ -41,6 +41,24 @@ impl_lang! {
         type Format = Format;
         type Item = Import;
 
+        fn start_string_eval(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+        ) -> fmt::Result {
+            out.write_str("${")?;
+            Ok(())
+        }
+
+        fn end_string_eval(
+            out: &mut fmt::Formatter<'_>,
+            _config: &Self::Config,
+            _format: &Self::Format,
+        ) -> fmt::Result {
+            out.write_char('}')?;
+            Ok(())
+        }
+
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // See: https://kotlinlang.org/docs/basic-types.html#escaped-strings
             for c in input.chars() {
@@ -52,7 +70,6 @@ impl_lang! {
                     '\'' => out.write_str("\\'")?,
                     '"' => out.write_str("\\\"")?,
                     '\\' => out.write_str("\\\\")?,
-                    '$' => out.write_str("\\$")?, // Dollar sign for string templates
                     c if c.is_ascii() && !c.is_control() => out.write_char(c)?,
                     c => {
                         // Encode non-ascii characters as UTF-16 surrogate pairs
