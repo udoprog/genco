@@ -21,7 +21,6 @@ use core::fmt::Write as _;
 
 use alloc::collections::{BTreeMap, BTreeSet};
 use alloc::string::{String, ToString};
-use std::println;
 use crate as genco;
 use crate::fmt;
 use crate::tokens::ItemStr;
