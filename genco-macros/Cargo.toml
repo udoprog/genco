@@ -1,9 +1,9 @@
 [package]
 name = "genco-macros"
-version = "0.17.10"
+version = "0.18.0"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
-rust-version = "1.66"
+rust-version = "1.88"
 description = """
 A whitespace-aware quasiquoter for beautiful code generation.
 """
@@ -16,7 +16,7 @@ keywords = ["code-generation", "template"]
 categories = ["template-engine"]
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(proc_macro_span)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(proc_macro_span, has_proc_macro_span)'] }
 
 [dependencies]
 syn = { version = "2.0.38", features = ["full"] }

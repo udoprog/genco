@@ -31,9 +31,9 @@ This project solves the following language-specific concerns:
 
 <br>
 
-To support line changes during [whitespace detection], we depend on the
-nightly [`proc_macro_span` feature]. On stable we can only detect column
-changes.
+To support line changes during [whitespace detection], we depend on span
+information which was made available in Rust `1.88`. Before that, we relied
+on a nightly [`proc_macro_span` feature] to work.
 
 *Until this is stabilized* and you want fully functional whitespace
 detection you must build and run projects using genco with a `nightly`

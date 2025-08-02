@@ -16,7 +16,7 @@ fn main() -> anyhow::Result<()> {
         }
 
         func greetUser() string {
-            return $(quoted(format_args!("Hello {}!", name)))
+            return $(quoted(format_args!("Hello {name}!")))
         }
     };
 

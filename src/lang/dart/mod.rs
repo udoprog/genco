@@ -67,7 +67,7 @@ impl_lang! {
             _format: &Self::Format,
             literal: &str,
         ) -> fmt::Result {
-            write!(out, "${}", literal)?;
+            write!(out, "${literal}")?;
             Ok(())
         }
 
@@ -120,7 +120,7 @@ impl_lang! {
                     }
                     c => {
                         for c in c.encode_utf16(&mut [0u16; 2]) {
-                            write!(out, "\\u{:04x}", c)?;
+                            write!(out, "\\u{c:04x}")?;
                         }
                     }
                 };
