@@ -19,12 +19,12 @@
 
 use core::fmt::Write as _;
 
-use alloc::collections::{BTreeMap, BTreeSet};
-use alloc::string::{String, ToString};
 use crate as genco;
 use crate::fmt;
+use crate::quote_in;
 use crate::tokens::ItemStr;
-use crate::{quote_in};
+use alloc::collections::{BTreeMap, BTreeSet};
+use alloc::string::{String, ToString};
 
 /// Tokens container specialized for Kotlin.
 pub type Tokens = crate::Tokens<Kotlin>;
@@ -231,7 +231,6 @@ impl Kotlin {
 
         out.line();
     }
-    
 }
 
 /// Create a new Kotlin import.
