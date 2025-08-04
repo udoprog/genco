@@ -69,11 +69,12 @@ impl_lang! {
                     '\'' => out.write_str("\\'")?,
                     '"' => out.write_str("\\\"")?,
                     '\\' => out.write_str("\\\\")?,
+                    '$' => out.write_str("\\$")?,
                     c if c.is_ascii() && !c.is_control() => out.write_char(c)?,
                     c => {
                         // Encode non-ascii characters as UTF-16 surrogate pairs
-                        for c in c.encode_utf16(&mut [0u16; 2]) {
-                            write!(out, "\\u{:04x}", c)?;
+                        for unit in c.encode_utf16(&mut [0u16; 2]) {
+                            write!(out, "\\u{unit:04x}")?;
                         }
                     }
                 }
