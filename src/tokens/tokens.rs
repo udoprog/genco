@@ -1079,7 +1079,7 @@ mod tests {
         Lang {
             type Config = ();
             type Format = ();
-            type Item = Import;
+            type Item = Any;
         }
 
         Import {
@@ -1101,7 +1101,7 @@ mod tests {
         let mut output: Vec<_> = toks.walk_imports().cloned().collect();
         output.sort();
 
-        let expected = vec![Import(1), Import(2)];
+        let expected = vec![Any::Import(Import(1)), Any::Import(Import(2))];
 
         assert_eq!(expected, output);
     }
