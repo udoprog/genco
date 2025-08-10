@@ -65,6 +65,9 @@ The following are languages which have built-in support in genco.
 * [☕ <b>Java</b>][java]<br>
   <small>[Example][java-example]</small>
 
+* [🧬 <b>Kotlin</b>][kotlin]<br>
+  <small>[Example][kotlin-example]</small>
+
 * [🎼 <b>C#</b>][c#]<br>
   <small>[Example][c#-example]</small>
 
@@ -141,6 +144,8 @@ fn main() {
 [interpolate]: https://docs.rs/genco/latest/genco/macro.quote.html#quoted-string-interpolation
 [java-example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
 [java]: https://docs.rs/genco/latest/genco/lang/java/index.html
+[kotlin-example]: https://github.com/udoprog/genco/blob/master/examples/kotlin.rs
+[kotlin]: https://docs.rs/genco/latest/genco/lang/kotlin/index.html
 [js-example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
 [js]: https://docs.rs/genco/latest/genco/lang/js/index.html
 [Open an issue!]: https://github.com/udoprog/genco/issues/new
