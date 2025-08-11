@@ -1,6 +1,6 @@
 [package]
 name = "genco"
-version = "0.18.0"
+version = "0.18.1"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
 rust-version = "1.88"
@@ -19,7 +19,7 @@ std = []
 alloc = []
 
 [dependencies]
-genco-macros = { path = "./genco-macros", version = "0.18.0" }
+genco-macros = { path = "./genco-macros", version = "0.18.1" }
 
 relative-path = "1.2.0"
 smallvec = "1.4.0"
