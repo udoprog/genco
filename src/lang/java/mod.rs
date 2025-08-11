@@ -44,7 +44,7 @@ impl_lang! {
             for c in input.chars() {
                 match c {
                     '\t' => out.write_str("\\t")?,
-                    '\u{0007}' => out.write_str("\\b")?,
+                    '\u{0008}' => out.write_str("\\b")?,
                     '\n' => out.write_str("\\n")?,
                     '\r' => out.write_str("\\r")?,
                     '\u{0014}' => out.write_str("\\f")?,
