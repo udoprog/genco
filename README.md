@@ -7,7 +7,7 @@
 
 A whitespace-aware quasiquoter for beautiful code generation.
 
-Central to genco are the [quote!] and [quote_in!] procedural macros which
+Central to genco are the [`quote!`] and [`quote_in!`] procedural macros which
 ease the construction of [token streams].
 
 This project solves the following language-specific concerns:
@@ -32,10 +32,10 @@ This project solves the following language-specific concerns:
 <br>
 
 To support line changes during [whitespace detection], we depend on span
-information which was made available in Rust `1.88`. Before that, we relied
-on a nightly [`proc_macro_span` feature] to work.
+information which was made available in Rust `1.88`. Before that, we rely on
+a nightly [`proc_macro_span` feature] to work.
 
-*Until this is stabilized* and you want fully functional whitespace
+*Prior to this version of Rust* if you want fully functional whitespace
 detection you must build and run projects using genco with a `nightly`
 compiler. This is important for whitespace-sensitive languages like python.
 
@@ -65,9 +65,6 @@ The following are languages which have built-in support in genco.
 * [☕ <b>Java</b>][java]<br>
   <small>[Example][java-example]</small>
 
-* [🧬 <b>Kotlin</b>][kotlin]<br>
-  <small>[Example][kotlin-example]</small>
-
 * [🎼 <b>C#</b>][c#]<br>
   <small>[Example][c#-example]</small>
 
@@ -84,8 +81,7 @@ The following are languages which have built-in support in genco.
   <small>[Example][c-example]</small>
 
 * [🐍 <b>Python</b>][python]<br>
-  <small>[Example][python-example]</small><br>
-  **Requires a `nightly` compiler**
+  <small>[Example][python-example]</small>
 
 <small>Is your favorite language missing? <b>[Open an issue!]</b></small>
 
@@ -130,33 +126,31 @@ fn main() {
 
 <br>
 
-[c-example]: https://github.com/udoprog/genco/blob/master/examples/c.rs
-[c]: https://docs.rs/genco/latest/genco/lang/c/index.html
-[c#-example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
-[c#]: https://docs.rs/genco/latest/genco/lang/csharp/index.html
-[dart-example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
-[dart]: https://docs.rs/genco/latest/genco/lang/dart/index.html
-[go-example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
-[go]: https://docs.rs/genco/latest/genco/lang/go/index.html
-[impl_lang!]: https://docs.rs/genco/latest/genco/macro.impl_lang.html
-[import statements]: https://docs.rs/genco/latest/genco/macro.quote.html#imports
-[indentation is meaningful]: https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements
-[interpolate]: https://docs.rs/genco/latest/genco/macro.quote.html#quoted-string-interpolation
-[java-example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
-[java]: https://docs.rs/genco/latest/genco/lang/java/index.html
-[kotlin-example]: https://github.com/udoprog/genco/blob/master/examples/kotlin.rs
-[kotlin]: https://docs.rs/genco/latest/genco/lang/kotlin/index.html
-[js-example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
-[js]: https://docs.rs/genco/latest/genco/lang/js/index.html
-[Open an issue!]: https://github.com/udoprog/genco/issues/new
-[python-example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
-[python]: https://docs.rs/genco/latest/genco/lang/python/index.html
-[quote strings]: https://docs.rs/genco/latest/genco/macro.quote.html#string-quoting
-[quote_in!]: https://docs.rs/genco/latest/genco/macro.quote_in.html
-[quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
-[quoted()]: https://docs.rs/genco/latest/genco/tokens/fn.quoted.html
-[rust-example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
-[rust]: https://docs.rs/genco/latest/genco/lang/rust/index.html
-[solve namespace conflicts]: https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html
-[token streams]: https://docs.rs/genco/latest/genco/tokens/struct.Tokens.html
-[whitespace detection]: https://docs.rs/genco/latest/genco/macro.quote.html#whitespace-detection
+[`quote_in!`]: <https://docs.rs/genco/latest/genco/macro.quote_in.html>
+[`quote!`]: <https://docs.rs/genco/latest/genco/macro.quote.html>
+[`quoted()`]: <https://docs.rs/genco/latest/genco/tokens/fn.quoted.html>
+[c-example]: <https://github.com/udoprog/genco/blob/master/examples/c.rs>
+[c]: <https://docs.rs/genco/latest/genco/lang/c/index.html>
+[c#-example]: <https://github.com/udoprog/genco/blob/master/examples/csharp.rs>
+[c#]: <https://docs.rs/genco/latest/genco/lang/csharp/index.html>
+[dart-example]: <https://github.com/udoprog/genco/blob/master/examples/dart.rs>
+[dart]: <https://docs.rs/genco/latest/genco/lang/dart/index.html>
+[go-example]: <https://github.com/udoprog/genco/blob/master/examples/go.rs>
+[go]: <https://docs.rs/genco/latest/genco/lang/go/index.html>
+[impl_lang!]: <https://docs.rs/genco/latest/genco/macro.impl_lang.html>
+[import statements]: <https://docs.rs/genco/latest/genco/macro.quote.html#imports>
+[indentation is meaningful]: <https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements>
+[interpolate]: <https://docs.rs/genco/latest/genco/macro.quote.html#quoted-string-interpolation>
+[java-example]: <https://github.com/udoprog/genco/blob/master/examples/java.rs>
+[java]: <https://docs.rs/genco/latest/genco/lang/java/index.html>
+[js-example]: <https://github.com/udoprog/genco/blob/master/examples/js.rs>
+[js]: <https://docs.rs/genco/latest/genco/lang/js/index.html>
+[Open an issue!]: <https://github.com/udoprog/genco/issues/new>
+[python-example]: <https://github.com/udoprog/genco/blob/master/examples/python.rs>
+[python]: <https://docs.rs/genco/latest/genco/lang/python/index.html>
+[quote strings]: <https://docs.rs/genco/latest/genco/macro.quote.html#string-quoting>
+[rust-example]: <https://github.com/udoprog/genco/blob/master/examples/rust.rs>
+[rust]: <https://docs.rs/genco/latest/genco/lang/rust/index.html>
+[solve namespace conflicts]: <https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html>
+[token streams]: <https://docs.rs/genco/latest/genco/tokens/struct.Tokens.html>
+[whitespace detection]: <https://docs.rs/genco/latest/genco/macro.quote.html#whitespace-detection>

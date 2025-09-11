@@ -8,11 +8,9 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: dart::Tokens = quote!("start π 😊 \n \x7f ÿ $ \\ end");
 //! assert_eq!("\"start π 😊 \\n \\x7f ÿ \\$ \\\\ end\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 //!
 //! # String Interpolation in Dart
@@ -23,14 +21,12 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: dart::Tokens = quote!($[str](  Hello: $var  ));
 //! assert_eq!("\"  Hello: $var  \"", toks.to_string()?);
 //!
 //! let toks: dart::Tokens = quote!($[str](  Hello: $(a + b)  ));
 //! assert_eq!("\"  Hello: ${a + b}  \"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 mod doc_comment;

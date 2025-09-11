@@ -5,7 +5,6 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: rust::Tokens = quote! {
 //!     fn foo() -> u32 {
 //!         42
@@ -20,8 +19,7 @@
 //!     ],
 //!     toks.to_file_vec()?
 //! );
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 //!
 //! # String Quoting in Rust
@@ -32,11 +30,10 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: rust::Tokens = quote!("start π 😊 \n \x7f ÿ $ end");
 //! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ end\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
+//! ```
 
 use core::fmt::Write as _;
 

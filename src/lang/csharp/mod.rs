@@ -10,11 +10,9 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: csharp::Tokens = quote!("start π 😊 \n \x7f end");
 //! assert_eq!("\"start \\u03c0 \\U0001f60a \\n \\x7f end\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 mod block_comment;

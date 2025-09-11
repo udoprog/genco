@@ -2,7 +2,7 @@ use crate::lang::Lang;
 use crate::tokens;
 use crate::Tokens;
 
-/// Construct a [FormatInto][crate::tokens::FormatInto] implementation from a
+/// Construct a [`FormatInto`][crate::tokens::FormatInto] implementation from a
 /// function.
 ///
 /// # Examples

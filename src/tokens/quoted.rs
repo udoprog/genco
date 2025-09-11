@@ -4,7 +4,7 @@ use crate::tokens::{FormatInto, Item, Tokens};
 /// Function to provide string quoting.
 ///
 /// Note that quoting is applied automatically for literal strings inside of
-/// the [quote!] macro, like: `quote!("hello")`.
+/// the [`quote!`] macro, like: `quote!("hello")`.
 ///
 /// This is used to generated quoted strings, in the language of choice.
 ///
@@ -50,7 +50,7 @@ use crate::tokens::{FormatInto, Item, Tokens};
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
 ///
-/// [quote!]: macro.quote.html
+/// [`quote!`]: crate::quote
 pub fn quoted<T>(inner: T) -> QuotedFn<T> {
     QuotedFn { inner }
 }

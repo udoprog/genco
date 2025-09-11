@@ -8,11 +8,10 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: swift::Tokens = quote!("start π 😊 \n \x7f ÿ $ end");
 //! assert_eq!("\"start π 😊 \\n \\u{7f} ÿ $ end\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
+//! ```
 
 use core::fmt::Write as _;
 

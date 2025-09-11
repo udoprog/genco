@@ -7,14 +7,12 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: python::Tokens = quote!("hello \n world");
 //! assert_eq!("\"hello \\n world\"", toks.to_string()?);
 //!
 //! let toks: python::Tokens = quote!($(quoted("hello \n world")));
 //! assert_eq!("\"hello \\n world\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 use core::fmt::Write as _;

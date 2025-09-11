@@ -7,7 +7,6 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: js::Tokens = quote! {
 //!     function foo(v) {
 //!         return v + ", World";
@@ -26,8 +25,7 @@
 //!     ],
 //!     toks.to_file_vec()?
 //! );
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 //!
 //! # String Quoting in JavaScript
@@ -39,14 +37,12 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: js::Tokens = quote!("start π 😊 \n \x7f ÿ $ \\ end");
 //! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ \\\\ end\"", toks.to_string()?);
 //!
 //! let toks: js::Tokens = quote!($(quoted("start π 😊 \n \x7f ÿ $ \\ end")));
 //! assert_eq!("\"start π 😊 \\n \\x7f ÿ $ \\\\ end\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 use core::fmt::Write as _;

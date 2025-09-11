@@ -3,7 +3,7 @@ use std::io;
 use crate::fmt;
 
 /// Helper struct to format a token stream to an underlying writer implementing
-/// [io::Write][std::io::Write].
+/// [`io::Write`].
 ///
 /// # Examples
 ///

@@ -24,7 +24,6 @@
 //! use genco::prelude::*;
 //! use genco::fmt;
 //!
-//! # fn main() -> fmt::Result {
 //! let map = rust::import("std::collections", "HashMap");
 //!
 //! let tokens: rust::Tokens = quote! {
@@ -43,8 +42,7 @@
 //! let format = rust::Format::default();
 //!
 //! tokens.format(&mut w.as_formatter(&fmt), &config, &format)?;
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 mod config;

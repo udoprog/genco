@@ -10,7 +10,8 @@
 //! ```
 #![allow(clippy::module_inception)]
 
-use core::cmp;
+use core::cmp::Ordering;
+use core::hash;
 use core::iter::FromIterator;
 use core::mem;
 use core::slice;
@@ -69,7 +70,6 @@ use crate::tokens::{FormatInto, Item, Register};
 /// [`space`]: Self::space
 /// [`push`]: Self::push
 /// [`line`]: Self::line
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Tokens<L = ()>
 where
     L: Lang,
@@ -77,8 +77,8 @@ where
     items: Vec<Item<L>>,
     /// The last position at which we observed a language item.
     ///
-    /// This references the `position + 1` in the items vector. A position of
-    /// 0 means that there are no more items.
+    /// This references the `position + 1` in the items vector. A position of 0
+    /// means that there are no more items.
     ///
     /// This makes up a singly-linked list over all language items that you can
     /// follow.
@@ -151,15 +151,15 @@ where
 
     /// Append the given tokens.
     ///
-    /// This append function takes anything implementing [FormatInto] making the
-    /// argument's behavior customizable. Most primitive types have built-in
-    /// implementations of [FormatInto] treating them as raw tokens.
+    /// This append function takes anything implementing [`FormatInto`] making
+    /// the argument's behavior customizable. Most primitive types have built-in
+    /// implementations of [`FormatInto`] treating them as raw tokens.
     ///
-    /// Most notabley, things implementing [FormatInto] can be used as arguments
-    /// for [interpolation] in the [quote!] macro.
+    /// Most notabley, things implementing [`FormatInto`] can be used as
+    /// arguments for [interpolation] in the [`quote!`] macro.
     ///
-    /// [quote!]: macro.quote.html
-    /// [interpolation]: macro.quote.html#interpolation
+    /// [`quote!`]: crate::quote
+    /// [interpolation]: crate::quote#interpolation
     ///
     /// # Examples
     ///
@@ -254,8 +254,6 @@ where
     /// assert_eq!("use byteorder::WriteBytesExt as _;\n", tokens.to_file_string()?);
     /// # Ok::<_, genco::fmt::Error>(())
     /// ```
-    ///
-    /// [quote!]: macro.quote.html
     pub fn register<T>(&mut self, tokens: T)
     where
         T: Register<L>,
@@ -864,9 +862,21 @@ where
     }
 }
 
-impl<L> cmp::PartialEq<Vec<Item<L>>> for Tokens<L>
+impl<L> PartialEq<Tokens<L>> for Tokens<L>
 where
     L: Lang,
+    L::Item: PartialEq,
+{
+    #[inline]
+    fn eq(&self, other: &Tokens<L>) -> bool {
+        self.items == other.items
+    }
+}
+
+impl<L> PartialEq<Vec<Item<L>>> for Tokens<L>
+where
+    L: Lang,
+    L::Item: PartialEq,
 {
     #[inline]
     fn eq(&self, other: &Vec<Item<L>>) -> bool {
@@ -874,30 +884,62 @@ where
     }
 }
 
-impl<L> cmp::PartialEq<Tokens<L>> for Vec<Item<L>>
+impl<L> PartialEq<Tokens<L>> for Vec<Item<L>>
 where
     L: Lang,
+    L::Item: PartialEq,
 {
     fn eq(&self, other: &Tokens<L>) -> bool {
         *self == other.items
     }
 }
 
-impl<L> cmp::PartialEq<[Item<L>]> for Tokens<L>
+impl<L> PartialEq<[Item<L>]> for Tokens<L>
 where
     L: Lang,
+    L::Item: PartialEq,
 {
     fn eq(&self, other: &[Item<L>]) -> bool {
         &*self.items == other
     }
 }
 
-impl<L> cmp::PartialEq<Tokens<L>> for [Item<L>]
+impl<L> PartialEq<Tokens<L>> for [Item<L>]
 where
     L: Lang,
+    L::Item: PartialEq,
 {
     fn eq(&self, other: &Tokens<L>) -> bool {
         self == &*other.items
+    }
+}
+
+impl<L> Eq for Tokens<L>
+where
+    L: Lang,
+    L::Item: Eq,
+{
+}
+
+impl<L> PartialOrd<Tokens<L>> for Tokens<L>
+where
+    L: Lang,
+    L::Item: PartialOrd,
+{
+    #[inline]
+    fn partial_cmp(&self, other: &Tokens<L>) -> Option<Ordering> {
+        self.items.iter().partial_cmp(other.items.iter())
+    }
+}
+
+impl<L> Ord for Tokens<L>
+where
+    L: Lang,
+    L::Item: Ord,
+{
+    #[inline]
+    fn cmp(&self, other: &Tokens<L>) -> Ordering {
+        self.items.iter().cmp(other.items.iter())
     }
 }
 
@@ -998,6 +1040,7 @@ where
 impl<'a, L> FromIterator<&'a Item<L>> for Tokens<L>
 where
     L: Lang,
+    L::Item: Clone,
 {
     fn from_iter<I: IntoIterator<Item = &'a Item<L>>>(iter: I) -> Self {
         let it = iter.into_iter();
@@ -1018,6 +1061,46 @@ where
         let mut tokens = Self::with_capacity(high.unwrap_or(low));
         tokens.extend(it);
         tokens
+    }
+}
+
+impl<L> core::fmt::Debug for Tokens<L>
+where
+    L: Lang,
+    L::Item: core::fmt::Debug,
+{
+    #[inline]
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_list().entries(&self.items).finish()
+    }
+}
+
+impl<L> Clone for Tokens<L>
+where
+    L: Lang,
+    L::Item: Clone,
+{
+    #[inline]
+    fn clone(&self) -> Self {
+        Self {
+            items: self.items.clone(),
+            last_lang_item: self.last_lang_item,
+        }
+    }
+}
+
+impl<L> hash::Hash for Tokens<L>
+where
+    L: Lang,
+    L::Item: hash::Hash,
+{
+    #[inline]
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: hash::Hasher,
+    {
+        self.items.hash(state);
+        self.last_lang_item.hash(state);
     }
 }
 
