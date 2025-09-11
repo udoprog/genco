@@ -10,11 +10,9 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: kotlin::Tokens = quote!("start π 😊 $var \n end");
 //! assert_eq!("\"start \\u03c0 \\ud83d\\ude0a \\$var \\n end\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 use core::fmt::Write as _;

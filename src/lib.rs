@@ -4,7 +4,7 @@
 //!
 //! A whitespace-aware quasiquoter for beautiful code generation.
 //!
-//! Central to genco are the [quote!] and [quote_in!] procedural macros which
+//! Central to genco are the [`quote!`] and [`quote_in!`] procedural macros which
 //! ease the construction of [token streams].
 //!
 //! This project solves the following language-specific concerns:
@@ -29,10 +29,10 @@
 //! <br>
 //!
 //! To support line changes during [whitespace detection], we depend on span
-//! information which was made available in Rust `1.88`. Before that, we relied
-//! on a nightly [`proc_macro_span` feature] to work.
+//! information which was made available in Rust `1.88`. Before that, we rely on
+//! a nightly [`proc_macro_span` feature] to work.
 //!
-//! *Until this is stabilized* and you want fully functional whitespace
+//! *Prior to this version of Rust* if you want fully functional whitespace
 //! detection you must build and run projects using genco with a `nightly`
 //! compiler. This is important for whitespace-sensitive languages like python.
 //!
@@ -78,8 +78,7 @@
 //!   <small>[Example][c-example]</small>
 //!
 //! * [🐍 <b>Python</b>][python]<br>
-//!   <small>[Example][python-example]</small><br>
-//!   **Requires a `nightly` compiler**
+//!   <small>[Example][python-example]</small>
 //!
 //! <small>Is your favorite language missing? <b>[Open an issue!]</b></small>
 //!
@@ -125,34 +124,34 @@
 //!
 //! <br>
 //!
-//! [c-example]: https://github.com/udoprog/genco/blob/master/examples/c.rs
-//! [c]: https://docs.rs/genco/latest/genco/lang/c/index.html
-//! [c#-example]: https://github.com/udoprog/genco/blob/master/examples/csharp.rs
-//! [c#]: https://docs.rs/genco/latest/genco/lang/csharp/index.html
-//! [dart-example]: https://github.com/udoprog/genco/blob/master/examples/dart.rs
-//! [dart]: https://docs.rs/genco/latest/genco/lang/dart/index.html
-//! [go-example]: https://github.com/udoprog/genco/blob/master/examples/go.rs
-//! [go]: https://docs.rs/genco/latest/genco/lang/go/index.html
-//! [impl_lang!]: https://docs.rs/genco/latest/genco/macro.impl_lang.html
-//! [import statements]: https://docs.rs/genco/latest/genco/macro.quote.html#imports
-//! [indentation is meaningful]: https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements
-//! [interpolate]: https://docs.rs/genco/latest/genco/macro.quote.html#quoted-string-interpolation
-//! [java-example]: https://github.com/udoprog/genco/blob/master/examples/java.rs
-//! [java]: https://docs.rs/genco/latest/genco/lang/java/index.html
-//! [js-example]: https://github.com/udoprog/genco/blob/master/examples/js.rs
-//! [js]: https://docs.rs/genco/latest/genco/lang/js/index.html
-//! [Open an issue!]: https://github.com/udoprog/genco/issues/new
-//! [python-example]: https://github.com/udoprog/genco/blob/master/examples/python.rs
-//! [python]: https://docs.rs/genco/latest/genco/lang/python/index.html
-//! [quote strings]: https://docs.rs/genco/latest/genco/macro.quote.html#string-quoting
-//! [quote_in!]: https://docs.rs/genco/latest/genco/macro.quote_in.html
-//! [quote!]: https://docs.rs/genco/latest/genco/macro.quote.html
-//! [quoted()]: https://docs.rs/genco/latest/genco/tokens/fn.quoted.html
-//! [rust-example]: https://github.com/udoprog/genco/blob/master/examples/rust.rs
-//! [rust]: https://docs.rs/genco/latest/genco/lang/rust/index.html
-//! [solve namespace conflicts]: https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html
-//! [token streams]: https://docs.rs/genco/latest/genco/tokens/struct.Tokens.html
-//! [whitespace detection]: https://docs.rs/genco/latest/genco/macro.quote.html#whitespace-detection
+//! [`quote_in!`]: <https://docs.rs/genco/latest/genco/macro.quote_in.html>
+//! [`quote!`]: <https://docs.rs/genco/latest/genco/macro.quote.html>
+//! [`quoted()`]: <https://docs.rs/genco/latest/genco/tokens/fn.quoted.html>
+//! [c-example]: <https://github.com/udoprog/genco/blob/master/examples/c.rs>
+//! [c]: <https://docs.rs/genco/latest/genco/lang/c/index.html>
+//! [c#-example]: <https://github.com/udoprog/genco/blob/master/examples/csharp.rs>
+//! [c#]: <https://docs.rs/genco/latest/genco/lang/csharp/index.html>
+//! [dart-example]: <https://github.com/udoprog/genco/blob/master/examples/dart.rs>
+//! [dart]: <https://docs.rs/genco/latest/genco/lang/dart/index.html>
+//! [go-example]: <https://github.com/udoprog/genco/blob/master/examples/go.rs>
+//! [go]: <https://docs.rs/genco/latest/genco/lang/go/index.html>
+//! [impl_lang!]: <https://docs.rs/genco/latest/genco/macro.impl_lang.html>
+//! [import statements]: <https://docs.rs/genco/latest/genco/macro.quote.html#imports>
+//! [indentation is meaningful]: <https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements>
+//! [interpolate]: <https://docs.rs/genco/latest/genco/macro.quote.html#quoted-string-interpolation>
+//! [java-example]: <https://github.com/udoprog/genco/blob/master/examples/java.rs>
+//! [java]: <https://docs.rs/genco/latest/genco/lang/java/index.html>
+//! [js-example]: <https://github.com/udoprog/genco/blob/master/examples/js.rs>
+//! [js]: <https://docs.rs/genco/latest/genco/lang/js/index.html>
+//! [Open an issue!]: <https://github.com/udoprog/genco/issues/new>
+//! [python-example]: <https://github.com/udoprog/genco/blob/master/examples/python.rs>
+//! [python]: <https://docs.rs/genco/latest/genco/lang/python/index.html>
+//! [quote strings]: <https://docs.rs/genco/latest/genco/macro.quote.html#string-quoting>
+//! [rust-example]: <https://github.com/udoprog/genco/blob/master/examples/rust.rs>
+//! [rust]: <https://docs.rs/genco/latest/genco/lang/rust/index.html>
+//! [solve namespace conflicts]: <https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html>
+//! [token streams]: <https://docs.rs/genco/latest/genco/tokens/struct.Tokens.html>
+//! [whitespace detection]: <https://docs.rs/genco/latest/genco/macro.quote.html#whitespace-detection>
 
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
@@ -170,15 +169,15 @@ compile_error!("genco: The `alloc` feature must be enabled");
 
 /// Whitespace sensitive quasi-quoting.
 ///
-/// This and the [quote_in!] macro is the thing that this library revolves
+/// This and the [`quote_in!`] macro is the thing that this library revolves
 /// around.
 ///
 /// It provides a flexible and intuitive mechanism for efficiently generating
 /// beautiful code directly inside of Rust.
 ///
-/// > Note that this macro **can only detect line changes** if it's built under
-/// > a `nightly` compiler. See the [main genco documentation] for more
-/// > information.
+/// > Note that this macro **can only detect line changes** if it's built with
+/// > Rust 1.88 or by using a `nightly` compiler. See the [main genco
+/// > documentation] for more information.
 ///
 /// ```
 /// use genco::prelude::*;
@@ -202,7 +201,7 @@ compile_error!("genco: The `alloc` feature must be enabled");
 /// # Interpolation
 ///
 /// Variables are interpolated using `$`, so to include the variable `test`, you
-/// would write `$test`. Interpolated variables must implement [FormatInto].
+/// would write `$test`. Interpolated variables must implement [`FormatInto`].
 /// Expressions can be interpolated with `$(<expr>)`.
 ///
 /// > *Note:* The `$` punctuation itself can be escaped by repeating it twice.
@@ -267,7 +266,7 @@ compile_error!("genco: The `alloc` feature must be enabled");
 /// }
 /// ```
 ///
-/// [FormatInto]: crate::tokens::FormatInto
+/// [`FormatInto`]: crate::tokens::FormatInto
 /// [main genco documentation]: https://docs.rs/genco
 ///
 /// <br>
@@ -399,7 +398,7 @@ compile_error!("genco: The `alloc` feature must be enabled");
 /// * Dart - With [interpolated strings] like `"Hello $a"` or `"Hello ${a +
 ///   b}"`.
 ///
-/// The [quote!] macro supports this through `$[str](<content>)`. This will
+/// The [`quote!`] macro supports this through `$[str](<content>)`. This will
 /// produce literal strings with the appropriate language-specific quoting and
 /// string interpolation formats used.
 ///
@@ -419,7 +418,7 @@ compile_error!("genco: The `alloc` feature must be enabled");
 ///
 /// Interpolated values are specified with `$(<quoted>)`. And `$` itself is
 /// escaped by repeating it twice through `$$`. The `<quoted>` section is
-/// interpreted the same as in the [quote!] macro, but is whitespace sensitive.
+/// interpreted the same as in the [`quote!`] macro, but is whitespace sensitive.
 /// This means that `$(foo)` is not the same as `$(foo )` since the latter will
 /// have a space preserved at the end.
 ///
@@ -446,7 +445,7 @@ compile_error!("genco: The `alloc` feature must be enabled");
 ///
 /// # Control Flow
 ///
-/// [quote!] provides some limited mechanisms for control flow inside of the
+/// [`quote!`] provides some limited mechanisms for control flow inside of the
 /// macro for convenience. The supported mechanisms are:
 ///
 /// * [Loops](#loops) - `$(for <bindings> in <expr> [join (<quoted>)] => <quoted>)`.
@@ -714,7 +713,7 @@ compile_error!("genco: The `alloc` feature must be enabled");
 ///
 /// ## Whitespace Detection
 ///
-/// The [quote!] macro has the following rules for dealing with indentation and
+/// The [`quote!`] macro has the following rules for dealing with indentation and
 /// spacing.
 ///
 /// **Spaces** — Two tokens that are separated are spaced. Regardless of how
@@ -840,12 +839,12 @@ compile_error!("genco: The `alloc` feature must be enabled");
 /// [escape]: #escape-sequences
 pub use genco_macros::quote;
 
-/// Convenience macro for constructing a [FormatInto] implementation in-place.
+/// Convenience macro for constructing a [`FormatInto`] implementation in-place.
 ///
-/// Constructing [FormatInto] implementation instead of short lived [token
+/// Constructing [`FormatInto`] implementation instead of short lived [token
 /// streams] can be more beneficial for memory use and performance.
 ///
-/// [FormatInto]: crate::tokens::FormatInto
+/// [`FormatInto`]: crate::tokens::FormatInto
 /// [token streams]: Tokens
 ///
 /// # Comparison
@@ -915,15 +914,15 @@ pub use genco_macros::quote;
 /// ```
 pub use genco_macros::quote_fn;
 
-/// Behaves the same as [quote!] while quoting into an existing token stream
+/// Behaves the same as [`quote!`] while quoting into an existing token stream
 /// with `<target> => <quoted>`.
 ///
 /// This macro takes a destination stream followed by an `=>` and the tokens to
 /// extend that stream with.
 ///
-/// Note that the `<target>` arguments must be borrowable. So a mutable
-/// reference like `&mut rust::Tokens` will have to be dereferenced when used
-/// with this macro.
+/// Note that it must be possible to borrow `<target>` mutably, so a reference
+/// like `&mut rust::Tokens` will have to be dereferenced when used with this
+/// macro.
 ///
 /// ```
 /// # use genco::prelude::*;
@@ -958,7 +957,7 @@ pub use genco_macros::quote_fn;
 ///
 /// # Use with scopes
 ///
-/// [quote_in!] can be used inside of a [quote!] through [a scope].
+/// [`quote_in!`] can be used inside of a [`quote!`] through [a scope].
 ///
 /// ```
 /// use genco::prelude::*;
@@ -987,5 +986,5 @@ pub mod fmt;
 pub mod lang;
 pub mod prelude;
 pub mod tokens;
-
+#[doc(inline)]
 pub use self::tokens::Tokens;

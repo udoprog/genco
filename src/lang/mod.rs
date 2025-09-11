@@ -11,10 +11,8 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let tokens: Tokens = quote!(hello world);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 pub mod c;
@@ -51,10 +49,7 @@ use crate::Tokens;
 ///
 /// The various language implementations can be found in the [lang][self]
 /// module.
-pub trait Lang
-where
-    Self: 'static + Sized + Copy + Eq + Ord + core::hash::Hash + core::fmt::Debug,
-{
+pub trait Lang: Sized {
     /// Configuration associated with building a formatting element.
     type Config;
     /// State being used during formatting.
@@ -165,7 +160,6 @@ where
 pub trait LangItem<L>
 where
     L: Lang,
-    Self: 'static + Clone + Eq + Ord + core::hash::Hash + core::fmt::Debug,
 {
     /// Format the language item appropriately.
     fn format(

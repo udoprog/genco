@@ -76,12 +76,12 @@ where
 /// Thanks to this, we can provide a flexible number of arguments to
 /// [register()], like a tuple.
 ///
-/// This is trait is very similar to [FormatInto], except that it constrains
+/// This is trait is very similar to [`FormatInto`], except that it constrains
 /// the types that can be "registered" to only language items. An implementation
-/// of register must not be used as a substitute for [FormatInto].
+/// of register must not be used as a substitute for [`FormatInto`].
 ///
 /// [register()]: crate::Tokens::register()
-/// [FormatInto]: crate::tokens::FormatInto
+/// [`FormatInto`]: crate::tokens::FormatInto
 ///
 /// # Examples
 ///

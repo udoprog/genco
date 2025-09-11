@@ -8,11 +8,9 @@
 //! ```rust
 //! use genco::prelude::*;
 //!
-//! # fn main() -> genco::fmt::Result {
 //! let toks: java::Tokens = quote!("start π 😊 \n \x7f end");
 //! assert_eq!("\"start \\u03c0 \\ud83d\\ude0a \\n \\u007f end\"", toks.to_string()?);
-//! # Ok(())
-//! # }
+//! # Ok::<_, genco::fmt::Error>(())
 //! ```
 
 mod block_comment;
