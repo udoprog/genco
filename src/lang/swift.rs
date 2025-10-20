@@ -100,7 +100,7 @@ pub struct Import {
 
 /// The implementation-only import of a Swift type `@_implementationOnly import UIKit`.
 ///
-/// Created through the [importImplementationOnly()] function.
+/// Created through the [import_implementation_only()] function.
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct ImportImplementationOnly {
     /// Module of the imported name.
@@ -195,7 +195,7 @@ where
 /// ```
 /// use genco::prelude::*;
 ///
-/// let toks = quote!($(swift::importImplementationOnly("Foo", "Debug")));
+/// let toks = quote!($(swift::import_implementation_only("Foo", "Debug")));
 ///
 /// assert_eq!(
 ///     vec![
