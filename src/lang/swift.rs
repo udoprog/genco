@@ -142,7 +142,7 @@ impl Swift {
         }
 
         if !modules.is_empty() {
-            for (module, impor_type) in modules {
+            for (module, import_type) in modules {
                 match import_type {
                     ImportType::Import => {
                         quote_in! { *out => $['\r']import $module}
