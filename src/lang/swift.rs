@@ -109,9 +109,17 @@ pub struct ImportImplementationOnly {
     name: ItemStr,
 }
 
+/// The type of import statement to use when importing a Swift module.
+/// - Standard imports that make the module's public API available
+/// - Implementation-only imports that hide the imported module from clients
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum ImportType {
+    /// A standard Swift import statement: `import ModuleName`
     Import,
+    /// An implementation-only import statement: `@_implementationOnly import ModuleName`
+    ///
+    /// This type of import hides the imported module from the public API,
+    /// preventing clients from depending on it transitively.
     ImportImplementationOnly,
 }
 
@@ -130,20 +138,18 @@ impl Swift {
                 Any::ImportImplementationOnly(ref i) => {
                     modules.insert((&i.module, ImportType::ImportImplementationOnly));
                 }
-                _ => {}
             }
         }
 
         if !modules.is_empty() {
-            for (module, importType) in modules {
-                match importType {
+            for (module, impor_type) in modules {
+                match import_type {
                     ImportType::Import => {
                         quote_in! { *out => $['\r']import $module}
                     }
                     ImportType::ImportImplementationOnly => {
                         quote_in! { *out => $['\r']@_implementationOnly import $module}
                     }
-                    _ => {}
                 }
             }
         }
@@ -201,7 +207,7 @@ where
 /// );
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-pub fn importImplementationOnly<M, N>(module: M, name: N) -> ImportImplementationOnly
+pub fn import_implementation_only<M, N>(module: M, name: N) -> ImportImplementationOnly
 where
     M: Into<ItemStr>,
     N: Into<ItemStr>,
