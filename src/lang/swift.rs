@@ -113,7 +113,7 @@ pub struct ImportImplementationOnly {
 /// - Standard imports that make the module's public API available
 /// - Implementation-only imports that hide the imported module from clients
 #[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub enum ImportType {
+enum ImportType {
     /// A standard Swift import statement: `import ModuleName`
     Import,
     /// An implementation-only import statement: `@_implementationOnly import ModuleName`
