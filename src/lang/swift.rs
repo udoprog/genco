@@ -66,13 +66,13 @@ impl_lang! {
         }
     }
 
-    Import {
+    Import(Import) {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&self.name)
         }
     }
 
-    ImportImplementationOnly {
+    ImportImplementationOnly(ImportImplementationOnly) {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             out.write_str(&self.name)
         }
@@ -131,11 +131,11 @@ impl Swift {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            match import {
-                Any::Import(ref i) => {
+            match import.kind() {
+                AnyKind::Import(ref i) => {
                     modules.insert((&i.module, ImportType::Import));
                 }
-                Any::ImportImplementationOnly(ref i) => {
+                AnyKind::ImportImplementationOnly(ref i) => {
                     modules.insert((&i.module, ImportType::ImportImplementationOnly));
                 }
             }

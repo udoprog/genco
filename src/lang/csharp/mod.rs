@@ -74,7 +74,7 @@ impl_lang! {
         }
     }
 
-    Import {
+    Import(Import) {
         fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             {
                 let qualified = self.qualified || is_qualified(config, format, &self.namespace, &self.name);

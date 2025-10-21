@@ -22,7 +22,7 @@ use alloc::vec::{self, Vec};
 
 use crate::fmt;
 use crate::lang::{Lang, LangSupportsEval};
-use crate::tokens::{FormatInto, Item, Register};
+use crate::tokens::{FormatInto, Item, ItemKind, Register};
 
 /// A stream of tokens.
 ///
@@ -47,7 +47,7 @@ use crate::tokens::{FormatInto, Item, Register};
 /// tokens.space();
 /// tokens.space();
 ///
-/// assert_eq!(vec![Item::Space::<()>], tokens);
+/// assert_eq!(tokens, [Item::space()]);
 ///
 /// let mut tokens = Tokens::<()>::new();
 ///
@@ -55,7 +55,7 @@ use crate::tokens::{FormatInto, Item, Register};
 /// tokens.push();
 /// tokens.push();
 ///
-/// assert_eq!(vec![Item::Push::<()>], tokens);
+/// assert_eq!(tokens, [Item::push()]);
 ///
 /// let mut tokens = Tokens::<()>::new();
 ///
@@ -64,7 +64,7 @@ use crate::tokens::{FormatInto, Item, Register};
 /// tokens.push();
 /// tokens.line();
 ///
-/// assert_eq!(vec![Item::Line::<()>], tokens);
+/// assert_eq!(tokens, [Item::line()]);
 /// ```
 ///
 /// [`space`]: Self::space
@@ -136,11 +136,11 @@ where
     /// let tokens: Tokens<()> = quote!(foo bar baz);
     /// let mut it = tokens.iter();
     ///
-    /// assert_eq!(Some(&Item::Literal(ItemStr::static_("foo"))), it.next());
-    /// assert_eq!(Some(&Item::Space), it.next());
-    /// assert_eq!(Some(&Item::Literal(ItemStr::static_("bar"))), it.next());
-    /// assert_eq!(Some(&Item::Space), it.next());
-    /// assert_eq!(Some(&Item::Literal(ItemStr::static_("baz"))), it.next());
+    /// assert_eq!(Some(&Item::literal(ItemStr::static_("foo"))), it.next());
+    /// assert_eq!(Some(&Item::space()), it.next());
+    /// assert_eq!(Some(&Item::literal(ItemStr::static_("bar"))), it.next());
+    /// assert_eq!(Some(&Item::space()), it.next());
+    /// assert_eq!(Some(&Item::literal(ItemStr::static_("baz"))), it.next());
     /// assert_eq!(None, it.next());
     /// ```
     pub fn iter(&self) -> Iter<'_, L> {
@@ -305,11 +305,11 @@ where
     /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn space(&mut self) {
-        if let Some(Item::Space) = self.items.last() {
+        if let Some(ItemKind::Space) = self.items.last().map(Item::kind) {
             return;
         }
 
-        self.items.push(Item::Space);
+        self.items.push(Item::space());
     }
 
     /// Add a single push operation.
@@ -344,19 +344,23 @@ where
     /// ```
     pub fn push(&mut self) {
         let item = loop {
-            match self.items.pop() {
+            let Some(item) = self.items.pop() else {
+                break None;
+            };
+
+            match &item.kind {
                 // NB: never reconfigure a line into a push.
-                Some(Item::Line) => {
-                    self.items.push(Item::Line);
+                ItemKind::Line => {
+                    self.items.push(item);
                     return;
                 }
-                Some(Item::Space | Item::Push) => continue,
-                item => break item,
+                ItemKind::Space | ItemKind::Push => continue,
+                _ => break Some(item),
             }
         };
 
         self.items.extend(item);
-        self.items.push(Item::Push);
+        self.items.push(Item::push());
     }
 
     /// Add a single line operation.
@@ -392,14 +396,19 @@ where
     /// ```
     pub fn line(&mut self) {
         let item = loop {
-            match self.items.pop() {
-                Some(Item::Line) | Some(Item::Push) => continue,
-                item => break item,
+            let Some(item) = self.items.pop() else {
+                break None;
+            };
+
+            if matches!(item.kind, ItemKind::Line | ItemKind::Push) {
+                continue;
             }
+
+            break Some(item);
         };
 
         self.items.extend(item);
-        self.items.push(Item::Line);
+        self.items.push(Item::line());
     }
 
     /// Increase the indentation of the token stream.
@@ -568,30 +577,28 @@ where
     /// assert_eq!(tokens, quote!(foo bar));
     /// ```
     pub(crate) fn item(&mut self, item: Item<L>) {
-        match item {
-            Item::Push => self.push(),
-            Item::Line => self.line(),
-            Item::Space => self.space(),
-            Item::Indentation(n) => self.indentation(n),
-            Item::Lang(_, item) => self.lang_item(item),
-            Item::Register(_, item) => self.lang_item_register(item),
-            other => self.items.push(other),
+        match item.kind {
+            ItemKind::Push => self.push(),
+            ItemKind::Line => self.line(),
+            ItemKind::Space => self.space(),
+            ItemKind::Indentation(n) => self.indentation(n),
+            ItemKind::Lang(_, item) => self.lang_item(item),
+            ItemKind::Register(_, item) => self.lang_item_register(item),
+            other => self.items.push(Item::new(other)),
         }
     }
 
     /// Add a language item directly.
     pub(crate) fn lang_item(&mut self, item: Box<L::Item>) {
         // NB: recorded position needs to be adjusted.
-        self.items
-            .push(crate::tokens::Item::Lang(self.last_lang_item, item));
+        self.items.push(Item::lang(self.last_lang_item, item));
         self.last_lang_item = self.items.len();
     }
 
     /// Register a language item directly.
     pub(crate) fn lang_item_register(&mut self, item: Box<L::Item>) {
         // NB: recorded position needs to be adjusted.
-        self.items
-            .push(crate::tokens::Item::Register(self.last_lang_item, item));
+        self.items.push(Item::register(self.last_lang_item, item));
         self.last_lang_item = self.items.len();
     }
 
@@ -643,19 +650,23 @@ where
     fn indentation(&mut self, mut n: i16) {
         let item = loop {
             // flush all whitespace preceeding the indentation change.
-            match self.items.pop() {
-                Some(Item::Push) => continue,
-                Some(Item::Space) => continue,
-                Some(Item::Line) => continue,
-                Some(Item::Indentation(u)) => n += u,
-                item => break item,
+            let Some(item) = self.items.pop() else {
+                break None;
+            };
+
+            match &item.kind {
+                ItemKind::Push => continue,
+                ItemKind::Space => continue,
+                ItemKind::Line => continue,
+                ItemKind::Indentation(u) => n += u,
+                _ => break Some(item),
             }
         };
 
         self.items.extend(item);
 
         if n != 0 {
-            self.items.push(Item::Indentation(n));
+            self.items.push(Item::new(ItemKind::Indentation(n)));
         }
     }
 }
@@ -889,6 +900,7 @@ where
     L: Lang,
     L::Item: PartialEq,
 {
+    #[inline]
     fn eq(&self, other: &Tokens<L>) -> bool {
         *self == other.items
     }
@@ -899,7 +911,19 @@ where
     L: Lang,
     L::Item: PartialEq,
 {
+    #[inline]
     fn eq(&self, other: &[Item<L>]) -> bool {
+        &*self.items == other
+    }
+}
+
+impl<L, const N: usize> PartialEq<[Item<L>; N]> for Tokens<L>
+where
+    L: Lang,
+    L::Item: PartialEq,
+{
+    #[inline]
+    fn eq(&self, other: &[Item<L>; N]) -> bool {
         &*self.items == other
     }
 }
@@ -909,6 +933,7 @@ where
     L: Lang,
     L::Item: PartialEq,
 {
+    #[inline]
     fn eq(&self, other: &Tokens<L>) -> bool {
         self == &*other.items
     }
@@ -979,11 +1004,11 @@ where
 /// let tokens: Tokens<()> = quote!(foo bar baz);
 /// let mut it = tokens.into_iter();
 ///
-/// assert_eq!(Some(Item::Literal(ItemStr::static_("foo"))), it.next());
-/// assert_eq!(Some(Item::Space), it.next());
-/// assert_eq!(Some(Item::Literal(ItemStr::static_("bar"))), it.next());
-/// assert_eq!(Some(Item::Space), it.next());
-/// assert_eq!(Some(Item::Literal(ItemStr::static_("baz"))), it.next());
+/// assert_eq!(Some(Item::literal(ItemStr::static_("foo"))), it.next());
+/// assert_eq!(Some(Item::space()), it.next());
+/// assert_eq!(Some(Item::literal(ItemStr::static_("bar"))), it.next());
+/// assert_eq!(Some(Item::space()), it.next());
+/// assert_eq!(Some(Item::literal(ItemStr::static_("baz"))), it.next());
 /// assert_eq!(None, it.next());
 /// ```
 impl<L> IntoIterator for Tokens<L>
@@ -1131,9 +1156,9 @@ where
         // NB: recorded position needs to be adjusted.
         let item = self.items.get(pos - 1)?;
 
-        let (prev, item) = match item {
-            Item::Lang(prev, item) => (prev, item),
-            Item::Register(prev, item) => (prev, item),
+        let (prev, item) = match &item.kind {
+            ItemKind::Lang(prev, item) => (prev, item),
+            ItemKind::Register(prev, item) => (prev, item),
             _ => return None,
         };
 
@@ -1165,7 +1190,7 @@ mod tests {
             type Item = Any;
         }
 
-        Import {
+        Import(Import) {
             fn format(&self, out: &mut fmt::Formatter<'_>, _: &(), _: &()) -> fmt::Result {
                 write!(out, "{}", self.0)
             }
@@ -1184,7 +1209,7 @@ mod tests {
         let mut output: Vec<_> = toks.walk_imports().cloned().collect();
         output.sort();
 
-        let expected = vec![Any::Import(Import(1)), Any::Import(Import(2))];
+        let expected: Vec<Any> = vec![Import(1).into(), Import(2).into()];
 
         assert_eq!(expected, output);
     }

@@ -167,7 +167,7 @@ impl_lang! {
         }
     }
 
-    Import {
+    Import(Import) {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             let name = match self.kind {
                 ImportKind::Named => self.alias.as_ref().unwrap_or(&self.name),

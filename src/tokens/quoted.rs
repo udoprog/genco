@@ -68,9 +68,10 @@ where
     L: Lang,
     T: FormatInto<L>,
 {
+    #[inline]
     fn format_into(self, t: &mut Tokens<L>) {
-        t.item(Item::OpenQuote(false));
+        t.item(Item::open_quote(false));
         self.inner.format_into(t);
-        t.item(Item::CloseQuote);
+        t.item(Item::close_quote());
     }
 }

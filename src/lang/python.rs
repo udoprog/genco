@@ -54,7 +54,7 @@ impl_lang! {
         }
     }
 
-    Import {
+    Import(Import) {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             if let TypeModule::Qualified { module, alias }  = &self.module {
                 out.write_str(alias.as_ref().unwrap_or(module))?;
@@ -71,7 +71,7 @@ impl_lang! {
         }
     }
 
-    ImportModule {
+    ImportModule(ImportModule) {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             let module = match &self.alias {
                 Some(alias) => alias,
@@ -291,8 +291,8 @@ impl Python {
         let mut imports = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            match import {
-                Any::Import(Import {
+            match import.kind() {
+                AnyKind::Import(Import {
                     module,
                     alias,
                     name,
@@ -307,7 +307,7 @@ impl Python {
                             .insert((name, alias));
                     }
                 },
-                Any::ImportModule(ImportModule { module, alias }) => {
+                AnyKind::ImportModule(ImportModule { module, alias }) => {
                     imports.insert((module, alias));
                 }
             }

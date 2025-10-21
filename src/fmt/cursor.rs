@@ -1,6 +1,6 @@
 use crate::fmt;
 use crate::lang::Lang;
-use crate::tokens::Item;
+use crate::tokens::{Item, ItemKind};
 
 /// Trait for peeking items.
 pub(super) trait Parse<L>
@@ -27,13 +27,13 @@ where
 
     #[inline]
     fn peek(item: &Item<L>) -> bool {
-        matches!(item, Item::Literal(..))
+        matches!(item.kind, ItemKind::Literal(..))
     }
 
     #[inline]
     fn parse(item: &Item<L>) -> fmt::Result<&Self::Output> {
-        match item {
-            Item::Literal(s) => Ok(s),
+        match &item.kind {
+            ItemKind::Literal(s) => Ok(s),
             _ => Err(core::fmt::Error),
         }
     }
@@ -50,13 +50,13 @@ where
 
     #[inline]
     fn peek(item: &Item<L>) -> bool {
-        matches!(item, Item::CloseEval)
+        matches!(item.kind, ItemKind::CloseEval)
     }
 
     #[inline]
     fn parse(item: &Item<L>) -> fmt::Result<&Self::Output> {
-        match item {
-            Item::CloseEval => Ok(&()),
+        match &item.kind {
+            ItemKind::CloseEval => Ok(&()),
             _ => Err(core::fmt::Error),
         }
     }

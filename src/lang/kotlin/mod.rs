@@ -102,7 +102,7 @@ impl_lang! {
         }
     }
 
-    Import {
+    Import(Import) {
         fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, format: &Format) -> fmt::Result {
             let file_package = config.package.as_ref().map(|p| p.as_ref());
             let imported = format.imported.get(self.name.as_ref()).map(String::as_str);
