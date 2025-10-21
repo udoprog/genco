@@ -33,7 +33,7 @@ impl<'a> StaticBuffer<'a> {
             let Ctxt { receiver, module } = self.cx;
 
             let s = syn::LitStr::new(&self.buffer, Span::call_site());
-            tokens.extend(q::quote!(#receiver.append(#module::tokens::ItemStr::Static(#s));));
+            tokens.extend(q::quote!(#receiver.append(#module::tokens::ItemStr::static_(#s));));
             self.buffer.clear();
         }
     }

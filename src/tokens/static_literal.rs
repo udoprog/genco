@@ -14,7 +14,7 @@ where
     L: Lang,
 {
     fn format_into(self, tokens: &mut crate::Tokens<L>) {
-        tokens.item(Item::Literal(ItemStr::Static(self.literal)));
+        tokens.item(Item::Literal(ItemStr::static_(self.literal)));
     }
 }
 

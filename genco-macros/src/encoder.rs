@@ -173,7 +173,7 @@ impl<'a> Encoder<'a> {
 
         self.output.extend(q::quote! {
             #receiver.append(#module::tokens::Item::OpenQuote(false));
-            #receiver.append(#module::tokens::ItemStr::Static(#s));
+            #receiver.append(#module::tokens::ItemStr::static_(#s));
             #receiver.append(#module::tokens::Item::CloseQuote);
         });
     }

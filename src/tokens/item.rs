@@ -11,6 +11,7 @@ use crate::lang::Lang;
 use crate::tokens::{FormatInto, ItemStr, Tokens};
 
 /// A single item in a stream of tokens.
+#[non_exhaustive]
 pub enum Item<L>
 where
     L: Lang,
@@ -259,8 +260,8 @@ where
 /// use genco::prelude::*;
 /// use genco::tokens::{Item, ItemStr};
 ///
-/// let foo = Item::Literal(ItemStr::Static("foo"));
-/// let bar = Item::Literal(ItemStr::Box("bar".into()));
+/// let foo = Item::Literal(ItemStr::static_("foo"));
+/// let bar = Item::Literal("bar".into());
 ///
 /// let result: Tokens = quote!($foo $bar baz);
 ///
@@ -268,11 +269,11 @@ where
 ///
 /// assert_eq!{
 ///     vec![
-///         Item::Literal(ItemStr::Static("foo")),
+///         Item::Literal(ItemStr::static_("foo")),
 ///         Item::Space,
-///         Item::Literal(ItemStr::Box("bar".into())),
+///         Item::Literal("bar".into()),
 ///         Item::Space,
-///         Item::Literal(ItemStr::Static("baz")),
+///         Item::Literal(ItemStr::static_("baz")),
 ///     ] as Vec<Item<()>>,
 ///     result,
 /// };

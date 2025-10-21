@@ -136,11 +136,11 @@ where
     /// let tokens: Tokens<()> = quote!(foo bar baz);
     /// let mut it = tokens.iter();
     ///
-    /// assert_eq!(Some(&Item::Literal(ItemStr::Static("foo"))), it.next());
+    /// assert_eq!(Some(&Item::Literal(ItemStr::static_("foo"))), it.next());
     /// assert_eq!(Some(&Item::Space), it.next());
-    /// assert_eq!(Some(&Item::Literal(ItemStr::Static("bar"))), it.next());
+    /// assert_eq!(Some(&Item::Literal(ItemStr::static_("bar"))), it.next());
     /// assert_eq!(Some(&Item::Space), it.next());
-    /// assert_eq!(Some(&Item::Literal(ItemStr::Static("baz"))), it.next());
+    /// assert_eq!(Some(&Item::Literal(ItemStr::static_("baz"))), it.next());
     /// assert_eq!(None, it.next());
     /// ```
     pub fn iter(&self) -> Iter<'_, L> {
@@ -560,10 +560,10 @@ where
     ///
     /// let mut tokens = Tokens::<()>::new();
     ///
-    /// tokens.append(ItemStr::Static("foo"));
+    /// tokens.append(ItemStr::static_("foo"));
     /// tokens.space();
     /// tokens.space(); // Note: second space ignored
-    /// tokens.append(ItemStr::Static("bar"));
+    /// tokens.append(ItemStr::static_("bar"));
     ///
     /// assert_eq!(tokens, quote!(foo bar));
     /// ```
@@ -979,11 +979,11 @@ where
 /// let tokens: Tokens<()> = quote!(foo bar baz);
 /// let mut it = tokens.into_iter();
 ///
-/// assert_eq!(Some(Item::Literal(ItemStr::Static("foo"))), it.next());
+/// assert_eq!(Some(Item::Literal(ItemStr::static_("foo"))), it.next());
 /// assert_eq!(Some(Item::Space), it.next());
-/// assert_eq!(Some(Item::Literal(ItemStr::Static("bar"))), it.next());
+/// assert_eq!(Some(Item::Literal(ItemStr::static_("bar"))), it.next());
 /// assert_eq!(Some(Item::Space), it.next());
-/// assert_eq!(Some(Item::Literal(ItemStr::Static("baz"))), it.next());
+/// assert_eq!(Some(Item::Literal(ItemStr::static_("baz"))), it.next());
 /// assert_eq!(None, it.next());
 /// ```
 impl<L> IntoIterator for Tokens<L>
