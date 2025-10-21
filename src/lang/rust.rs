@@ -416,7 +416,7 @@ impl Rust {
 
         let mut queue = VecDeque::new();
 
-        for import in tokens.walk_imports() {
+        for import in tokens.iter_lang() {
             queue.push_back(import);
         }
 

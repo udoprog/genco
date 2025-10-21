@@ -36,7 +36,7 @@
 ///             let mut header: Tokens<MyLang> = Tokens::new();
 ///             let mut any_imports = false;
 ///
-///             for import in tokens.walk_imports() {
+///             for import in tokens.iter_lang() {
 ///                 any_imports = true;
 ///
 ///                 match import.kind() {

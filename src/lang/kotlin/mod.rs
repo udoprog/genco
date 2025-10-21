@@ -201,7 +201,7 @@ impl Kotlin {
         let mut to_import = BTreeSet::new();
         let file_package = config.package.as_ref().map(|p| p.as_ref());
 
-        for import in tokens.walk_imports() {
+        for import in tokens.iter_lang() {
             // Don't import if the type is in the current package
             if Some(import.package.as_ref()) == file_package {
                 continue;

@@ -178,7 +178,7 @@ impl Java {
 
         let file_package = config.package.as_ref().map(|p| p.as_ref());
 
-        for import in tokens.walk_imports() {
+        for import in tokens.iter_lang() {
             modules.insert((import.package.clone(), import.name.clone()));
         }
 

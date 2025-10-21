@@ -416,7 +416,7 @@ impl JavaScript {
         let mut modules = BTreeMap::<&Module, ResolvedModule<'_>>::new();
         let mut wildcards = BTreeSet::new();
 
-        for import in tokens.walk_imports() {
+        for import in tokens.iter_lang() {
             match import.kind {
                 ImportKind::Named => {
                     let module = modules.entry(&import.module).or_default();

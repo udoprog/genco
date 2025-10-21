@@ -290,7 +290,7 @@ impl Python {
         let mut imported_from = BTreeMap::new();
         let mut imports = BTreeSet::new();
 
-        for import in tokens.walk_imports() {
+        for import in tokens.iter_lang() {
             match import.kind() {
                 AnyKind::Import(Import {
                     module,

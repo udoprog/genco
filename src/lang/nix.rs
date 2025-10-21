@@ -121,7 +121,7 @@ impl Nix {
     fn arguments(out: &mut Tokens, tokens: &Tokens) {
         let mut arguments = BTreeSet::new();
 
-        for imports in tokens.walk_imports() {
+        for imports in tokens.iter_lang() {
             match imports {
                 Import::Argument(argument) => {
                     arguments.insert(argument.0.to_string());
@@ -134,7 +134,7 @@ impl Nix {
                 }
                 Import::Variable(variable) => {
                     let value = &variable.value;
-                    for import in value.walk_imports() {
+                    for import in value.iter_lang() {
                         match import {
                             Import::Inherit(inherit) => {
                                 let argument = inherit.path.split('.').next();
@@ -180,7 +180,7 @@ impl Nix {
     fn withs(out: &mut Tokens, tokens: &Tokens) {
         let mut withs = BTreeSet::new();
 
-        for imports in tokens.walk_imports() {
+        for imports in tokens.iter_lang() {
             if let Import::With(with) = imports {
                 withs.insert(&with.argument);
             }
@@ -202,14 +202,14 @@ impl Nix {
         let mut inherits = BTreeSet::new();
         let mut variables = BTreeSet::new();
 
-        for imports in tokens.walk_imports() {
+        for imports in tokens.iter_lang() {
             match imports {
                 Import::Inherit(inherit) => {
                     inherits.insert((&inherit.path, &inherit.name));
                 }
                 Import::Variable(variable) => {
                     let value = &variable.value;
-                    for import in value.walk_imports() {
+                    for import in value.iter_lang() {
                         if let Import::Inherit(inherit) = import {
                             inherits.insert((&inherit.path, &inherit.name));
                         }

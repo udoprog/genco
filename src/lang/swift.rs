@@ -130,7 +130,7 @@ impl Swift {
 
         let mut modules = BTreeSet::new();
 
-        for import in tokens.walk_imports() {
+        for import in tokens.iter_lang() {
             match import.kind() {
                 AnyKind::Import(ref i) => {
                     modules.insert((&i.module, ImportType::Import));
