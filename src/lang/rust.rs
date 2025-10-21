@@ -100,7 +100,7 @@ impl_lang! {
         }
     }
 
-    Import {
+    Import(Import) {
         fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
             match &self.module {
                 Module::Module {

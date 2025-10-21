@@ -99,9 +99,9 @@ impl<'a> Encoder<'a> {
         let ident = syn::LitStr::new(&ident.to_string(), ident.span());
 
         self.stream.borrow_mut().extend(q::quote! {
-            #receiver.append(#module::tokens::Item::OpenEval);
-            #receiver.append(#module::tokens::Item::Literal(#module::tokens::ItemStr::static_(#ident)));
-            #receiver.append(#module::tokens::Item::CloseEval);
+            #receiver.append(#module::__priv::open_eval());
+            #receiver.append(#module::__priv::static_(#ident));
+            #receiver.append(#module::__priv::close_eval());
         });
 
         self.options.has_eval.set(true);
@@ -120,9 +120,9 @@ impl<'a> Encoder<'a> {
         let Ctxt { receiver, module } = self.cx;
 
         self.stream.borrow_mut().extend(q::quote! {
-            #receiver.append(#module::tokens::Item::OpenEval);
+            #receiver.append(#module::__priv::open_eval());
             #expr
-            #receiver.append(#module::tokens::Item::CloseEval);
+            #receiver.append(#module::__priv::close_eval());
         });
 
         self.options.has_eval.set(true);
@@ -176,7 +176,7 @@ impl<'a> Encoder<'a> {
         self.count.set(self.count.get().wrapping_add(1));
 
         self.stream.borrow_mut().extend(q::quote! {
-            #receiver.append(#module::tokens::ItemStr::static_(#lit));
+            #receiver.append(#module::__priv::static_(#lit));
         });
 
         self.buf.borrow_mut().clear();

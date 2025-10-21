@@ -61,7 +61,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.append(Item::Literal(self));
+        tokens.append(Item::literal(self));
     }
 }
 
@@ -71,7 +71,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.append(Item::Literal(self.clone()));
+        tokens.append(Item::literal(self.clone()));
     }
 }
 
@@ -201,7 +201,7 @@ impl Eq for ItemStr {}
 impl PartialOrd for ItemStr {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
-        Some(self.as_ref().cmp(other.as_ref()))
+        Some(self.cmp(other))
     }
 }
 

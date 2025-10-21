@@ -160,9 +160,9 @@ impl<'a> Encoder<'a> {
         self.item_buffer.flush(&mut self.output);
 
         self.output.extend(q::quote! {
-            #receiver.append(#module::tokens::Item::OpenQuote(#has_eval));
+            #receiver.append(#module::__priv::open_quote(#has_eval));
             #stream
-            #receiver.append(#module::tokens::Item::CloseQuote);
+            #receiver.append(#module::__priv::close_quote());
         });
     }
 
@@ -172,9 +172,9 @@ impl<'a> Encoder<'a> {
         self.item_buffer.flush(&mut self.output);
 
         self.output.extend(q::quote! {
-            #receiver.append(#module::tokens::Item::OpenQuote(false));
-            #receiver.append(#module::tokens::ItemStr::static_(#s));
-            #receiver.append(#module::tokens::Item::CloseQuote);
+            #receiver.append(#module::__priv::open_quote(false));
+            #receiver.append(#module::__priv::static_(#s));
+            #receiver.append(#module::__priv::close_quote());
         });
     }
 

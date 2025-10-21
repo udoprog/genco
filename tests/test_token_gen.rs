@@ -2,13 +2,9 @@
 
 use genco::fmt;
 use genco::prelude::*;
-use genco::tokens::Item::*;
 use genco::tokens::ItemStr;
 
-#[inline]
-const fn static_(s: &'static str) -> ItemStr {
-    ItemStr::static_(s)
-}
+use genco::__priv::{indentation, line, literal, push, space, static_};
 
 #[test]
 fn test_token_gen() {
@@ -22,15 +18,15 @@ fn test_token_gen() {
 
     assert_eq! {
         vec![
-            Literal(static_("foo")),
-            Push,
-            Literal(static_("bar")),
-            Push,
-            Literal(static_("baz")),
-            Indentation(1),
-            Literal(static_("hello")),
-            Indentation(-1),
-            Literal(static_("out?"))
+            static_("foo"),
+            push(),
+            static_("bar"),
+            push(),
+            static_("baz"),
+            indentation(1),
+            static_("hello"),
+            indentation(-1),
+            static_("out?")
         ],
         tokens,
     }
@@ -47,12 +43,12 @@ fn test_iterator_gen() {
 
     assert_eq! {
         vec![
-            Push,
-            Literal("0".into()),
-            Push,
-            Literal("1".into()),
-            Push,
-            Literal("2".into()),
+            push(),
+            literal("0".into()),
+            push(),
+            literal("1".into()),
+            push(),
+            literal("2".into()),
         ],
         tokens,
     };
@@ -68,12 +64,12 @@ fn test_iterator_gen() {
 
     assert_eq! {
         vec![
-            Push,
-            Literal("0".into()),
-            Push,
-            Literal("1".into()),
-            Push,
-            Literal("2".into()),
+            push(),
+            literal("0".into()),
+            push(),
+            literal("1".into()),
+            push(),
+            literal("2".into()),
         ],
         tokens,
     };
@@ -83,7 +79,7 @@ fn test_iterator_gen() {
 fn test_tricky_continuation() {
     let mut output = rust::Tokens::new();
 
-    let bar = static_("bar");
+    let bar = ItemStr::static_("bar");
 
     quote_in! {
         output =>
@@ -98,14 +94,14 @@ fn test_tricky_continuation() {
     assert_eq! {
         output,
         vec![
-            Literal(static_("foo,")),
-            Space,
-            Literal(static_("bar")),
-            Literal(static_(",")),
-            Space,
-            Literal(static_("baz")),
-            Push,
-            Literal(static_("biz")),
+            static_("foo,"),
+            space(),
+            static_("bar"),
+            static_(","),
+            space(),
+            static_("baz"),
+            push(),
+            static_("biz"),
         ]
     };
 }
@@ -127,11 +123,11 @@ fn test_indentation() {
     assert_eq! {
         a,
         vec![
-            Literal(static_("a")),
-            Indentation(1),
-            Literal(static_("b")),
-            Indentation(-1),
-            Literal(static_("c"))
+            static_("a"),
+            indentation(1),
+            static_("b"),
+            indentation(-1),
+            static_("c")
         ]
     };
 
@@ -147,11 +143,11 @@ fn test_indentation() {
     assert_eq! {
         b,
         vec![
-            Literal(static_("a")),
-            Indentation(1),
-            Literal(static_("b")),
-            Indentation(-1),
-            Literal(static_("c"))
+            static_("a"),
+            indentation(1),
+            static_("b"),
+            indentation(-1),
+            static_("c")
         ]
     };
 }
@@ -164,17 +160,17 @@ fn test_repeat() {
 
     assert_eq! {
         vec![
-            Literal(static_("foo")),
-            Space,
-            Literal("0".into()),
-            Space,
-            Literal("3".into()),
-            Literal("1".into()),
-            Space,
-            Literal("4".into()),
-            Literal("2".into()),
-            Space,
-            Literal("5".into())
+            static_("foo"),
+            space(),
+            literal("0".into()),
+            space(),
+            literal("3".into()),
+            literal("1".into()),
+            space(),
+            literal("4".into()),
+            literal("2".into()),
+            space(),
+            literal("5".into())
         ],
         tokens,
     };
@@ -185,17 +181,17 @@ fn test_repeat() {
 
     assert_eq! {
         vec![
-            Literal(static_("foo")),
-            Space,
-            Literal("0".into()),
-            Space,
-            Literal("3".into()),
-            Literal("1".into()),
-            Space,
-            Literal("4".into()),
-            Literal("2".into()),
-            Space,
-            Literal("5".into())
+            static_("foo"),
+            space(),
+            literal("0".into()),
+            space(),
+            literal("3".into()),
+            literal("1".into()),
+            space(),
+            literal("4".into()),
+            literal("2".into()),
+            space(),
+            literal("5".into())
         ],
         tokens,
     };
@@ -210,9 +206,9 @@ fn test_tight_quote() {
     assert_eq! {
         output,
         vec![
-            Literal(static_("You")),
-            Space,
-            Literal(static_("are:fine")),
+            static_("You"),
+            space(),
+            static_("are:fine"),
         ]
     };
 }
@@ -226,17 +222,17 @@ fn test_tight_repitition() {
     assert_eq! {
         output,
         vec![
-            Literal(static_("You")),
-            Space,
-            Literal(static_("are:")),
-            Space,
-            Literal("0".into()),
-            Literal(static_(",")),
-            Space,
-            Literal("1".into()),
-            Literal(static_(",")),
-            Space,
-            Literal("2".into()),
+            static_("You"),
+            space(),
+            static_("are:"),
+            space(),
+            literal("0".into()),
+            static_(","),
+            space(),
+            literal("1".into()),
+            static_(","),
+            space(),
+            literal("2".into()),
         ]
     };
 }
@@ -259,15 +255,15 @@ fn test_if() {
     assert_eq! {
         output,
         vec![
-            Literal(static_("foo")),
-            Push,
-            Literal(static_("foo2")),
-            Push,
-            Literal(static_("baz")),
-            Push,
-            Literal(static_("baz2")),
-            Push,
-            Literal(static_("biz")),
+            static_("foo"),
+            push(),
+            static_("foo2"),
+            push(),
+            static_("baz"),
+            push(),
+            static_("baz2"),
+            push(),
+            static_("biz"),
         ]
     };
 }
@@ -299,32 +295,32 @@ fn test_match() {
 
     assert_eq! {
         test(Alt::A),
-        vec![Literal(static_("a"))]
+        vec![static_("a")]
     };
 
     assert_eq! {
         test(Alt::B),
-        vec![Literal(static_("b"))]
+        vec![static_("b")]
     };
 
     assert_eq! {
         test2(Alt::A),
-        vec![Literal(static_("a"))]
+        vec![static_("a")]
     };
 
     assert_eq! {
         test2(Alt::B),
-        vec![Literal(static_("b"))]
+        vec![static_("b")]
     };
 
     assert_eq! {
         test2_cond(Alt::A, true),
-        vec![Literal(static_("a"))]
+        vec![static_("a")]
     };
 
     assert_eq! {
         test2_cond(Alt::A, false),
-        vec![Literal(static_("b"))]
+        vec![static_("b")]
     };
 }
 
@@ -336,7 +332,7 @@ fn test_let() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal("1".into())]
+        vec![space(), literal("1".into())]
     };
 
     // Tuple binding
@@ -347,9 +343,9 @@ fn test_let() {
     assert_eq! {
         tokens,
         vec![
-            Space, Literal("c".into()),
-            Literal(static_(",")),
-            Space, Literal("d".into())
+            space(), literal("c".into()),
+            static_(","),
+            space(), literal("d".into())
         ]
     };
 
@@ -365,7 +361,7 @@ fn test_let() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal("barbaz".into())]
+        vec![space(), literal("barbaz".into())]
     };
 
     // Complex expression
@@ -376,7 +372,7 @@ fn test_let() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal("even".into())]
+        vec![space(), literal("even".into())]
     };
 }
 
@@ -397,18 +393,18 @@ fn test_mutable_let() {
     assert_eq!(
         tokens,
         vec![
-            Push,
-            Literal(static_("First")),
-            Space,
-            Literal(static_("is")),
-            Space,
-            Literal("A".into()),
-            Push,
-            Literal(static_("Second")),
-            Space,
-            Literal(static_("is")),
-            Space,
-            Literal("B".into())
+            push(),
+            static_("First"),
+            space(),
+            static_("is"),
+            space(),
+            literal("A".into()),
+            push(),
+            static_("Second"),
+            space(),
+            static_("is"),
+            space(),
+            literal("B".into())
         ]
     );
 }
@@ -423,7 +419,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Literal(static_(",")), Literal(static_(","))]
+        vec![static_(","), static_(",")]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -432,7 +428,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal(static_(",")), Space, Literal(static_(","))]
+        vec![space(), static_(","), space(), static_(",")]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -441,7 +437,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Literal(static_(",")), Space, Literal(static_(",")), Space]
+        vec![static_(","), space(), static_(","), space()]
     };
 
     let tokens: rust::Tokens = quote! {
@@ -450,7 +446,7 @@ fn test_empty_loop_whitespace() {
 
     assert_eq! {
         tokens,
-        vec![Space, Literal(static_(",")), Space, Literal(static_(",")), Space]
+        vec![space(), static_(","), space(), static_(","), space()]
     };
 }
 
@@ -465,8 +461,8 @@ fn test_indentation_empty() {
     assert_eq! {
         tokens,
         vec![
-            Literal(static_("a")),
-            Literal(static_("b"))
+            static_("a"),
+            static_("b")
         ]
     };
 
@@ -479,8 +475,8 @@ fn test_indentation_empty() {
     assert_eq! {
         tokens,
         vec![
-            Literal(static_("a")),
-            Literal(static_("b"))
+            static_("a"),
+            static_("b")
         ]
     };
 
@@ -493,8 +489,8 @@ fn test_indentation_empty() {
     assert_eq! {
         tokens,
         vec![
-            Literal(static_("a")),
-            Literal(static_("b"))
+            static_("a"),
+            static_("b")
         ]
     };
 }
@@ -511,20 +507,20 @@ fn test_indentation_management() {
 
     assert_eq! {
         vec![
-            Literal(static_("if")),
-            Space,
-            Literal(static_("a:")),
-            Indentation(1),
-            Literal(static_("if")),
-            Space,
-            Literal(static_("b:")),
-            Indentation(1),
-            Literal(static_("foo")),
-            Indentation(-2),
-            Literal(static_("else:")),
-            Indentation(1),
-            Literal(static_("c")),
-            Indentation(-1)
+            static_("if"),
+            space(),
+            static_("a:"),
+            indentation(1),
+            static_("if"),
+            space(),
+            static_("b:"),
+            indentation(1),
+            static_("foo"),
+            indentation(-2),
+            static_("else:"),
+            indentation(1),
+            static_("c"),
+            indentation(-1)
         ],
         tokens,
     };
@@ -541,18 +537,18 @@ fn test_indentation_management() {
 
     assert_eq! {
         vec![
-            Literal(static_("if")),
-            Space,
-            Literal(static_("a:")),
-            Indentation(1),
-            Literal(static_("if")),
-            Space,
-            Literal(static_("b:")),
-            Indentation(1),
-            Literal(static_("foo")),
-            Indentation(-2),
-            Line,
-            Literal(static_("baz")),
+            static_("if"),
+            space(),
+            static_("a:"),
+            indentation(1),
+            static_("if"),
+            space(),
+            static_("b:"),
+            indentation(1),
+            static_("foo"),
+            indentation(-2),
+            line(),
+            static_("baz"),
         ],
         tokens,
     };
@@ -570,19 +566,19 @@ fn test_indentation_management2() -> fmt::Result {
 
     assert_eq! {
         vec![
-            Literal(static_("def")),
-            Space,
-            Literal(static_("foo():")),
-            Indentation(1),
-            Literal(static_("pass")),
-            Indentation(-1),
-            Line,
-            Literal(static_("def")),
-            Space,
-            Literal(static_("bar():")),
-            Indentation(1),
-            Literal(static_("pass")),
-            Indentation(-1)
+            static_("def"),
+            space(),
+            static_("foo():"),
+            indentation(1),
+            static_("pass"),
+            indentation(-1),
+            line(),
+            static_("def"),
+            space(),
+            static_("bar():"),
+            indentation(1),
+            static_("pass"),
+            indentation(-1)
         ],
         tokens,
     };
@@ -612,21 +608,21 @@ fn test_lines() -> fmt::Result {
 
     assert_eq! {
         vec![
-            Literal(static_("fn")),
-            Space,
-            Literal(static_("foo()")),
-            Space,
-            Literal(static_("{")),
-            Push,
-            Literal(static_("}")),
-            Line,
-            Literal(static_("fn")),
-            Space,
-            Literal(static_("bar()")),
-            Space,
-            Literal(static_("{")),
-            Push,
-            Literal(static_("}"))
+            static_("fn"),
+            space(),
+            static_("foo()"),
+            space(),
+            static_("{"),
+            push(),
+            static_("}"),
+            line(),
+            static_("fn"),
+            space(),
+            static_("bar()"),
+            space(),
+            static_("{"),
+            push(),
+            static_("}")
         ],
         tokens.clone(),
     };

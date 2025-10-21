@@ -39,12 +39,12 @@
 ///             for import in tokens.walk_imports() {
 ///                 any_imports = true;
 ///
-///                 match import {
-///                     Any::Import(import) => {
+///                 match import.kind() {
+///                     AnyKind::Import(import) => {
 ///                         header.push();
 ///                         quote_in!(header => import $(import.0));
 ///                     }
-///                     Any::ImportDefault(import) => {
+///                     AnyKind::ImportDefault(import) => {
 ///                         header.push();
 ///                         quote_in!(header => import default $(import.0));
 ///                     }
@@ -63,14 +63,14 @@
 ///         }
 ///     }
 ///
-///     Import {
+///     Import(Import) {
 ///         fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
 ///             out.write_str(self.0)?;
 ///             Ok(())
 ///         }
 ///     }
 ///
-///     ImportDefault {
+///     ImportDefault(ImportDefault) {
 ///         fn format(&self, out: &mut fmt::Formatter<'_>, config: &Config, _: &Format) -> fmt::Result {
 ///             write!(out, "default:{}", self.0)?;
 ///             Ok(())
@@ -115,7 +115,7 @@ macro_rules! impl_lang {
         }
 
         $(
-            $ty:ident {
+            $name:ident($ty:ty) {
                 $($ty_lang_item_item:tt)*
             }
         )*
@@ -128,32 +128,44 @@ macro_rules! impl_lang {
             $($lang_item)*
         }
 
+        #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+        enum AnyKind {
+            $($name($ty),)*
+        }
+
         /// A type-erased language item capable of holding any kind.
         #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
-        $vis enum Any {
-            $(
-                #[doc = "Type variant."]
-                $ty($ty),
-            )*
+        $vis struct Any {
+            kind: AnyKind,
+        }
+
+        impl Any {
+            /// Access the kind of the any type.
+            #[allow(unused)]
+            fn kind(&self) -> &AnyKind {
+                &self.kind
+            }
         }
 
         $(
             impl From<$ty> for Any {
+                #[inline]
                 fn from(lang: $ty) -> Self {
-                    Self::$ty(lang)
+                    Any { kind: AnyKind::$name(lang) }
                 }
             }
         )*
 
         impl $crate::lang::LangItem<$lang> for Any {
+            #[inline]
             fn format(
                 &self,
                 out: &mut $crate::fmt::Formatter<'_>,
                 config: &<$lang as $crate::lang::Lang>::Config,
                 format: &<$lang as $crate::lang::Lang>::Format,
             ) -> $crate::fmt::Result {
-                match self {
-                    $(Self::$ty(lang) => lang.format(out, config, format),)*
+                match &self.kind {
+                    $(AnyKind::$name(lang) => lang.format(out, config, format),)*
                 }
             }
         }
@@ -161,25 +173,25 @@ macro_rules! impl_lang {
         $(
             impl $crate::tokens::FormatInto<$lang> for $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::__lang_item::<$lang>(self.into()));
+                    tokens.append($crate::__priv::item::<$lang>(self.into()));
                 }
             }
 
             impl<'a> $crate::tokens::FormatInto<$lang> for &'a $ty {
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::__lang_item::<$lang>(self.clone().into()));
+                    tokens.append($crate::__priv::item::<$lang>(self.clone().into()));
                 }
             }
 
             impl $crate::tokens::Register<$lang> for $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::__lang_item_register::<$lang>(self.into()));
+                    tokens.append($crate::__priv::register::<$lang>(self.into()));
                 }
             }
 
             impl<'a> $crate::tokens::Register<$lang> for &'a $ty {
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::tokens::__lang_item_register::<$lang>(self.clone().into()));
+                    tokens.append($crate::__priv::register::<$lang>(self.clone().into()));
                 }
             }
 

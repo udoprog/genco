@@ -85,7 +85,7 @@ impl_lang! {
         }
     }
 
-    Import {
+    Import(Import) {
         fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
             if let Some(module) = self.module.rsplit(MODULE_SEP).next() {
                 out.write_str(module)?;

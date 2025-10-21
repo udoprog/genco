@@ -366,19 +366,19 @@ compile_error!("genco: The `alloc` feature must be enabled");
 ///
 /// assert_eq!(
 ///     vec![
-///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::static_("hello world 😊")),
-///         Item::CloseQuote,
-///         Item::Push,
-///         Item::OpenQuote(false),
-///         Item::Literal("hello world 😊".into()),
-///         Item::CloseQuote,
-///         Item::Push,
-///         Item::Literal(ItemStr::static_("\"hello world 😊\"")),
-///         Item::Push,
-///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::static_("hello world 😊")),
-///         Item::CloseQuote
+///         Item::open_quote(false),
+///         Item::literal(ItemStr::static_("hello world 😊")),
+///         Item::close_quote(),
+///         Item::push(),
+///         Item::open_quote(false),
+///         Item::literal("hello world 😊".into()),
+///         Item::close_quote(),
+///         Item::push(),
+///         Item::literal(ItemStr::static_("\"hello world 😊\"")),
+///         Item::push(),
+///         Item::open_quote(false),
+///         Item::literal(ItemStr::static_("hello world 😊")),
+///         Item::close_quote()
 ///     ],
 ///     tokens,
 /// );
@@ -988,3 +988,125 @@ pub mod prelude;
 pub mod tokens;
 #[doc(inline)]
 pub use self::tokens::Tokens;
+
+/// Private module used for macros.
+#[doc(hidden)]
+pub mod __priv {
+    use alloc::boxed::Box;
+
+    use crate::lang::Lang;
+    use crate::tokens::{from_fn, FormatInto};
+    use crate::tokens::{Item, ItemStr};
+
+    #[inline]
+    pub const fn static_<L>(string: &'static str) -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::static_(string)
+    }
+
+    #[inline]
+    pub const fn literal<L>(string: ItemStr) -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::literal(string)
+    }
+
+    #[inline]
+    pub const fn indentation<L>(level: i16) -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::indentation(level)
+    }
+
+    #[inline]
+    pub const fn push<L>() -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::push()
+    }
+
+    #[inline]
+    pub const fn line<L>() -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::line()
+    }
+
+    #[inline]
+    pub const fn space<L>() -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::space()
+    }
+
+    #[inline]
+    pub const fn open_quote<L>(is_interpolation: bool) -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::open_quote(is_interpolation)
+    }
+
+    #[inline]
+    pub const fn close_quote<L>() -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::close_quote()
+    }
+
+    #[inline]
+    pub const fn open_eval<L>() -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::open_eval()
+    }
+
+    #[inline]
+    pub const fn close_eval<L>() -> Item<L>
+    where
+        L: Lang,
+    {
+        Item::close_eval()
+    }
+
+    /// Add a language item directly.
+    ///
+    /// This must only be used by the [`impl_lang!`] macro.
+    ///
+    /// [`impl_lang!`]: crate::impl_lang!
+    #[doc(hidden)]
+    #[inline]
+    pub fn item<L>(item: L::Item) -> impl FormatInto<L>
+    where
+        L: Lang,
+    {
+        from_fn(|t| {
+            t.lang_item(Box::new(item));
+        })
+    }
+
+    /// Register a language item directly.
+    ///
+    /// This must only be used by the [`impl_lang!`] macro.
+    ///
+    /// [`impl_lang!`]: crate::impl_lang!
+    #[doc(hidden)]
+    #[inline]
+    pub fn register<L>(item: L::Item) -> impl FormatInto<L>
+    where
+        L: Lang,
+    {
+        from_fn(|t| {
+            t.lang_item_register(Box::new(item));
+        })
+    }
+}

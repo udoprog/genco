@@ -52,6 +52,7 @@ impl<L> FormatInto<L> for Tokens<L>
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Self) {
         tokens.extend(self);
     }
@@ -77,6 +78,7 @@ where
     L: Lang,
     L::Item: Clone,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         tokens.extend(self.iter().cloned());
     }
@@ -104,6 +106,7 @@ where
     L: Lang,
     T: FormatInto<L>,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         for t in self {
             tokens.append(t);
@@ -133,6 +136,7 @@ where
     L: Lang,
     T: FormatInto<L> + Clone,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         for t in self {
             tokens.append(t.clone());
@@ -163,6 +167,7 @@ where
     L: Lang,
     T: Clone + FormatInto<L>,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         for t in self {
             tokens.append(t.clone());
@@ -189,8 +194,9 @@ impl<L> FormatInto<L> for &str
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(ItemStr::from(self)));
+        tokens.item(Item::literal(ItemStr::from(self)));
     }
 }
 
@@ -213,8 +219,9 @@ impl<L> FormatInto<L> for &String
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(ItemStr::from(self)));
+        tokens.item(Item::literal(ItemStr::from(self)));
     }
 }
 
@@ -238,8 +245,9 @@ impl<L> FormatInto<L> for String
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(ItemStr::from(self)));
+        tokens.item(Item::literal(ItemStr::from(self)));
     }
 }
 
@@ -263,8 +271,9 @@ impl<L> FormatInto<L> for Rc<String>
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(ItemStr::from(self)));
+        tokens.item(Item::literal(ItemStr::from(self)));
     }
 }
 
@@ -289,12 +298,13 @@ impl<L> FormatInto<L> for &Rc<String>
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(ItemStr::from(self.clone())));
+        tokens.item(Item::literal(ItemStr::from(self.clone())));
     }
 }
 
-/// Implementation for [Arguments] which allows for arbitrary and efficient
+/// Implementation for [`Arguments`] which allows for arbitrary and efficient
 /// literal formatting.
 ///
 /// # Examples
@@ -312,8 +322,13 @@ impl<L> FormatInto<L> for Arguments<'_>
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(ItemStr::from(self.to_string())));
+        if let Some(s) = self.as_str() {
+            tokens.item(Item::literal(ItemStr::static_(s)));
+        } else {
+            tokens.item(Item::literal(ItemStr::from(self.to_string())));
+        }
     }
 }
 
@@ -339,6 +354,7 @@ where
     L: Lang,
     T: FormatInto<L>,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         if let Some(inner) = self {
             inner.format_into(tokens);
@@ -366,9 +382,10 @@ impl<L> FormatInto<L> for Cow<'_, str>
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         match self {
-            Cow::Borrowed(b) => tokens.item(Item::Literal(ItemStr::from(b))),
+            Cow::Borrowed(b) => tokens.item(Item::literal(ItemStr::from(b))),
             Cow::Owned(o) => o.format_into(tokens),
         }
     }
@@ -394,9 +411,10 @@ impl<L> FormatInto<L> for &Cow<'_, str>
 where
     L: Lang,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         match self {
-            Cow::Borrowed(b) => tokens.item(Item::Literal(ItemStr::from(b))),
+            Cow::Borrowed(b) => tokens.item(Item::literal(ItemStr::from(b))),
             Cow::Owned(o) => o.format_into(tokens),
         }
     }
@@ -423,6 +441,7 @@ where
     L: Lang,
     T: FormatInto<L> + Clone,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         match self {
             Cow::Borrowed(b) => {
@@ -456,6 +475,7 @@ where
     L: Lang,
     T: FormatInto<L> + Clone,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         match self {
             Cow::Borrowed(b) => {

@@ -75,8 +75,9 @@ where
     L: Lang,
     T: fmt::Display,
 {
+    #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::Literal(
+        tokens.item(Item::literal(
             self.inner.to_string().into_boxed_str().into(),
         ));
     }
