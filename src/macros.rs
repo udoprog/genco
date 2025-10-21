@@ -134,9 +134,16 @@ macro_rules! impl_lang {
         }
 
         /// A type-erased language item capable of holding any kind.
-        #[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+        #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
         $vis struct Any {
             kind: AnyKind,
+        }
+
+        impl core::fmt::Debug for Any {
+            #[inline]
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+                self.kind.fmt(f)
+            }
         }
 
         impl Any {

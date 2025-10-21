@@ -69,7 +69,7 @@ pub use self::display::{display, Display};
 pub use self::format_into::FormatInto;
 pub use self::from_fn::{from_fn, FromFn};
 pub use self::item::Item;
-pub(crate) use self::item::ItemKind;
+pub(crate) use self::item::Kind;
 pub use self::item_str::ItemStr;
 pub use self::quoted::{quoted, QuotedFn};
 pub use self::register::{register, Register, RegisterFn};

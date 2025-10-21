@@ -22,7 +22,7 @@ use alloc::vec::{self, Vec};
 
 use crate::fmt;
 use crate::lang::{Lang, LangSupportsEval};
-use crate::tokens::{FormatInto, Item, ItemKind, Register};
+use crate::tokens::{FormatInto, Item, Kind, Register};
 
 /// A stream of tokens.
 ///
@@ -74,7 +74,7 @@ pub struct Tokens<L = ()>
 where
     L: Lang,
 {
-    items: Vec<Item<L>>,
+    items: Vec<(usize, Item<L>)>,
     /// The last position at which we observed a language item.
     ///
     /// This references the `position + 1` in the items vector. A position of 0
@@ -143,6 +143,7 @@ where
     /// assert_eq!(Some(&Item::literal(ItemStr::static_("baz"))), it.next());
     /// assert_eq!(None, it.next());
     /// ```
+    #[inline]
     pub fn iter(&self) -> Iter<'_, L> {
         Iter {
             iter: self.items.iter(),
@@ -305,11 +306,11 @@ where
     /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn space(&mut self) {
-        if let Some(ItemKind::Space) = self.items.last().map(Item::kind) {
+        if let Some((_, Item { kind: Kind::Space })) = self.items.last() {
             return;
         }
 
-        self.items.push(Item::space());
+        self.items.push((0, Item::space()));
     }
 
     /// Add a single push operation.
@@ -344,23 +345,23 @@ where
     /// ```
     pub fn push(&mut self) {
         let item = loop {
-            let Some(item) = self.items.pop() else {
+            let Some((o, item)) = self.items.pop() else {
                 break None;
             };
 
             match &item.kind {
                 // NB: never reconfigure a line into a push.
-                ItemKind::Line => {
-                    self.items.push(item);
+                Kind::Line => {
+                    self.items.push((o, item));
                     return;
                 }
-                ItemKind::Space | ItemKind::Push => continue,
-                _ => break Some(item),
+                Kind::Space | Kind::Push => continue,
+                _ => break Some((o, item)),
             }
         };
 
         self.items.extend(item);
-        self.items.push(Item::push());
+        self.items.push((0, Item::push()));
     }
 
     /// Add a single line operation.
@@ -396,19 +397,19 @@ where
     /// ```
     pub fn line(&mut self) {
         let item = loop {
-            let Some(item) = self.items.pop() else {
+            let Some((o, item)) = self.items.pop() else {
                 break None;
             };
 
-            if matches!(item.kind, ItemKind::Line | ItemKind::Push) {
+            if matches!(item.kind, Kind::Line | Kind::Push) {
                 continue;
             }
 
-            break Some(item);
+            break Some((o, item));
         };
 
         self.items.extend(item);
-        self.items.push(Item::line());
+        self.items.push((0, Item::line()));
     }
 
     /// Increase the indentation of the token stream.
@@ -578,27 +579,27 @@ where
     /// ```
     pub(crate) fn item(&mut self, item: Item<L>) {
         match item.kind {
-            ItemKind::Push => self.push(),
-            ItemKind::Line => self.line(),
-            ItemKind::Space => self.space(),
-            ItemKind::Indentation(n) => self.indentation(n),
-            ItemKind::Lang(_, item) => self.lang_item(item),
-            ItemKind::Register(_, item) => self.lang_item_register(item),
-            other => self.items.push(Item::new(other)),
+            Kind::Push => self.push(),
+            Kind::Line => self.line(),
+            Kind::Space => self.space(),
+            Kind::Indentation(n) => self.indentation(n),
+            Kind::Lang(item) => self.lang_item(item),
+            Kind::Register(item) => self.lang_item_register(item),
+            other => self.items.push((0, Item::new(other))),
         }
     }
 
     /// Add a language item directly.
     pub(crate) fn lang_item(&mut self, item: Box<L::Item>) {
         // NB: recorded position needs to be adjusted.
-        self.items.push(Item::lang(self.last_lang_item, item));
+        self.items.push((self.last_lang_item, Item::lang(item)));
         self.last_lang_item = self.items.len();
     }
 
     /// Register a language item directly.
     pub(crate) fn lang_item_register(&mut self, item: Box<L::Item>) {
         // NB: recorded position needs to be adjusted.
-        self.items.push(Item::register(self.last_lang_item, item));
+        self.items.push((self.last_lang_item, Item::register(item)));
         self.last_lang_item = self.items.len();
     }
 
@@ -650,23 +651,23 @@ where
     fn indentation(&mut self, mut n: i16) {
         let item = loop {
             // flush all whitespace preceeding the indentation change.
-            let Some(item) = self.items.pop() else {
+            let Some((o, item)) = self.items.pop() else {
                 break None;
             };
 
             match &item.kind {
-                ItemKind::Push => continue,
-                ItemKind::Space => continue,
-                ItemKind::Line => continue,
-                ItemKind::Indentation(u) => n += u,
-                _ => break Some(item),
+                Kind::Push => continue,
+                Kind::Space => continue,
+                Kind::Line => continue,
+                Kind::Indentation(u) => n += u,
+                _ => break Some((o, item)),
             }
         };
 
         self.items.extend(item);
 
         if n != 0 {
-            self.items.push(Item::new(ItemKind::Indentation(n)));
+            self.items.push((0, Item::new(Kind::Indentation(n))));
         }
     }
 }
@@ -891,7 +892,7 @@ where
 {
     #[inline]
     fn eq(&self, other: &Vec<Item<L>>) -> bool {
-        self.items == *other
+        self == &other[..]
     }
 }
 
@@ -902,7 +903,7 @@ where
 {
     #[inline]
     fn eq(&self, other: &Tokens<L>) -> bool {
-        *self == other.items
+        other == &self[..]
     }
 }
 
@@ -913,7 +914,7 @@ where
 {
     #[inline]
     fn eq(&self, other: &[Item<L>]) -> bool {
-        &*self.items == other
+        self.iter().eq(other)
     }
 }
 
@@ -924,7 +925,7 @@ where
 {
     #[inline]
     fn eq(&self, other: &[Item<L>; N]) -> bool {
-        &*self.items == other
+        self == &other[..]
     }
 }
 
@@ -935,7 +936,7 @@ where
 {
     #[inline]
     fn eq(&self, other: &Tokens<L>) -> bool {
-        self == &*other.items
+        self.iter().eq(other.iter())
     }
 }
 
@@ -975,7 +976,7 @@ pub struct IntoIter<L>
 where
     L: Lang,
 {
-    iter: vec::IntoIter<Item<L>>,
+    iter: vec::IntoIter<(usize, Item<L>)>,
 }
 
 impl<L> Iterator for IntoIter<L>
@@ -984,10 +985,12 @@ where
 {
     type Item = Item<L>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        Some(self.iter.next()?.1)
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
@@ -1018,6 +1021,7 @@ where
     type Item = Item<L>;
     type IntoIter = IntoIter<L>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         IntoIter {
             iter: self.items.into_iter(),
@@ -1032,7 +1036,7 @@ pub struct Iter<'a, L>
 where
     L: Lang,
 {
-    iter: slice::Iter<'a, Item<L>>,
+    iter: slice::Iter<'a, (usize, Item<L>)>,
 }
 
 impl<'a, L> Iterator for Iter<'a, L>
@@ -1041,10 +1045,12 @@ where
 {
     type Item = &'a Item<L>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        Some(&self.iter.next()?.1)
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
     }
@@ -1136,7 +1142,7 @@ pub struct WalkImports<'a, L>
 where
     L: Lang,
 {
-    items: &'a [Item<L>],
+    items: &'a [(usize, Item<L>)],
     pos: usize,
 }
 
@@ -1154,16 +1160,18 @@ where
         }
 
         // NB: recorded position needs to be adjusted.
-        let item = self.items.get(pos - 1)?;
-
-        let (prev, item) = match &item.kind {
-            ItemKind::Lang(prev, item) => (prev, item),
-            ItemKind::Register(prev, item) => (prev, item),
-            _ => return None,
-        };
-
-        self.pos = *prev;
-        Some(item)
+        match self.items.get(pos - 1)? {
+            (
+                prev,
+                Item {
+                    kind: Kind::Lang(item) | Kind::Register(item),
+                },
+            ) => {
+                self.pos = *prev;
+                Some(item)
+            }
+            _ => None,
+        }
     }
 }
 
