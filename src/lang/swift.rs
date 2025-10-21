@@ -28,7 +28,7 @@ impl_lang! {
     pub Swift {
         type Config = Config;
         type Format = Format;
-        type Item = Import;
+        type Item = Any;
 
         fn write_quoted(out: &mut fmt::Formatter<'_>, input: &str) -> fmt::Result {
             // From: https://docs.swift.org/swift-book/LanguageGuide/StringsAndCharacters.html
@@ -71,6 +71,12 @@ impl_lang! {
             out.write_str(&self.name)
         }
     }
+
+    ImportImplementationOnly {
+        fn format(&self, out: &mut fmt::Formatter<'_>, _: &Config, _: &Format) -> fmt::Result {
+            out.write_str(&self.name)
+        }
+    }
 }
 
 /// Format state for Swift code.
@@ -92,6 +98,31 @@ pub struct Import {
     name: ItemStr,
 }
 
+/// The implementation-only import of a Swift type `@_implementationOnly import UIKit`.
+///
+/// Created through the [import_implementation_only()] function.
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct ImportImplementationOnly {
+    /// Module of the imported name.
+    module: ItemStr,
+    /// Name imported.
+    name: ItemStr,
+}
+
+/// The type of import statement to use when importing a Swift module.
+/// - Standard imports that make the module's public API available
+/// - Implementation-only imports that hide the imported module from clients
+#[derive(Debug, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+enum ImportType {
+    /// A standard Swift import statement: `import ModuleName`
+    Import,
+    /// An implementation-only import statement: `@_implementationOnly import ModuleName`
+    ///
+    /// This type of import hides the imported module from the public API,
+    /// preventing clients from depending on it transitively.
+    ImportImplementationOnly,
+}
+
 impl Swift {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
         use crate as genco;
@@ -100,12 +131,26 @@ impl Swift {
         let mut modules = BTreeSet::new();
 
         for import in tokens.walk_imports() {
-            modules.insert(&import.module);
+            match import {
+                Any::Import(ref i) => {
+                    modules.insert((&i.module, ImportType::Import));
+                }
+                Any::ImportImplementationOnly(ref i) => {
+                    modules.insert((&i.module, ImportType::ImportImplementationOnly));
+                }
+            }
         }
 
         if !modules.is_empty() {
-            for module in modules {
-                quote_in! { *out => $['\r']import $module}
+            for (module, import_type) in modules {
+                match import_type {
+                    ImportType::Import => {
+                        quote_in! { *out => $['\r']import $module}
+                    }
+                    ImportType::ImportImplementationOnly => {
+                        quote_in! { *out => $['\r']@_implementationOnly import $module}
+                    }
+                }
             }
         }
 
@@ -138,6 +183,36 @@ where
     N: Into<ItemStr>,
 {
     Import {
+        module: module.into(),
+        name: name.into(),
+    }
+}
+
+/// The implementation-only import of a Swift type `@_implementationOnly import UIKit`.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+///
+/// let toks = quote!($(swift::import_implementation_only("Foo", "Debug")));
+///
+/// assert_eq!(
+///     vec![
+///         "@_implementationOnly import Foo",
+///         "",
+///         "Debug",
+///     ],
+///     toks.to_file_vec()?
+/// );
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
+pub fn import_implementation_only<M, N>(module: M, name: N) -> ImportImplementationOnly
+where
+    M: Into<ItemStr>,
+    N: Into<ItemStr>,
+{
+    ImportImplementationOnly {
         module: module.into(),
         name: name.into(),
     }
