@@ -72,7 +72,7 @@ impl C {
     fn imports(out: &mut Tokens, tokens: &Tokens) {
         let mut includes = BTreeSet::new();
 
-        for include in tokens.walk_imports() {
+        for include in tokens.iter_lang() {
             includes.insert((&include.path, include.system));
         }
 

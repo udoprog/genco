@@ -175,7 +175,7 @@ impl Csharp {
     ) {
         let mut modules = BTreeSet::new();
 
-        for import in tokens.walk_imports() {
+        for import in tokens.iter_lang() {
             modules.insert((&*import.namespace, &*import.name));
         }
 

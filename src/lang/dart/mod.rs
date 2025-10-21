@@ -188,7 +188,7 @@ impl Dart {
     fn imports(out: &mut Tokens, input: &Tokens, _: &Config) {
         let mut modules = BTreeSet::new();
 
-        for import in input.walk_imports() {
+        for import in input.iter_lang() {
             if &*import.path == DART_CORE {
                 continue;
             }

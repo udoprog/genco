@@ -212,10 +212,10 @@ where
         }
     }
 
-    /// Walk over all imports.
+    /// Iterate over all registered [`Lang`] items.
     ///
     /// The order in which the imports are returned is *not* defined. So if you
-    /// need them in some particular order you need to sort them.
+    /// need them in some particular order you have to sort them.
     ///
     /// # Examples
     ///
@@ -227,12 +227,12 @@ where
     ///
     /// let tokens = quote!(foo $ty<u32, dyn $debug> baz);
     ///
-    /// for import in tokens.walk_imports() {
+    /// for import in tokens.iter_lang() {
     ///     println!("{:?}", import);
     /// }
     /// ```
-    pub fn walk_imports(&self) -> WalkImports<'_, L> {
-        WalkImports {
+    pub fn iter_lang(&self) -> IterLang<'_, L> {
+        IterLang {
             items: &self.items,
             pos: self.last_lang_item,
         }
@@ -1137,8 +1137,8 @@ where
 
 /// An iterator over language-specific imported items.
 ///
-/// Constructed using the [Tokens::walk_imports] method.
-pub struct WalkImports<'a, L>
+/// Constructed using the [`Tokens::iter_lang`] method.
+pub struct IterLang<'a, L>
 where
     L: Lang,
 {
@@ -1146,7 +1146,7 @@ where
     pos: usize,
 }
 
-impl<'a, L> Iterator for WalkImports<'a, L>
+impl<'a, L> Iterator for IterLang<'a, L>
 where
     L: Lang,
 {
@@ -1214,7 +1214,7 @@ mod tests {
             $(String::from("nope"))
         };
 
-        let mut output: Vec<_> = toks.walk_imports().cloned().collect();
+        let mut output: Vec<_> = toks.iter_lang().cloned().collect();
         output.sort();
 
         let expected: Vec<Any> = vec![Import(1).into(), Import(2).into()];
