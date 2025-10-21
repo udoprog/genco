@@ -6,7 +6,7 @@ use crate::fmt;
 use crate::fmt::config::{Config, Indentation};
 use crate::fmt::cursor;
 use crate::lang::Lang;
-use crate::tokens::{Item, ItemKind};
+use crate::tokens::{Item, Kind};
 
 /// Buffer used as indentation source.
 static SPACES: &str = "                                                                                                    ";
@@ -77,7 +77,7 @@ impl<'a> Formatter<'a> {
     /// Format the given stream of tokens.
     pub(crate) fn format_items<L>(
         &mut self,
-        items: &[Item<L>],
+        items: &[(usize, Item<L>)],
         config: &L::Config,
         format: &L::Format,
     ) -> fmt::Result<()>
@@ -165,16 +165,16 @@ impl<'a> Formatter<'a> {
             } = head;
 
             match &item.kind {
-                ItemKind::Register(..) => (),
-                ItemKind::Indentation(0) => (),
-                ItemKind::Literal(literal) => {
+                Kind::Register(..) => (),
+                Kind::Indentation(0) => (),
+                Kind::Literal(literal) => {
                     if *in_quote {
                         L::write_quoted(self, literal)?;
                     } else {
                         self.write_str(literal)?;
                     }
                 }
-                ItemKind::OpenQuote(e) if !*in_quote => {
+                Kind::OpenQuote(e) if !*in_quote => {
                     *has_eval = *e;
                     *in_quote = true;
                     L::open_quote(self, config, format, *has_eval)?;
@@ -183,35 +183,35 @@ impl<'a> Formatter<'a> {
                 // This is used for expressions like: `$[str](Hello $(quoted(world)))`.
                 //
                 // Evaluating quotes are not supported.
-                ItemKind::OpenQuote(false) if *in_quote => {
+                Kind::OpenQuote(false) if *in_quote => {
                     self.quoted_quote(cursor, &mut buf, config, format)?;
                     L::write_quoted(self, &buf)?;
                     buf.clear();
                 }
-                ItemKind::CloseQuote if end_on_close_quote => {
+                Kind::CloseQuote if end_on_close_quote => {
                     return Ok(());
                 }
-                ItemKind::CloseQuote if *in_quote => {
+                Kind::CloseQuote if *in_quote => {
                     *in_quote = false;
                     L::close_quote(self, config, format, mem::take(has_eval))?;
                 }
-                ItemKind::Lang(_, lang) => {
+                Kind::Lang(lang) => {
                     lang.format(self, config, format)?;
                 }
                 // whitespace below
-                ItemKind::Push => {
+                Kind::Push => {
                     self.push();
                 }
-                ItemKind::Line => {
+                Kind::Line => {
                     self.line();
                 }
-                ItemKind::Space => {
+                Kind::Space => {
                     self.space();
                 }
-                ItemKind::Indentation(n) => {
+                Kind::Indentation(n) => {
                     self.indentation(*n);
                 }
-                ItemKind::OpenEval if *in_quote => {
+                Kind::OpenEval if *in_quote => {
                     if cursor.peek::<cursor::Literal>() && cursor.peek1::<cursor::CloseEval>() {
                         let literal = cursor.parse::<cursor::Literal>()?;
                         L::string_eval_literal(self, config, format, literal)?;
@@ -227,7 +227,7 @@ impl<'a> Formatter<'a> {
                     }
                 }
                 // Eval are only allowed within quotes.
-                ItemKind::CloseEval if *end_on_eval => {
+                Kind::CloseEval if *end_on_eval => {
                     L::end_string_eval(self, config, format)?;
                     stack.pop();
                 }
