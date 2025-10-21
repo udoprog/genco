@@ -367,17 +367,17 @@ compile_error!("genco: The `alloc` feature must be enabled");
 /// assert_eq!(
 ///     vec![
 ///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::Static("hello world 😊")),
+///         Item::Literal(ItemStr::static_("hello world 😊")),
 ///         Item::CloseQuote,
 ///         Item::Push,
 ///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::Box("hello world 😊".into())),
+///         Item::Literal("hello world 😊".into()),
 ///         Item::CloseQuote,
 ///         Item::Push,
-///         Item::Literal(ItemStr::Static("\"hello world 😊\"")),
+///         Item::Literal(ItemStr::static_("\"hello world 😊\"")),
 ///         Item::Push,
 ///         Item::OpenQuote(false),
-///         Item::Literal(ItemStr::Static("hello world 😊")),
+///         Item::Literal(ItemStr::static_("hello world 😊")),
 ///         Item::CloseQuote
 ///     ],
 ///     tokens,

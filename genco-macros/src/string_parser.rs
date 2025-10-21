@@ -100,7 +100,7 @@ impl<'a> Encoder<'a> {
 
         self.stream.borrow_mut().extend(q::quote! {
             #receiver.append(#module::tokens::Item::OpenEval);
-            #receiver.append(#module::tokens::Item::Literal(#module::tokens::ItemStr::Static(#ident)));
+            #receiver.append(#module::tokens::Item::Literal(#module::tokens::ItemStr::static_(#ident)));
             #receiver.append(#module::tokens::Item::CloseEval);
         });
 
@@ -176,7 +176,7 @@ impl<'a> Encoder<'a> {
         self.count.set(self.count.get().wrapping_add(1));
 
         self.stream.borrow_mut().extend(q::quote! {
-            #receiver.append(#module::tokens::ItemStr::Static(#lit));
+            #receiver.append(#module::tokens::ItemStr::static_(#lit));
         });
 
         self.buf.borrow_mut().clear();

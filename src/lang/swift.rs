@@ -207,11 +207,10 @@ where
 /// );
 /// # Ok::<_, genco::fmt::Error>(())
 /// ```
-pub fn import_implementation_only<M, N>(module: M, name: N) -> ImportImplementationOnly
-where
-    M: Into<ItemStr>,
-    N: Into<ItemStr>,
-{
+pub fn import_implementation_only(
+    module: impl Into<ItemStr>,
+    name: impl Into<ItemStr>,
+) -> ImportImplementationOnly {
     ImportImplementationOnly {
         module: module.into(),
         name: name.into(),

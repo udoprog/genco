@@ -15,7 +15,7 @@ where
     fn format_into(self, tokens: &mut Tokens<Csharp>) {
         for line in self.0 {
             tokens.push();
-            tokens.append(ItemStr::Static("///"));
+            tokens.append(ItemStr::static_("///"));
             tokens.space();
             tokens.append(line.into());
         }
