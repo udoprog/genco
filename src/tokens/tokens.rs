@@ -22,6 +22,7 @@ use alloc::vec::{self, Vec};
 
 use crate::fmt;
 use crate::lang::{Lang, LangSupportsEval};
+use crate::tokens::ItemStr;
 use crate::tokens::{FormatInto, Item, Kind, Register};
 
 /// A stream of tokens.
@@ -557,6 +558,24 @@ where
         format: &L::Format,
     ) -> fmt::Result {
         out.format_items(&self.items, config, format)
+    }
+
+    /// Push a literal item to the stream.
+    #[inline]
+    pub(crate) fn literal(&mut self, lit: impl Into<ItemStr>) {
+        self.items.push((0, Item::literal(lit.into())));
+    }
+
+    /// Push an open quote item to the stream.
+    #[inline]
+    pub(crate) fn open_quote(&mut self, is_interpolated: bool) {
+        self.items.push((0, Item::open_quote(is_interpolated)));
+    }
+
+    /// Push a close quote item to the stream.
+    #[inline]
+    pub(crate) fn close_quote(&mut self) {
+        self.items.push((0, Item::close_quote()));
     }
 
     /// Push a single item to the stream while checking for structural

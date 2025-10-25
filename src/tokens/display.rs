@@ -3,7 +3,7 @@ use core::fmt;
 use alloc::string::ToString;
 
 use crate::lang::Lang;
-use crate::tokens::{FormatInto, Item};
+use crate::tokens::FormatInto;
 use crate::Tokens;
 
 /// Function to build a string literal.
@@ -77,8 +77,6 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::literal(
-            self.inner.to_string().into_boxed_str().into(),
-        ));
+        tokens.literal(self.inner.to_string());
     }
 }
