@@ -96,8 +96,8 @@
 ///
 /// assert_eq! {
 ///     vec![
-///         "import default second",
 ///         "import first",
+///         "import default second",
 ///         "",
 ///         "first",
 ///         "default:second"

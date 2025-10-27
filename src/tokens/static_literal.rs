@@ -1,5 +1,5 @@
 use crate::lang::Lang;
-use crate::tokens::{FormatInto, Item, ItemStr};
+use crate::tokens::{FormatInto, ItemStr};
 
 /// A formatter from a static literal.
 ///
@@ -15,7 +15,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut crate::Tokens<L>) {
-        tokens.item(Item::literal(ItemStr::static_(self.literal)));
+        tokens.literal(ItemStr::static_(self.literal));
     }
 }
 

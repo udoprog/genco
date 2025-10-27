@@ -12,17 +12,14 @@
 
 use core::cmp::Ordering;
 use core::hash;
-use core::iter::FromIterator;
-use core::mem;
 use core::slice;
 
-use alloc::boxed::Box;
 use alloc::string::String;
-use alloc::vec::{self, Vec};
+use alloc::vec::Vec;
 
 use crate::fmt;
 use crate::lang::{Lang, LangSupportsEval};
-use crate::tokens::{FormatInto, Item, Kind, Register};
+use crate::tokens::{FormatInto, Item, ItemStr, Kind, Register};
 
 /// A stream of tokens.
 ///
@@ -74,15 +71,8 @@ pub struct Tokens<L = ()>
 where
     L: Lang,
 {
-    items: Vec<(usize, Item<L>)>,
-    /// The last position at which we observed a language item.
-    ///
-    /// This references the `position + 1` in the items vector. A position of 0
-    /// means that there are no more items.
-    ///
-    /// This makes up a singly-linked list over all language items that you can
-    /// follow.
-    last_lang_item: usize,
+    items: Vec<Item>,
+    lang: Vec<L::Item>,
 }
 
 impl<L> Tokens<L>
@@ -103,7 +93,7 @@ where
     pub fn new() -> Self {
         Tokens {
             items: Vec::new(),
-            last_lang_item: 0,
+            lang: Vec::new(),
         }
     }
 
@@ -121,7 +111,7 @@ where
     pub fn with_capacity(cap: usize) -> Self {
         Tokens {
             items: Vec::with_capacity(cap),
-            last_lang_item: 0,
+            lang: Vec::new(),
         }
     }
 
@@ -136,16 +126,17 @@ where
     /// let tokens: Tokens<()> = quote!(foo bar baz);
     /// let mut it = tokens.iter();
     ///
-    /// assert_eq!(Some(&Item::literal(ItemStr::static_("foo"))), it.next());
-    /// assert_eq!(Some(&Item::space()), it.next());
-    /// assert_eq!(Some(&Item::literal(ItemStr::static_("bar"))), it.next());
-    /// assert_eq!(Some(&Item::space()), it.next());
-    /// assert_eq!(Some(&Item::literal(ItemStr::static_("baz"))), it.next());
+    /// assert_eq!(Item::literal(ItemStr::static_("foo")), it.next().unwrap());
+    /// assert_eq!(Item::space(), it.next().unwrap());
+    /// assert_eq!(Item::literal(ItemStr::static_("bar")), it.next().unwrap());
+    /// assert_eq!(Item::space(), it.next().unwrap());
+    /// assert_eq!(Item::literal(ItemStr::static_("baz")), it.next().unwrap());
     /// assert_eq!(None, it.next());
     /// ```
     #[inline]
-    pub fn iter(&self) -> Iter<'_, L> {
+    pub fn iter(&self) -> Iter<'_, L::Item> {
         Iter {
+            lang: &self.lang[..],
             iter: self.items.iter(),
         }
     }
@@ -179,36 +170,66 @@ where
         tokens.format_into(self)
     }
 
+    #[inline]
+    pub(crate) fn item(&mut self, item: Item) {
+        match item.kind {
+            Kind::Push => self.push(),
+            Kind::Line => self.line(),
+            Kind::Space => self.space(),
+            Kind::Indentation(n) => self.indentation(n),
+            Kind::Lang(..) => { /* ignored */ }
+            kind => self.items.push(Item::new(kind)),
+        }
+    }
+
     /// Extend with another stream of tokens.
     ///
     /// This respects the structural requirements of adding one element at a
-    /// time, like you would get by calling [`space`], [`push`], or [`line`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use genco::prelude::*;
-    /// use genco::tokens::{Item, ItemStr};
-    ///
-    /// let mut tokens: Tokens<()> = quote!(foo bar);
-    /// tokens.extend::<Tokens<()>>(quote!($[' ']baz));
-    ///
-    /// assert_eq!(tokens, quote!(foo bar baz));
-    /// ```
-    ///
-    /// [`space`]: Self::space
-    /// [`push`]: Self::push
-    /// [`line`]: Self::line
-    pub fn extend<I>(&mut self, it: I)
+    /// time, like you would get by calling `space`, `push`, or `line`.
+    #[inline]
+    pub(crate) fn extend_by_ref(&mut self, other: &Tokens<L>)
     where
-        I: IntoIterator<Item = Item<L>>,
+        L::Item: Clone,
     {
-        let it = it.into_iter();
-        let (low, high) = it.size_hint();
-        self.items.reserve(high.unwrap_or(low));
+        self.items.reserve(other.items.len());
+        let base = self.lang.len();
+        self.lang.extend(other.lang.iter().cloned());
 
-        for item in it {
-            self.item(item);
+        for item in &other.items {
+            match &item.kind {
+                Kind::Push => self.push(),
+                Kind::Line => self.line(),
+                Kind::Space => self.space(),
+                Kind::Indentation(n) => self.indentation(*n),
+                Kind::Lang(lang) => {
+                    self.items.push(Item::lang(base.saturating_add(*lang)));
+                }
+                kind => self.items.push(Item::new(kind.clone())),
+            }
+        }
+    }
+
+    /// Extend with another stream of tokens.
+    ///
+    /// This respects the structural requirements of adding one element at a
+    /// time, like you would get by calling `space`, `push`, or `line`.
+    #[inline]
+    pub(crate) fn extend_by_owned(&mut self, mut other: Tokens<L>) {
+        self.items.reserve(other.items.len());
+        let base = self.lang.len();
+        self.lang.append(&mut other.lang);
+
+        for item in other.items {
+            match item.kind {
+                Kind::Push => self.push(),
+                Kind::Line => self.line(),
+                Kind::Space => self.space(),
+                Kind::Indentation(n) => self.indentation(n),
+                Kind::Lang(lang) => {
+                    self.items.push(Item::lang(base.saturating_add(lang)));
+                }
+                kind => self.items.push(Item::new(kind)),
+            }
         }
     }
 
@@ -231,10 +252,10 @@ where
     ///     println!("{:?}", import);
     /// }
     /// ```
+    #[inline]
     pub fn iter_lang(&self) -> IterLang<'_, L> {
         IterLang {
-            items: &self.items,
-            pos: self.last_lang_item,
+            lang: self.lang.iter(),
         }
     }
 
@@ -306,11 +327,11 @@ where
     /// # Ok::<_, genco::fmt::Error>(())
     /// ```
     pub fn space(&mut self) {
-        if let Some((_, Item { kind: Kind::Space })) = self.items.last() {
+        if let Some(Item { kind: Kind::Space }) = self.items.last() {
             return;
         }
 
-        self.items.push((0, Item::space()));
+        self.items.push(Item::space());
     }
 
     /// Add a single push operation.
@@ -345,23 +366,23 @@ where
     /// ```
     pub fn push(&mut self) {
         let item = loop {
-            let Some((o, item)) = self.items.pop() else {
+            let Some(item) = self.items.pop() else {
                 break None;
             };
 
             match &item.kind {
                 // NB: never reconfigure a line into a push.
                 Kind::Line => {
-                    self.items.push((o, item));
+                    self.items.push(item);
                     return;
                 }
                 Kind::Space | Kind::Push => continue,
-                _ => break Some((o, item)),
+                _ => break Some(item),
             }
         };
 
         self.items.extend(item);
-        self.items.push((0, Item::push()));
+        self.items.push(Item::push());
     }
 
     /// Add a single line operation.
@@ -397,7 +418,7 @@ where
     /// ```
     pub fn line(&mut self) {
         let item = loop {
-            let Some((o, item)) = self.items.pop() else {
+            let Some(item) = self.items.pop() else {
                 break None;
             };
 
@@ -405,11 +426,11 @@ where
                 continue;
             }
 
-            break Some((o, item));
+            break Some(item);
         };
 
         self.items.extend(item);
-        self.items.push((0, Item::line()));
+        self.items.push(Item::line());
     }
 
     /// Increase the indentation of the token stream.
@@ -556,51 +577,36 @@ where
         config: &L::Config,
         format: &L::Format,
     ) -> fmt::Result {
-        out.format_items(&self.items, config, format)
+        out.format_items::<L>(&self.lang, &self.items, config, format)
     }
 
-    /// Push a single item to the stream while checking for structural
-    /// guarantees.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use genco::prelude::*;
-    /// use genco::tokens::{Item, ItemStr};
-    ///
-    /// let mut tokens = Tokens::<()>::new();
-    ///
-    /// tokens.append(ItemStr::static_("foo"));
-    /// tokens.space();
-    /// tokens.space(); // Note: second space ignored
-    /// tokens.append(ItemStr::static_("bar"));
-    ///
-    /// assert_eq!(tokens, quote!(foo bar));
-    /// ```
-    pub(crate) fn item(&mut self, item: Item<L>) {
-        match item.kind {
-            Kind::Push => self.push(),
-            Kind::Line => self.line(),
-            Kind::Space => self.space(),
-            Kind::Indentation(n) => self.indentation(n),
-            Kind::Lang(item) => self.lang_item(item),
-            Kind::Register(item) => self.lang_item_register(item),
-            other => self.items.push((0, Item::new(other))),
-        }
+    /// Push a literal item to the stream.
+    #[inline]
+    pub(crate) fn literal(&mut self, lit: impl Into<ItemStr>) {
+        self.items.push(Item::literal(lit.into()));
+    }
+
+    /// Push an open quote item to the stream.
+    #[inline]
+    pub(crate) fn open_quote(&mut self, is_interpolated: bool) {
+        self.items.push(Item::open_quote(is_interpolated));
+    }
+
+    /// Push a close quote item to the stream.
+    #[inline]
+    pub(crate) fn close_quote(&mut self) {
+        self.items.push(Item::close_quote());
     }
 
     /// Add a language item directly.
-    pub(crate) fn lang_item(&mut self, item: Box<L::Item>) {
-        // NB: recorded position needs to be adjusted.
-        self.items.push((self.last_lang_item, Item::lang(item)));
-        self.last_lang_item = self.items.len();
+    pub(crate) fn lang_item(&mut self, item: L::Item) {
+        self.items.push(Item::lang(self.lang.len()));
+        self.lang.push(item);
     }
 
     /// Register a language item directly.
-    pub(crate) fn lang_item_register(&mut self, item: Box<L::Item>) {
-        // NB: recorded position needs to be adjusted.
-        self.items.push((self.last_lang_item, Item::register(item)));
-        self.last_lang_item = self.items.len();
+    pub(crate) fn lang_item_register(&mut self, item: L::Item) {
+        self.lang.push(item);
     }
 
     /// File formatting function for token streams that gives full control over the
@@ -651,7 +657,7 @@ where
     fn indentation(&mut self, mut n: i16) {
         let item = loop {
             // flush all whitespace preceeding the indentation change.
-            let Some((o, item)) = self.items.pop() else {
+            let Some(item) = self.items.pop() else {
                 break None;
             };
 
@@ -660,14 +666,14 @@ where
                 Kind::Space => continue,
                 Kind::Line => continue,
                 Kind::Indentation(u) => n += u,
-                _ => break Some((o, item)),
+                _ => break Some(item),
             }
         };
 
         self.items.extend(item);
 
         if n != 0 {
-            self.items.push((0, Item::new(Kind::Indentation(n))));
+            self.items.push(Item::new(Kind::Indentation(n)));
         }
     }
 }
@@ -885,54 +891,49 @@ where
     }
 }
 
-impl<L> PartialEq<Vec<Item<L>>> for Tokens<L>
+impl<L> PartialEq<Vec<Item>> for Tokens<L>
 where
     L: Lang,
-    L::Item: PartialEq,
 {
     #[inline]
-    fn eq(&self, other: &Vec<Item<L>>) -> bool {
-        self == &other[..]
+    fn eq(&self, other: &Vec<Item>) -> bool {
+        self.iter().eq(other.iter())
     }
 }
 
-impl<L> PartialEq<Tokens<L>> for Vec<Item<L>>
+impl<L> PartialEq<Tokens<L>> for Vec<Item>
 where
     L: Lang,
-    L::Item: PartialEq,
 {
     #[inline]
     fn eq(&self, other: &Tokens<L>) -> bool {
-        other == &self[..]
+        self.iter().eq(other.iter())
     }
 }
 
-impl<L> PartialEq<[Item<L>]> for Tokens<L>
+impl<L> PartialEq<[Item]> for Tokens<L>
 where
     L: Lang,
-    L::Item: PartialEq,
 {
     #[inline]
-    fn eq(&self, other: &[Item<L>]) -> bool {
+    fn eq(&self, other: &[Item]) -> bool {
         self.iter().eq(other)
     }
 }
 
-impl<L, const N: usize> PartialEq<[Item<L>; N]> for Tokens<L>
+impl<L, const N: usize> PartialEq<[Item; N]> for Tokens<L>
 where
     L: Lang,
-    L::Item: PartialEq,
 {
     #[inline]
-    fn eq(&self, other: &[Item<L>; N]) -> bool {
+    fn eq(&self, other: &[Item; N]) -> bool {
         self == &other[..]
     }
 }
 
-impl<L> PartialEq<Tokens<L>> for [Item<L>]
+impl<L> PartialEq<Tokens<L>> for [Item]
 where
     L: Lang,
-    L::Item: PartialEq,
 {
     #[inline]
     fn eq(&self, other: &Tokens<L>) -> bool {
@@ -969,85 +970,85 @@ where
     }
 }
 
-/// Iterator over [Tokens].
-///
-/// This is created using [Tokens::into_iter()].
-pub struct IntoIter<L>
-where
-    L: Lang,
-{
-    iter: vec::IntoIter<(usize, Item<L>)>,
+/// An item reference, where language items are translated into a reference to
+/// them.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ItemRef<'a, T> {
+    kind: ItemRefKind<'a, T>,
 }
 
-impl<L> Iterator for IntoIter<L>
+impl<T> core::fmt::Debug for ItemRef<'_, T>
 where
-    L: Lang,
+    T: core::fmt::Debug,
 {
-    type Item = Item<L>;
-
     #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        Some(self.iter.next()?.1)
-    }
-
-    #[inline]
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        self.iter.size_hint()
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.kind.fmt(f)
     }
 }
 
-/// Construct an owned iterator over the token stream.
-///
-/// # Examples
-///
-/// ```
-/// use genco::prelude::*;
-/// use genco::tokens::{ItemStr, Item};
-///
-/// let tokens: Tokens<()> = quote!(foo bar baz);
-/// let mut it = tokens.into_iter();
-///
-/// assert_eq!(Some(Item::literal(ItemStr::static_("foo"))), it.next());
-/// assert_eq!(Some(Item::space()), it.next());
-/// assert_eq!(Some(Item::literal(ItemStr::static_("bar"))), it.next());
-/// assert_eq!(Some(Item::space()), it.next());
-/// assert_eq!(Some(Item::literal(ItemStr::static_("baz"))), it.next());
-/// assert_eq!(None, it.next());
-/// ```
-impl<L> IntoIterator for Tokens<L>
-where
-    L: Lang,
-{
-    type Item = Item<L>;
-    type IntoIter = IntoIter<L>;
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum ItemRefKind<'a, T> {
+    Lang(&'a T),
+    Item(&'a Item),
+}
 
+impl<T> PartialEq<Item> for ItemRef<'_, T> {
     #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        IntoIter {
-            iter: self.items.into_iter(),
+    fn eq(&self, other: &Item) -> bool {
+        match self.kind {
+            ItemRefKind::Lang(..) => false,
+            ItemRefKind::Item(item) => *item == *other,
         }
     }
 }
 
-/// Iterator over [Tokens].
-///
-/// This is created using [Tokens::iter()].
-pub struct Iter<'a, L>
-where
-    L: Lang,
-{
-    iter: slice::Iter<'a, (usize, Item<L>)>,
+impl<T> PartialEq<&Item> for ItemRef<'_, T> {
+    #[inline]
+    fn eq(&self, other: &&Item) -> bool {
+        match self.kind {
+            ItemRefKind::Lang(..) => false,
+            ItemRefKind::Item(item) => *item == **other,
+        }
+    }
 }
 
-impl<'a, L> Iterator for Iter<'a, L>
-where
-    L: Lang,
-{
-    type Item = &'a Item<L>;
+impl<T> PartialEq<ItemRef<'_, T>> for Item {
+    #[inline]
+    fn eq(&self, other: &ItemRef<'_, T>) -> bool {
+        *other == *self
+    }
+}
+
+impl<T> PartialEq<ItemRef<'_, T>> for &Item {
+    #[inline]
+    fn eq(&self, other: &ItemRef<'_, T>) -> bool {
+        *other == **self
+    }
+}
+
+/// Iterator over [`Tokens`].
+///
+/// This is created using [`Tokens::iter()`].
+pub struct Iter<'a, T> {
+    lang: &'a [T],
+    iter: slice::Iter<'a, Item>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = ItemRef<'a, T>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        Some(&self.iter.next()?.1)
+        let item = self.iter.next()?;
+
+        let kind = if let Kind::Lang(n) = item.kind {
+            ItemRefKind::Lang(self.lang.get(n)?)
+        } else {
+            ItemRefKind::Item(item)
+        };
+
+        Some(ItemRef { kind })
     }
 
     #[inline]
@@ -1060,38 +1061,12 @@ impl<'a, L> IntoIterator for &'a Tokens<L>
 where
     L: Lang,
 {
-    type Item = &'a Item<L>;
-    type IntoIter = Iter<'a, L>;
+    type Item = ItemRef<'a, L::Item>;
+    type IntoIter = Iter<'a, L::Item>;
 
+    #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
-    }
-}
-
-impl<'a, L> FromIterator<&'a Item<L>> for Tokens<L>
-where
-    L: Lang,
-    L::Item: Clone,
-{
-    fn from_iter<I: IntoIterator<Item = &'a Item<L>>>(iter: I) -> Self {
-        let it = iter.into_iter();
-        let (low, high) = it.size_hint();
-        let mut tokens = Self::with_capacity(high.unwrap_or(low));
-        tokens.extend(it.cloned());
-        tokens
-    }
-}
-
-impl<L> FromIterator<Item<L>> for Tokens<L>
-where
-    L: Lang,
-{
-    fn from_iter<I: IntoIterator<Item = Item<L>>>(iter: I) -> Self {
-        let it = iter.into_iter();
-        let (low, high) = it.size_hint();
-        let mut tokens = Self::with_capacity(high.unwrap_or(low));
-        tokens.extend(it);
-        tokens
     }
 }
 
@@ -1115,7 +1090,7 @@ where
     fn clone(&self) -> Self {
         Self {
             items: self.items.clone(),
-            last_lang_item: self.last_lang_item,
+            lang: self.lang.clone(),
         }
     }
 }
@@ -1131,7 +1106,7 @@ where
         H: hash::Hasher,
     {
         self.items.hash(state);
-        self.last_lang_item.hash(state);
+        self.lang.hash(state);
     }
 }
 
@@ -1142,8 +1117,7 @@ pub struct IterLang<'a, L>
 where
     L: Lang,
 {
-    items: &'a [(usize, Item<L>)],
-    pos: usize,
+    lang: slice::Iter<'a, L::Item>,
 }
 
 impl<'a, L> Iterator for IterLang<'a, L>
@@ -1152,26 +1126,9 @@ where
 {
     type Item = &'a L::Item;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let pos = mem::take(&mut self.pos);
-
-        if pos == 0 {
-            return None;
-        }
-
-        // NB: recorded position needs to be adjusted.
-        match self.items.get(pos - 1)? {
-            (
-                prev,
-                Item {
-                    kind: Kind::Lang(item) | Kind::Register(item),
-                },
-            ) => {
-                self.pos = *prev;
-                Some(item)
-            }
-            _ => None,
-        }
+        self.lang.next()
     }
 }
 

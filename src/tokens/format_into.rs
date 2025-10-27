@@ -6,7 +6,7 @@ use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 
 use crate::lang::Lang;
-use crate::tokens::{Item, ItemStr, Tokens};
+use crate::tokens::{ItemStr, Tokens};
 
 /// Trait for types that can be formatted in-place into a token stream.
 ///
@@ -48,13 +48,28 @@ where
     fn format_into(self, tokens: &mut Tokens<L>);
 }
 
+/// Formatting a reference to a token stream is exactly the same as extending
+/// the token stream with a copy of the stream being formatted.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+///
+/// let a: Tokens = quote!(foo bar);
+///
+/// let result = quote!($a baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
 impl<L> FormatInto<L> for Tokens<L>
 where
     L: Lang,
 {
     #[inline]
     fn format_into(self, tokens: &mut Self) {
-        tokens.extend(self);
+        tokens.extend_by_owned(self);
     }
 }
 
@@ -80,7 +95,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.extend(self.iter().cloned());
+        tokens.extend_by_ref(self);
     }
 }
 
@@ -196,7 +211,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::literal(ItemStr::from(self)));
+        tokens.literal(self);
     }
 }
 
@@ -221,7 +236,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::literal(ItemStr::from(self)));
+        tokens.literal(self);
     }
 }
 
@@ -247,7 +262,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::literal(ItemStr::from(self)));
+        tokens.literal(self);
     }
 }
 
@@ -273,7 +288,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::literal(ItemStr::from(self)));
+        tokens.literal(self);
     }
 }
 
@@ -300,7 +315,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.item(Item::literal(ItemStr::from(self.clone())));
+        tokens.literal(self.as_ref());
     }
 }
 
@@ -325,9 +340,9 @@ where
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         if let Some(s) = self.as_str() {
-            tokens.item(Item::literal(ItemStr::static_(s)));
+            tokens.literal(ItemStr::static_(s));
         } else {
-            tokens.item(Item::literal(ItemStr::from(self.to_string())));
+            tokens.literal(self.to_string());
         }
     }
 }
@@ -385,7 +400,7 @@ where
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         match self {
-            Cow::Borrowed(b) => tokens.item(Item::literal(ItemStr::from(b))),
+            Cow::Borrowed(b) => tokens.literal(b),
             Cow::Owned(o) => o.format_into(tokens),
         }
     }
@@ -414,7 +429,7 @@ where
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
         match self {
-            Cow::Borrowed(b) => tokens.item(Item::literal(ItemStr::from(b))),
+            Cow::Borrowed(b) => tokens.literal(b),
             Cow::Owned(o) => o.format_into(tokens),
         }
     }
