@@ -4,7 +4,7 @@ use alloc::string::String;
 
 use crate::fmt;
 use crate::fmt::config::{Config, Indentation};
-use crate::fmt::cursor;
+use crate::fmt::cursor::{self, Cursor};
 use crate::lang::Lang;
 use crate::tokens::{Item, Kind};
 
@@ -77,15 +77,16 @@ impl<'a> Formatter<'a> {
     /// Format the given stream of tokens.
     pub(crate) fn format_items<L>(
         &mut self,
-        items: &[(usize, Item<L>)],
+        lang: &[L::Item],
+        items: &[Item],
         config: &L::Config,
         format: &L::Format,
     ) -> fmt::Result<()>
     where
         L: Lang,
     {
-        let mut cursor = cursor::Cursor::new(items);
-        self.format_cursor(&mut cursor, config, format, false)
+        let mut cursor = Cursor::new(lang, items);
+        self.format_cursor::<L>(&mut cursor, config, format, false)
     }
 
     /// Forcibly write a line ending, at the end of a file.
@@ -142,7 +143,7 @@ impl<'a> Formatter<'a> {
     /// Internal function for formatting.
     fn format_cursor<L>(
         &mut self,
-        cursor: &mut cursor::Cursor<'_, L>,
+        cursor: &mut Cursor<'_, L::Item>,
         config: &L::Config,
         format: &L::Format,
         end_on_close_quote: bool,
@@ -164,10 +165,9 @@ impl<'a> Formatter<'a> {
                 end_on_eval,
             } = head;
 
-            match &item.kind {
-                Kind::Register(..) => (),
+            match item.kind {
                 Kind::Indentation(0) => (),
-                Kind::Literal(literal) => {
+                Kind::Literal(ref literal) => {
                     if *in_quote {
                         L::write_quoted(self, literal)?;
                     } else {
@@ -175,7 +175,7 @@ impl<'a> Formatter<'a> {
                     }
                 }
                 Kind::OpenQuote(e) if !*in_quote => {
-                    *has_eval = *e;
+                    *has_eval = e;
                     *in_quote = true;
                     L::open_quote(self, config, format, *has_eval)?;
                 }
@@ -184,7 +184,7 @@ impl<'a> Formatter<'a> {
                 //
                 // Evaluating quotes are not supported.
                 Kind::OpenQuote(false) if *in_quote => {
-                    self.quoted_quote(cursor, &mut buf, config, format)?;
+                    self.quoted_quote::<L>(cursor, &mut buf, config, format)?;
                     L::write_quoted(self, &buf)?;
                     buf.clear();
                 }
@@ -196,7 +196,7 @@ impl<'a> Formatter<'a> {
                     L::close_quote(self, config, format, mem::take(has_eval))?;
                 }
                 Kind::Lang(lang) => {
-                    lang.format(self, config, format)?;
+                    cursor.lang(lang)?.format(self, config, format)?;
                 }
                 // whitespace below
                 Kind::Push => {
@@ -209,7 +209,7 @@ impl<'a> Formatter<'a> {
                     self.space();
                 }
                 Kind::Indentation(n) => {
-                    self.indentation(*n);
+                    self.indentation(n);
                 }
                 Kind::OpenEval if *in_quote => {
                     if cursor.peek::<cursor::Literal>() && cursor.peek1::<cursor::CloseEval>() {
@@ -251,7 +251,7 @@ impl<'a> Formatter<'a> {
     /// Support for evaluating an interior quote and returning it as a string.
     fn quoted_quote<L>(
         &mut self,
-        cursor: &mut cursor::Cursor<'_, L>,
+        cursor: &mut Cursor<'_, L::Item>,
         buf: &mut String,
         config: &L::Config,
         format: &L::Format,
@@ -264,7 +264,7 @@ impl<'a> Formatter<'a> {
         let mut w = FmtWriter::new(buf);
         let out = &mut Formatter::new(&mut w, self.config);
         L::open_quote(out, config, format, false)?;
-        out.format_cursor(cursor, config, format, true)?;
+        out.format_cursor::<L>(cursor, config, format, true)?;
         L::close_quote(out, config, format, false)?;
         Ok(())
     }

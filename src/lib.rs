@@ -992,89 +992,57 @@ pub use self::tokens::Tokens;
 /// Private module used for macros.
 #[doc(hidden)]
 pub mod __priv {
-    use alloc::boxed::Box;
-
     use crate::lang::Lang;
     use crate::tokens::{from_fn, FormatInto};
     use crate::tokens::{Item, ItemStr};
 
     #[inline]
-    pub const fn static_<L>(string: &'static str) -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn static_(string: &'static str) -> Item {
         Item::static_(string)
     }
 
     #[inline]
-    pub const fn literal<L>(string: ItemStr) -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn literal(string: ItemStr) -> Item {
         Item::literal(string)
     }
 
     #[inline]
-    pub const fn indentation<L>(level: i16) -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn indentation(level: i16) -> Item {
         Item::indentation(level)
     }
 
     #[inline]
-    pub const fn push<L>() -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn push() -> Item {
         Item::push()
     }
 
     #[inline]
-    pub const fn line<L>() -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn line() -> Item {
         Item::line()
     }
 
     #[inline]
-    pub const fn space<L>() -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn space() -> Item {
         Item::space()
     }
 
     #[inline]
-    pub const fn open_quote<L>(is_interpolation: bool) -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn open_quote(is_interpolation: bool) -> Item {
         Item::open_quote(is_interpolation)
     }
 
     #[inline]
-    pub const fn close_quote<L>() -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn close_quote() -> Item {
         Item::close_quote()
     }
 
     #[inline]
-    pub const fn open_eval<L>() -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn open_eval() -> Item {
         Item::open_eval()
     }
 
     #[inline]
-    pub const fn close_eval<L>() -> Item<L>
-    where
-        L: Lang,
-    {
+    pub const fn close_eval() -> Item {
         Item::close_eval()
     }
 
@@ -1090,7 +1058,7 @@ pub mod __priv {
         L: Lang,
     {
         from_fn(|t| {
-            t.lang_item(Box::new(item));
+            t.lang_item(item);
         })
     }
 
@@ -1106,7 +1074,7 @@ pub mod __priv {
         L: Lang,
     {
         from_fn(|t| {
-            t.lang_item_register(Box::new(item));
+            t.lang_item_register(item);
         })
     }
 }

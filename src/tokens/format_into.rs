@@ -48,13 +48,28 @@ where
     fn format_into(self, tokens: &mut Tokens<L>);
 }
 
+/// Formatting a reference to a token stream is exactly the same as extending
+/// the token stream with a copy of the stream being formatted.
+///
+/// # Examples
+///
+/// ```
+/// use genco::prelude::*;
+///
+/// let a: Tokens = quote!(foo bar);
+///
+/// let result = quote!($a baz);
+///
+/// assert_eq!("foo bar baz", result.to_string()?);
+/// # Ok::<_, genco::fmt::Error>(())
+/// ```
 impl<L> FormatInto<L> for Tokens<L>
 where
     L: Lang,
 {
     #[inline]
     fn format_into(self, tokens: &mut Self) {
-        tokens.extend(self);
+        tokens.extend_by_owned(self);
     }
 }
 
@@ -80,7 +95,7 @@ where
 {
     #[inline]
     fn format_into(self, tokens: &mut Tokens<L>) {
-        tokens.extend(self.iter().cloned());
+        tokens.extend_by_ref(self);
     }
 }
 
