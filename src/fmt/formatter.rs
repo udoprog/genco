@@ -14,10 +14,11 @@ static SPACES: &str = "                                                         
 static TABS: &str =
     "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t";
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 enum Whitespace {
-    Initial,
+    #[default]
     None,
+    Initial,
     Push,
     Line,
 }
@@ -34,12 +35,6 @@ impl Whitespace {
             Self::Line => Some(2),
             Self::None => None,
         }
-    }
-}
-
-impl Default for Whitespace {
-    fn default() -> Self {
-        Self::None
     }
 }
 
