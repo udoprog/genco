@@ -171,34 +171,42 @@ macro_rules! impl_lang {
                 config: &<$lang as $crate::lang::Lang>::Config,
                 format: &<$lang as $crate::lang::Lang>::Format,
             ) -> $crate::fmt::Result {
-                match &self.kind {
-                    $(AnyKind::$name(lang) => lang.format(out, config, format),)*
+                match self.kind {
+                    $(AnyKind::$name(ref lang) => lang.format(out, config, format),)*
                 }
             }
         }
 
         $(
             impl $crate::tokens::FormatInto<$lang> for $ty {
+                #[inline]
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::__priv::item::<$lang>(self.into()));
+                    tokens.append($crate::__priv::item::<$lang>(
+                        <<$lang as $crate::lang::Lang>::Item as ::core::convert::From<$ty>>::from(self)
+                    ));
                 }
             }
 
             impl<'a> $crate::tokens::FormatInto<$lang> for &'a $ty {
+                #[inline]
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::__priv::item::<$lang>(self.clone().into()));
+                    $crate::tokens::FormatInto::<$lang>::format_into(::core::clone::Clone::clone(self), tokens)
                 }
             }
 
             impl $crate::tokens::Register<$lang> for $ty {
+                #[inline]
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::__priv::register::<$lang>(self.into()));
+                    tokens.append($crate::__priv::register::<$lang>(
+                        <<$lang as $crate::lang::Lang>::Item as ::core::convert::From<$ty>>::from(self)
+                    ));
                 }
             }
 
             impl<'a> $crate::tokens::Register<$lang> for &'a $ty {
+                #[inline]
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
-                    tokens.append($crate::__priv::register::<$lang>(self.clone().into()));
+                    $crate::tokens::Register::<$lang>::register(::core::clone::Clone::clone(self), tokens)
                 }
             }
 
