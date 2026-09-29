@@ -26,7 +26,6 @@ smallvec = "1.4.0"
 
 [dev-dependencies]
 anyhow = "1.0.31"
-rand = "0.7.3"
 
 [workspace]
 members = ["genco-macros"]
