@@ -252,7 +252,10 @@ where
     }
 }
 
-/// Format a doc comment where each line is preceeded by `///`.
+/// Format an XML doc comment where each line is preceeded by `///`.
+///
+/// Despite its name, this does not produce a `/* */` block comment. Line breaks
+/// in the input start a new `///` line.
 ///
 /// # Examples
 ///
@@ -283,7 +286,9 @@ where
     BlockComment(comment)
 }
 
-/// Format a doc comment where each line is preceeded by `//`.
+/// Format a comment where each line is preceeded by `//`.
+///
+/// Line breaks in the input start a new `//` line.
 ///
 /// # Examples
 ///

@@ -1,8 +1,9 @@
+use crate::lang::comment::for_each_line;
 use crate::lang::Csharp;
 use crate::tokens;
 use crate::Tokens;
 
-/// Format a doc comment where each line is preceeded by `//`.
+/// Format a comment where each line is preceeded by `//`.
 ///
 /// This struct is created by the [comment][super::comment()] function.
 pub struct Comment<T>(pub(super) T);
@@ -14,10 +15,12 @@ where
 {
     fn format_into(self, tokens: &mut Tokens<Csharp>) {
         for line in self.0 {
-            tokens.push();
-            tokens.append(tokens::static_literal("//"));
-            tokens.space();
-            tokens.append(line.into());
+            for_each_line(line.into(), |line| {
+                tokens.push();
+                tokens.append(tokens::static_literal("//"));
+                tokens.space();
+                tokens.append(line);
+            });
         }
     }
 }

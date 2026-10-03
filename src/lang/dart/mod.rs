@@ -261,6 +261,8 @@ where
 
 /// Format a doc comment where each line is preceeded by `///`.
 ///
+/// Line breaks in the input start a new `///` line.
+///
 /// # Examples
 ///
 /// ```

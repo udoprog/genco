@@ -248,6 +248,9 @@ where
 
 /// Format a block comment, starting with `/**`, and ending in `*/`.
 ///
+/// Line breaks in the input start a new ` * ` line, and `*/` in the input is
+/// written as `*&#47;` so that it doesn't end the comment early.
+///
 /// # Examples
 ///
 /// ```
