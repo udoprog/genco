@@ -285,13 +285,22 @@ where
 
     /// Check if tokens contain no items.
     ///
+    /// Language items that are only [registered] are not counted, since they
+    /// don't render in place. Use [`iter_lang()`] to inspect them.
+    ///
     /// ```
     /// use genco::prelude::*;
     ///
     /// let tokens: Tokens<()> = quote!();
-    ///
     /// assert!(tokens.is_empty());
+    ///
+    /// let tokens: rust::Tokens = quote!($(register(rust::import("std::fmt", "Write"))));
+    /// assert!(tokens.is_empty());
+    /// assert_eq!(tokens.iter_lang().count(), 1);
     /// ```
+    ///
+    /// [registered]: Self::register
+    /// [`iter_lang()`]: Self::iter_lang
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }
@@ -880,6 +889,8 @@ where
     }
 }
 
+// Eq, Ord and Hash must agree: all compare resolved items and then every
+// language item, including register-only ones.
 impl<L> PartialEq<Tokens<L>> for Tokens<L>
 where
     L: Lang,
@@ -887,7 +898,7 @@ where
 {
     #[inline]
     fn eq(&self, other: &Tokens<L>) -> bool {
-        self.items == other.items
+        self.iter().eq(other.iter()) && self.lang == other.lang
     }
 }
 
@@ -955,7 +966,10 @@ where
 {
     #[inline]
     fn partial_cmp(&self, other: &Tokens<L>) -> Option<Ordering> {
-        self.items.iter().partial_cmp(other.items.iter())
+        match self.iter().partial_cmp(other.iter())? {
+            Ordering::Equal => self.lang.partial_cmp(&other.lang),
+            ordering => Some(ordering),
+        }
     }
 }
 
@@ -966,7 +980,9 @@ where
 {
     #[inline]
     fn cmp(&self, other: &Tokens<L>) -> Ordering {
-        self.items.iter().cmp(other.items.iter())
+        self.iter()
+            .cmp(other.iter())
+            .then_with(|| self.lang.cmp(&other.lang))
     }
 }
 
@@ -1105,7 +1121,12 @@ where
     where
         H: hash::Hasher,
     {
-        self.items.hash(state);
+        state.write_usize(self.items.len());
+
+        for item in self.iter() {
+            item.hash(state);
+        }
+
         self.lang.hash(state);
     }
 }
