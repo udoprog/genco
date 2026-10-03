@@ -151,13 +151,20 @@ impl<'a> Formatter<'a> {
         let mut buf = String::new();
         let mut stack = smallvec::SmallVec::<[Frame; 4]>::new();
 
-        stack.push(Frame::default());
+        // A nested quote (`end_on_close_quote`) starts inside the quote being
+        // buffered and ends on its matching close.
+        stack.push(Frame {
+            in_quote: end_on_close_quote,
+            end_on_close_quote,
+            ..Frame::default()
+        });
 
         while let (Some(item), Some(head)) = (cursor.next(), stack.last_mut()) {
             let Frame {
                 in_quote,
                 has_eval,
                 end_on_eval,
+                end_on_close_quote,
             } = head;
 
             match item.kind {
@@ -183,7 +190,7 @@ impl<'a> Formatter<'a> {
                     L::write_quoted(self, &buf)?;
                     buf.clear();
                 }
-                Kind::CloseQuote if end_on_close_quote => {
+                Kind::CloseQuote if *end_on_close_quote => {
                     return Ok(());
                 }
                 Kind::CloseQuote if *in_quote => {
@@ -215,9 +222,8 @@ impl<'a> Formatter<'a> {
                         L::start_string_eval(self, config, format)?;
 
                         stack.push(Frame {
-                            in_quote: false,
-                            has_eval: false,
                             end_on_eval: true,
+                            ..Frame::default()
                         });
                     }
                 }
@@ -240,6 +246,7 @@ impl<'a> Formatter<'a> {
             in_quote: bool,
             has_eval: bool,
             end_on_eval: bool,
+            end_on_close_quote: bool,
         }
     }
 
