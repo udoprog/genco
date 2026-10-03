@@ -29,6 +29,8 @@ pub mod python;
 pub mod rust;
 pub mod swift;
 
+mod comment;
+
 pub use self::c::C;
 pub use self::csharp::Csharp;
 pub use self::dart::Dart;

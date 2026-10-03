@@ -1,3 +1,4 @@
+use crate::lang::comment::for_each_line;
 use crate::lang::Dart;
 use crate::tokens;
 use crate::Tokens;
@@ -14,10 +15,12 @@ where
 {
     fn format_into(self, tokens: &mut Tokens<Dart>) {
         for line in self.0 {
-            tokens.push();
-            tokens.append(tokens::static_literal("///"));
-            tokens.space();
-            tokens.append(line.into());
+            for_each_line(line.into(), |line| {
+                tokens.push();
+                tokens.append(tokens::static_literal("///"));
+                tokens.space();
+                tokens.append(line);
+            });
         }
     }
 }
