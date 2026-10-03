@@ -44,7 +44,7 @@ use crate::tokens::{FormatInto, Tokens};
 /// let tokens: python::Tokens = quote!($[str](Hello $[const](quoted("World 😊"))));
 ///
 /// assert_eq!(
-///     "\"Hello \\\"World \\U0001f60a\\\"\"",
+///     "\"Hello \\\"World \\\\U0001f60a\\\"\"",
 ///     tokens.to_string()?,
 /// );
 /// # Ok::<_, genco::fmt::Error>(())
