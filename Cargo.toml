@@ -15,7 +15,7 @@ categories = ["template-engine"]
 
 [features]
 default = ["std", "alloc"]
-std = ["relative-path/std"]
+std = ["alloc", "relative-path/std"]
 alloc = []
 
 [dependencies]
