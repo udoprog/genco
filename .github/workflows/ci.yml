@@ -20,6 +20,7 @@ jobs:
     - uses: dtolnay/rust-toolchain@1.88
     - run: cargo build --workspace --lib
     - run: cargo build --workspace --lib --no-default-features --features alloc
+    - run: cargo build --workspace --lib --no-default-features --features std
 
   test:
     runs-on: ubuntu-latest
