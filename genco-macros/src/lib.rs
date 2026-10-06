@@ -4,7 +4,6 @@
 
 #![recursion_limit = "256"]
 #![allow(clippy::type_complexity)]
-#![cfg_attr(proc_macro_span, feature(proc_macro_span))]
 
 extern crate proc_macro;
 
@@ -37,7 +36,6 @@ impl Default for Ctxt {
 mod ast;
 mod cursor;
 mod encoder;
-mod fake;
 mod quote;
 mod quote_fn;
 mod quote_in;

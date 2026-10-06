@@ -31,30 +31,6 @@ This project solves the following language-specific concerns:
 
 <br>
 
-To support line changes during [whitespace detection], we depend on span
-information which was made available in Rust `1.88`. Before that, we rely on
-a nightly [`proc_macro_span` feature] to work.
-
-*Prior to this version of Rust* if you want fully functional whitespace
-detection you must build and run projects using genco with a `nightly`
-compiler. This is important for whitespace-sensitive languages like python.
-
-You can try the difference between:
-
-```bash
-cargo run --example rust
-```
-
-And:
-
-```bash
-cargo +nightly run --example rust
-```
-
-[`proc_macro_span` feature]: https://github.com/rust-lang/rust/issues/54725
-
-<br>
-
 ## Supported Languages
 
 The following are languages which have built-in support in genco.
@@ -83,6 +59,15 @@ The following are languages which have built-in support in genco.
 * [🐍 <b>Python</b>][python]<br>
   <small>[Example][python-example]</small>
 
+* [🏝️ <b>Kotlin</b>][kotlin]<br>
+  <small>[Example][kotlin-example]</small>
+
+* [🐦 <b>Swift</b>][swift]<br>
+  <small>[Example][swift-example]</small>
+
+* [❄️ <b>Nix</b>][nix]<br>
+  <small>[Example][nix-example]</small>
+
 * [📄 <b>HTML</b>][html]<br>
   <small>[Example][html-example]</small>
 
@@ -91,7 +76,7 @@ The following are languages which have built-in support in genco.
 You can run one of the examples by:
 
 ```bash
-cargo +nightly run --example rust
+cargo run --example rust
 ```
 
 <br>
@@ -150,6 +135,10 @@ fn main() {
 [java]: <https://docs.rs/genco/latest/genco/lang/java/index.html>
 [js-example]: <https://github.com/udoprog/genco/blob/master/examples/js.rs>
 [js]: <https://docs.rs/genco/latest/genco/lang/js/index.html>
+[kotlin-example]: <https://github.com/udoprog/genco/blob/master/examples/kotlin.rs>
+[kotlin]: <https://docs.rs/genco/latest/genco/lang/kotlin/index.html>
+[nix-example]: <https://github.com/udoprog/genco/blob/master/examples/nix.rs>
+[nix]: <https://docs.rs/genco/latest/genco/lang/nix/index.html>
 [Open an issue!]: <https://github.com/udoprog/genco/issues/new>
 [python-example]: <https://github.com/udoprog/genco/blob/master/examples/python.rs>
 [python]: <https://docs.rs/genco/latest/genco/lang/python/index.html>
@@ -157,5 +146,7 @@ fn main() {
 [rust-example]: <https://github.com/udoprog/genco/blob/master/examples/rust.rs>
 [rust]: <https://docs.rs/genco/latest/genco/lang/rust/index.html>
 [solve namespace conflicts]: <https://docs.rs/genco/latest/genco/lang/csharp/fn.import.html>
+[swift-example]: <https://github.com/udoprog/genco/blob/master/examples/swift.rs>
+[swift]: <https://docs.rs/genco/latest/genco/lang/swift/index.html>
 [token streams]: <https://docs.rs/genco/latest/genco/tokens/struct.Tokens.html>
 [whitespace detection]: <https://docs.rs/genco/latest/genco/macro.quote.html#whitespace-detection>

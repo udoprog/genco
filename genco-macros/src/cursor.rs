@@ -1,6 +1,35 @@
 use proc_macro2::Span;
 
-use crate::fake::LineColumn;
+/// Internal line-column abstraction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LineColumn {
+    /// The line.
+    pub(crate) line: usize,
+    /// The column.
+    pub(crate) column: usize,
+}
+
+impl LineColumn {
+    /// The start of the given span.
+    pub(crate) fn start(span: Span) -> Self {
+        let span = span.unwrap().start();
+
+        Self {
+            line: span.line(),
+            column: span.column(),
+        }
+    }
+
+    /// The end of the given span.
+    pub(crate) fn end(span: Span) -> Self {
+        let span = span.unwrap().end();
+
+        Self {
+            line: span.line(),
+            column: span.column(),
+        }
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Cursor {
@@ -13,9 +42,22 @@ pub(crate) struct Cursor {
 }
 
 impl Cursor {
-    /// Construt a cursor.
-    pub(crate) fn new(span: Span, start: LineColumn, end: LineColumn) -> Cursor {
-        Self { span, start, end }
+    /// Construct a cursor covering the given span.
+    pub(crate) fn from_span(span: Span) -> Cursor {
+        Self {
+            span,
+            start: LineColumn::start(span),
+            end: LineColumn::end(span),
+        }
+    }
+
+    /// Construct a cursor from the start of `a` to the end of `b`.
+    pub(crate) fn join(a: Span, b: Span) -> Cursor {
+        Self {
+            span: a.join(b).unwrap_or(a),
+            start: LineColumn::start(a),
+            end: LineColumn::end(b),
+        }
     }
 
     /// Calculate the start character for the cursor.
