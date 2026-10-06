@@ -83,6 +83,9 @@ The following are languages which have built-in support in genco.
 * [🐍 <b>Python</b>][python]<br>
   <small>[Example][python-example]</small>
 
+* [📄 <b>HTML</b>][html]<br>
+  <small>[Example][html-example]</small>
+
 <small>Is your favorite language missing? <b>[Open an issue!]</b></small>
 
 You can run one of the examples by:
@@ -137,6 +140,8 @@ fn main() {
 [dart]: <https://docs.rs/genco/latest/genco/lang/dart/index.html>
 [go-example]: <https://github.com/udoprog/genco/blob/master/examples/go.rs>
 [go]: <https://docs.rs/genco/latest/genco/lang/go/index.html>
+[html-example]: <https://github.com/udoprog/genco/blob/master/examples/html.rs>
+[html]: <https://docs.rs/genco/latest/genco/lang/html/index.html>
 [impl_lang!]: <https://docs.rs/genco/latest/genco/macro.impl_lang.html>
 [import statements]: <https://docs.rs/genco/latest/genco/macro.quote.html#imports>
 [indentation is meaningful]: <https://docs.python.org/3/faq/design.html#why-does-python-use-indentation-for-grouping-of-statements>
