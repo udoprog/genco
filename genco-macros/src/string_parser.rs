@@ -10,7 +10,7 @@ use syn::token;
 use syn::Result;
 
 use crate::ast::LiteralName;
-use crate::fake::{Buf, LineColumn};
+use crate::cursor::{Cursor, LineColumn};
 use crate::quote::parse_internal_function;
 use crate::requirements::Requirements;
 use crate::Ctxt;
@@ -209,26 +209,24 @@ impl<'a> Encoder<'a> {
 
 pub struct StringParser<'a> {
     cx: &'a Ctxt,
-    buf: &'a Buf,
     start: LineColumn,
     end: LineColumn,
     span: Span,
 }
 
 impl<'a> StringParser<'a> {
-    pub(crate) fn new(cx: &'a Ctxt, buf: &'a Buf, span: Span) -> syn::Result<Self> {
-        let cursor = buf.cursor(span)?;
+    pub(crate) fn new(cx: &'a Ctxt, span: Span) -> Self {
+        let cursor = Cursor::from_span(span);
 
-        Ok(Self {
+        Self {
             cx,
-            buf,
             // Note: adjusting span since we expect the quoted string to be
             // withing a block, where the interior span is one character pulled
             // in in each direction.
             start: adjust_start(cursor.start),
             end: adjust_end(cursor.end),
             span,
-        })
+        }
     }
 
     pub(crate) fn parse(self, input: ParseStream) -> Result<(Options, Requirements, TokenStream)> {
@@ -239,8 +237,8 @@ impl<'a> StringParser<'a> {
             if input.peek(syn::Token![$]) && input.peek2(syn::Token![$]) {
                 let start = input.parse::<syn::Token![$]>()?;
                 let escape = input.parse::<syn::Token![$]>()?;
-                let start = self.buf.cursor(start.span())?;
-                let escape = self.buf.cursor(escape.span())?;
+                let start = Cursor::from_span(start.span());
+                let escape = Cursor::from_span(escape.span());
                 encoder.encode_char('$', start.start, escape.end)?;
                 continue;
             }
@@ -249,8 +247,8 @@ impl<'a> StringParser<'a> {
                 if let Some((name, content, [start, end])) = parse_internal_function(input)? {
                     match (name.as_literal_name(), content) {
                         (LiteralName::Ident("const"), Some(content)) => {
-                            let start = self.buf.cursor(start)?;
-                            let end = self.buf.cursor(end)?;
+                            let start = Cursor::from_span(start);
+                            let end = Cursor::from_span(end);
 
                             // Compile-time string optimization. A single,
                             // enclosed literal string can be added to the
@@ -278,8 +276,8 @@ impl<'a> StringParser<'a> {
 
                     if !input.peek(token::Paren) {
                         let ident = input.parse::<syn::Ident>()?;
-                        let start = self.buf.cursor(start.span())?;
-                        let end = self.buf.cursor(ident.span())?.end;
+                        let start = Cursor::from_span(start.span());
+                        let end = Cursor::from_span(ident.span()).end;
                         encoder.eval_ident(&ident, start.start, Some(end))?;
                         continue;
                     }
@@ -288,11 +286,11 @@ impl<'a> StringParser<'a> {
                     let end = syn::parenthesized!(content in input).span;
 
                     let (req, stream) = crate::quote::Quote::new(self.cx)
-                        .with_span(content.span())?
+                        .with_span(content.span())
                         .parse(&content)?;
                     requirements.merge_with(req);
-                    let start = self.buf.cursor(start.span())?;
-                    let end = self.buf.cursor(end.span())?;
+                    let start = Cursor::from_span(start.span());
+                    let end = Cursor::from_span(end.span());
                     encoder.eval_stream(stream, start.start, Some(end.end))?;
                 }
 
@@ -300,7 +298,7 @@ impl<'a> StringParser<'a> {
             }
 
             let tt = input.parse::<TokenTree>()?;
-            let cursor = self.buf.cursor(tt.span())?;
+            let cursor = Cursor::from_span(tt.span());
             encoder.extend_tt(&tt, cursor.start, Some(cursor.end))?;
         }
 

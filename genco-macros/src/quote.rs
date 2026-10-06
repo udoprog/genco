@@ -4,9 +4,8 @@ use syn::spanned::Spanned;
 use syn::{token, Result, Token};
 
 use crate::ast::{Ast, Control, Delimiter, LiteralName, MatchArm, Name};
+use crate::cursor::{Cursor, LineColumn};
 use crate::encoder::Encoder;
-use crate::fake::Buf;
-use crate::fake::LineColumn;
 use crate::requirements::Requirements;
 use crate::string_parser::StringParser;
 use crate::Ctxt;
@@ -26,8 +25,6 @@ pub(crate) struct Quote<'a> {
     span_end: Option<LineColumn>,
     /// If true, only parse until a comma (`,`) is encountered.
     until_comma: bool,
-    /// Buffer,
-    buf: Buf,
 }
 
 impl<'a> Quote<'a> {
@@ -38,7 +35,6 @@ impl<'a> Quote<'a> {
             span_start: None,
             span_end: None,
             until_comma: false,
-            buf: Buf::default(),
         }
     }
 
@@ -49,17 +45,16 @@ impl<'a> Quote<'a> {
             span_start: None,
             span_end: None,
             until_comma: true,
-            buf: Buf::default(),
         }
     }
 
     /// Override the default starting span.
-    pub(crate) fn with_span(mut self, span: Span) -> syn::Result<Self> {
-        return Ok(Self {
-            span_start: Some(adjust_start(self.buf.start(span)?)),
-            span_end: Some(adjust_end(self.buf.end(span)?)),
+    pub(crate) fn with_span(self, span: Span) -> Self {
+        return Self {
+            span_start: Some(adjust_start(LineColumn::start(span))),
+            span_end: Some(adjust_end(LineColumn::end(span))),
             ..self
-        });
+        };
 
         fn adjust_start(start: LineColumn) -> LineColumn {
             LineColumn {
@@ -152,7 +147,7 @@ impl<'a> Quote<'a> {
             let paren = syn::parenthesized!(content in input);
 
             let (r, join) = Quote::new(self.cx)
-                .with_span(paren.span.span())?
+                .with_span(paren.span.span())
                 .parse(&content)?;
             req.merge_with(r);
 
@@ -220,7 +215,7 @@ impl<'a> Quote<'a> {
                 let paren = syn::parenthesized!(block in body);
 
                 Quote::new(self.cx)
-                    .with_span(paren.span.span())?
+                    .with_span(paren.span.span())
                     .parse(&block)?
             } else {
                 let parser = Quote::new_until_comma(self.cx);
@@ -291,7 +286,7 @@ impl<'a> Quote<'a> {
         // Single identifier without quoting.
         if !input.peek(token::Paren) {
             let ident = input.parse::<syn::Ident>()?;
-            let cursor = self.buf.join(start, ident.span())?;
+            let cursor = Cursor::join(start, ident.span());
 
             encoder.encode(cursor, Ast::EvalIdent { ident })?;
             return Ok(());
@@ -300,7 +295,7 @@ impl<'a> Quote<'a> {
         let scope;
         let outer = syn::parenthesized!(scope in input);
 
-        let cursor = self.buf.join(start, outer.span.span())?;
+        let cursor = Cursor::join(start, outer.span.span());
 
         let ast = if scope.peek(Token![if]) {
             let (req, ast) = self.parse_condition(&scope)?;
@@ -349,7 +344,7 @@ impl<'a> Quote<'a> {
                 let [a] = input.parse::<Token![$]>()?.spans;
                 let [b] = input.parse::<Token![$]>()?.spans;
 
-                let cursor = self.buf.join(a, b)?;
+                let cursor = Cursor::join(a, b);
                 let mut punct = Punct::new('$', Spacing::Joint);
                 punct.set_span(cursor.span);
                 encoder.encode(cursor, Ast::Tree { tt: punct.into() })?;
@@ -365,12 +360,12 @@ impl<'a> Quote<'a> {
                         ));
                     }
                     (LiteralName::Ident("str"), Some(content)) => {
-                        let parser = StringParser::new(self.cx, &self.buf, end)?;
+                        let parser = StringParser::new(self.cx, end);
 
                         let (options, r, stream) = parser.parse(&content)?;
                         encoder.requirements.merge_with(r);
 
-                        let cursor = self.buf.join(start, end)?;
+                        let cursor = Cursor::join(start, end);
 
                         encoder.encode(
                             cursor,
@@ -395,7 +390,7 @@ impl<'a> Quote<'a> {
                             ));
                         }
 
-                        let cursor = self.buf.join(start.span(), end.span())?;
+                        let cursor = Cursor::join(start.span(), end.span());
                         encoder.encode(cursor, Ast::Control { control })?;
                     }
                     (LiteralName::Ident(string), _) => {
@@ -418,7 +413,7 @@ impl<'a> Quote<'a> {
 
             if input.peek(syn::LitStr) {
                 let s = input.parse::<syn::LitStr>()?;
-                let cursor = self.buf.cursor(s.span())?;
+                let cursor = Cursor::from_span(s.span());
                 encoder.encode(cursor, Ast::Quoted { s })?;
                 continue;
             }
@@ -464,7 +459,7 @@ impl<'a> Quote<'a> {
             }
 
             let tt: TokenTree = input.parse()?;
-            let cursor = self.buf.cursor(tt.span())?;
+            let cursor = Cursor::from_span(tt.span());
             encoder.encode(cursor, Ast::Tree { tt })?;
         }
 
@@ -479,7 +474,7 @@ impl<'a> Quote<'a> {
         input: ParseStream,
         group_depth: usize,
     ) -> Result<()> {
-        let cursor = self.buf.cursor(span)?;
+        let cursor = Cursor::from_span(span);
 
         encoder.encode(cursor.first_character(), Ast::DelimiterOpen { delimiter })?;
 

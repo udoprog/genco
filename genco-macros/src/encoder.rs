@@ -1,6 +1,5 @@
 use crate::ast::{Ast, Control, ControlKind, Delimiter, MatchArm};
-use crate::cursor::Cursor;
-use crate::fake::LineColumn;
+use crate::cursor::{Cursor, LineColumn};
 use crate::requirements::Requirements;
 use crate::static_buffer::StaticBuffer;
 use crate::Ctxt;
@@ -372,8 +371,8 @@ impl<'a> Encoder<'a> {
         Ok(())
     }
 
-    /// If we are in a nightly genco, insert indentation and spacing if
-    /// appropriate in the output token stream.
+    /// Insert indentation and spacing if appropriate in the output token
+    /// stream.
     fn tokenize_whitespace(
         &mut self,
         from: LineColumn,
