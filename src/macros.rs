@@ -180,6 +180,8 @@ macro_rules! impl_lang {
         $(
             impl $crate::tokens::FormatInto<$lang> for $ty {
                 #[inline]
+                // An uninhabited item type makes these bodies unreachable.
+                #[allow(unreachable_code, unused_variables)]
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
                     tokens.append($crate::__priv::item::<$lang>(
                         <<$lang as $crate::lang::Lang>::Item as ::core::convert::From<$ty>>::from(self)
@@ -189,6 +191,7 @@ macro_rules! impl_lang {
 
             impl<'a> $crate::tokens::FormatInto<$lang> for &'a $ty {
                 #[inline]
+                #[allow(unreachable_code, unused_variables)]
                 fn format_into(self, tokens: &mut $crate::Tokens<$lang>) {
                     $crate::tokens::FormatInto::<$lang>::format_into(::core::clone::Clone::clone(self), tokens)
                 }
@@ -196,6 +199,7 @@ macro_rules! impl_lang {
 
             impl $crate::tokens::Register<$lang> for $ty {
                 #[inline]
+                #[allow(unreachable_code, unused_variables)]
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
                     tokens.append($crate::__priv::register::<$lang>(
                         <<$lang as $crate::lang::Lang>::Item as ::core::convert::From<$ty>>::from(self)
@@ -205,6 +209,7 @@ macro_rules! impl_lang {
 
             impl<'a> $crate::tokens::Register<$lang> for &'a $ty {
                 #[inline]
+                #[allow(unreachable_code, unused_variables)]
                 fn register(self, tokens: &mut $crate::Tokens<$lang>) {
                     $crate::tokens::Register::<$lang>::register(::core::clone::Clone::clone(self), tokens)
                 }

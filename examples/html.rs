@@ -2,13 +2,17 @@ use genco::fmt;
 use genco::prelude::*;
 
 fn main() -> anyhow::Result<()> {
+    let url = "https://example.com/?a=1&b=2";
+    let message = "Text like <b>this</b> & that is escaped";
+
     let tokens: html::Tokens = quote! {
         <html>
             <head>
                 <title>Example</title>
             </head>
             <body>
-                <p>This contains stuff that needs to be escaped like <></p>
+                <a href=$(quoted(url))>Link</a>
+                <p>$(html::text(message))</p>
             </body>
         </html>
     };
