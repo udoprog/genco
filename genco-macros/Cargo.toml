@@ -1,6 +1,6 @@
 [package]
 name = "genco-macros"
-version = "0.19.0"
+version = "0.20.0"
 authors = ["John-John Tedro <udoprog@tedro.se>"]
 edition = "2018"
 rust-version = "1.88"
@@ -9,7 +9,6 @@ A whitespace-aware quasiquoter for beautiful code generation.
 """
 documentation = "https://docs.rs/genco"
 readme = "README.md"
-homepage = "https://github.com/udoprog/genco"
 repository = "https://github.com/udoprog/genco"
 license = "MIT OR Apache-2.0"
 keywords = ["code-generation", "template"]
