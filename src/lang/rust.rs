@@ -709,3 +709,30 @@ where
         alias: None,
     }
 }
+
+/// Implements [`crate::tokens::FormatInto`] for [`::proc_macro2::Ident`] and [`::proc_macro2::Literal`].
+///
+/// Doesn't include [`::proc_macro2::TokenStream`] since that output isn't nicely formatted.
+/// Doesn't include [`::proc_macro2::Punct`] since it would require use of an implicit
+/// [`crate::Tokens::space`] to implement [`::proc_macro2::Punct::spacing`].
+/// The user might find that unexpected.
+#[cfg(feature = "proc-macro2")]
+mod proc_macro2 {
+    use super::Rust;
+    use crate::tokens::{FormatInto, Tokens};
+    macro_rules! to_string_impl {
+        ($($target:path), $(,)?) => {$(
+            impl FormatInto<Rust> for &$target {
+                fn format_into(self, tokens: &mut Tokens<Rust>) {
+                    self.append(self.to_string());
+                }
+            }
+            impl FormatInto<Rust> for $target {
+                fn format_into(self, tokens: &mut Tokens<Rust>) {
+                    (&self).format_into(tokens)
+                }
+            }
+        )*};
+    }
+    to_string_impl!(proc_macro2::Literal, proc_macro2::Ident);
+}
